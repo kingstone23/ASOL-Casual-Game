@@ -1,77 +1,66 @@
-# 8-Ball Pool 2D - Flutter & Flame Forge2D Game
+# Bida Game 2D
 
-Một tựa game bida 8 bóng (8-Ball Pool) chuyên nghiệp được phát triển bằng Flutter và sử dụng động cơ vật lý 2D Flame (Forge2D / Box2D). Đồ án tập trung tái hiện chân thực các định luật vật lý va chạm cơ học, hệ thống ngắm bắn dự đoán đường đi (bao gồm cả A-băng và khúc xạ bi), chế độ chơi 2 người trên cùng một thiết bị (Local 2-Player Turn-based) với giao diện tối giản, hiện đại.
+Game bida 8 bóng dành cho 2 người chơi trên cùng một thiết bị. Game được làm bằng Flutter, Flame và Forge2D.
 
-## Các Tính Năng Nổi Bật
+## Tính năng
 
-### 1. Mô phỏng Vật lý Chuyên nghiệp (Physics Engine)
-- Động cơ Box2D (Forge2D): Xây dựng trên nền tảng vật lý tính toán gia tốc, lực ma sát nỉ (linearDamping), độ đàn hồi va chạm (restitution) và hệ số khối lượng (density) của bi.
-- Động lực học va chạm: Phân biệt chính xác giữa va chạm băng bàn (phản xạ gương góc tới bằng góc phản xạ) và va chạm bi-bi (truyền động lượng theo đường pháp tuyến và trượt theo đường tiếp tuyến).
+- Chơi 2 người theo lượt.
+- Bàn bida hiển thị ngang, phù hợp với điện thoại.
+- Điều khiển bằng cảm ứng hoặc chuột.
+- Kéo trên bàn để ngắm hướng đánh.
+- Kéo thanh lực bên trái xuống để tăng lực, thả ra để đánh.
+- Có đường ngắm và dự đoán hướng bi.
+- Bi có va chạm, nảy băng và ma sát giống chuyển động trên bàn bida.
+- Có 6 lỗ bida.
+- Có luật bi trơn, bi sọc, bi số 8 và foul.
+- Có chế độ di chuyển bi cái tự do khi bị `Ball in hand`.
+- Có nút cài đặt để bắt đầu lại trận đấu.
 
-### 2. Hệ Thống Ngắm Bắn & Dự Đoán Thông Minh (Advanced Aiming & Raycasting)
-- Raycast Prediction: Sử dụng thuật toán phóng tia (RayCastCallback) để quét trước đường đi của bi cái trong môi trường vật lý.
-- Đường ngắm A-Băng (Bank Shot Prediction): Tự động tính toán góc nảy khi bi cái chuẩn bị đập vào băng bàn.
-- Điểm báo va chạm: Hiển thị điểm tiếp xúc trực quan trên thân bi mục tiêu kèm theo hướng văng của bi cái sau khi truyền động lực.
+## Luật chơi chính
 
-### 3. Cơ Chế Lượt Chơi & Luật Chơi 2 Người (Local Multiplayer Turn-Based)
-- Hệ thống quản lý lượt chơi luân phiên giữa Player 1 và Player 2 sử dụng ValueNotifier kết nối trực tiếp mô hình game với giao diện UI ngoài bàn.
-- Cơ chế cảm biến lỗ bida (Sensors & Pockets) tự động nhận diện khi bi rơi xuống 6 lỗ, tự động xóa bi mục tiêu khỏi bàn và xử lý phạt khi bi cái lọt lỗ.
+- Bi số 1 đến 7 là **bi trơn**.
+- Bi số 9 đến 15 là **bi sọc**.
+- Bi số 8 là bi cuối cùng cần đánh.
+- Sau khi chia nhóm, mỗi người chỉ được đánh nhóm bi của mình.
+- Đánh đúng bi và đưa bi vào lỗ thì được đánh tiếp.
+- Không đưa bi hợp lệ vào lỗ hoặc đánh sai nhóm thì đổi lượt.
+- Đánh bi cái vào lỗ sẽ bị foul và người chơi tiếp theo được đặt bi cái tự do.
+- Đánh bi số 8 quá sớm sẽ thua.
+- Đánh bi số 8 sau khi dọn hết nhóm của mình sẽ thắng.
 
-### 4. Đồ Họa & Tối Ưu Trải Nghiệm (Game Feel)
-- Tỷ lệ khung hình chuẩn bàn bida: Thiết kế giao diện ngang (Landscape Mode) tối ưu hóa không gian hiển thị trên cả Web, Desktop và Mobile.
-- Sprite-based Rendering: Hỗ trợ hiển thị hình ảnh chi tiết của mặt bàn vân gỗ và bộ 15 bi màu sắc nét, kết hợp cơ chế khóa/mở góc xoay giúp hình ảnh con số luôn trực quan.
+## Cách chơi
 
-## Công Nghệ Sử Dụng
+1. Kéo ngón tay trên bàn để chọn hướng cây cơ.
+2. Kéo thanh lực bên trái xuống để tăng lực.
+3. Thả thanh lực để đánh.
+4. Nếu được `Ball in hand`, chạm vào bi cái và kéo đến vị trí mong muốn rồi thả ra.
+5. Nhấn nút bánh răng để bắt đầu lại trận đấu.
 
-- Framework: Flutter (Dart)
-- Game Engine: Flame Engine
-- Physics Engine: Flame Forge2D (Port của Box2D)
-- State Management: Flutter ValueNotifier & Flame Lifecycle hooks.
+## Cài đặt và chạy
 
-## Cấu Trúc Thư Mục Dự Án
+### Yêu cầu
 
-bida_game/
-│
-├── assets/
-│   └── images/
-│       ├── pool_table.png      # Hình nền mặt bàn bida
-│       ├── cue_ball.png        # Hình ảnh bi cái (bi trắng)
-│       ├── cue_stick.png       # Hình ảnh cơ bida (tùy chọn)
-│       └── ball_1.png ... ball_15.png  # Hình ảnh 15 bi mục tiêu
-│
-├── lib/
-│   └── main.dart               # Mã nguồn chính (Game logic, Physics, UI, Raycasting)
-│
-├── pubspec.yaml                # Cấu hình assets và dependencies
-└── README.md                   # Tài liệu mô tả đồ án
+- Flutter SDK.
+- Android Studio nếu chạy Android.
+- Xcode và macOS nếu chạy iOS.
 
-## Hướng Dẫn Cài Đặt & Chạy Trò Chơi
+## Tài nguyên chính
 
-Đảm bảo bạn đã cài đặt sẵn môi trường Flutter SDK trên máy tính.
+- `lib/main.dart`: mã nguồn game.
+- `assets/images/`: hình bàn, bi và cây cơ.
+- `pubspec.yaml`: thư viện và tài nguyên của project.
 
-1. Clone hoặc tải mã nguồn về máy:
-   cd bida_game
+## Giới hạn hiện tại
 
-2. Cài đặt các thư viện phụ thuộc:
-   flutter pub get
+- Chưa có âm thanh.
+- Chưa có chơi online.
+- Chưa có đối thủ máy.
+- Một số luật thi đấu chuyên nghiệp chưa được mô phỏng đầy đủ.
 
-3. Chạy ứng dụng (Hỗ trợ Chrome, Desktop hoặc Mobile):
-   - Chạy trên trình duyệt Chrome:
-     flutter run -d chrome
-   - Chạy trên thiết bị Desktop (Windows/macOS/Linux):
-     flutter run -d windows
+## Hướng phát triển
 
-## Hướng Dẫn Cách Chơi
-
-1. Ngắm bắn: Nhấn giữ chuột (hoặc chạm tay) vào khu vực gần bi cái, kéo ngược về phía sau giống như hành động kéo gậy bida lấy đà.
-2. Quan sát: Theo dõi đường ray trắng (đường ngắm chính) và đường ray vàng (đường dự đoán A-băng hoặc hướng bi trượt) để canh góc chính xác.
-3. Đánh bóng: Thả tay ra để thực hiện cú đánh. Lực đánh sẽ phụ thuộc vào khoảng cách bạn kéo gậy.
-4. Chuyển lượt: Sau mỗi cú đánh kết thúc, hệ thống sẽ tự động chuyển đổi lượt chơi giữa Player 1 (Xanh) và Player 2 (Đỏ).
-5. Mục tiêu: Đưa các viên bi mục tiêu rơi vào 1 trong 6 lỗ bida trên bàn để giành chiến thắng.
-
-## Hướng Phát Triển Tương Lai (Roadmap)
-- [ ] Bổ sung âm thanh va chạm chân thực (Sound Effects) khi bi chạm băng, chạm bi và rơi xuống lỗ.
-- [ ] Hoàn thiện luật chơi chuẩn 8-ball (Phân chia bi sọc / bi trơn cho từng người sau cú đánh khai cuộc - Break shot).
-- [ ] Thêm chế độ chơi với máy (AI Opponent) sử dụng thuật toán Minimax cơ bản.
-
-Phát triển bởi Bảo - Đồ án lập trình game sinh viên năm 4.
+- Thêm âm thanh và hiệu ứng.
+- Thêm chế độ chơi với máy.
+- Thêm chơi online.
+- Thêm hiệu ứng xoáy bi.
+- Cải thiện giao diện và luật thi đấu.
