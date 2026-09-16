@@ -99,6 +99,7 @@ Future<void> main() async {
                                   "Player 1",
                                   Colors.blue,
                                   turn == 1,
+                                  gameInstance.playerScores[1] ?? 0,
                                   gameInstance.groupLabel(1),
                                   gameInstance.groupBalls(1),
                                 ),
@@ -106,6 +107,7 @@ Future<void> main() async {
                                   "Player 2",
                                   Colors.red,
                                   turn == 2,
+                                  gameInstance.playerScores[2] ?? 0,
                                   gameInstance.groupLabel(2),
                                   gameInstance.groupBalls(2),
                                 ),
@@ -133,6 +135,66 @@ Future<void> main() async {
                         ),
                       ),
                     ),
+                  ),
+                  ValueListenableBuilder<int>(
+                    valueListenable: gameInstance.matchVersion,
+                    builder: (context, _, child) {
+                      if (!gameInstance.rackOver) {
+                        return const SizedBox.shrink();
+                      }
+                      return Positioned.fill(
+                        child: Container(
+                          color: Colors.black.withOpacity(0.72),
+                          child: Center(
+                            child: Container(
+                              constraints: const BoxConstraints(maxWidth: 360),
+                              padding: const EdgeInsets.all(24),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF173A32),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: Colors.amber, width: 2),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.emoji_events,
+                                    color: Colors.amber,
+                                    size: 54,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    gameInstance.winningPlayer == null
+                                        ? 'Rack kết thúc'
+                                        : 'Player ${gameInstance.winningPlayer} thắng!',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
+                                    style: const TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  FilledButton.icon(
+                                    onPressed: gameInstance.restartMatch,
+                                    icon: const Icon(Icons.replay),
+                                    label: const Text('Chơi lại'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   Positioned(
                     bottom: 10,
@@ -180,11 +242,19 @@ void _showSettings(BuildContext context) {
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Cài đặt'),
-      content: const Text('Bạn muốn bắt đầu lại trận đấu?'),
+      content: const Text('Chọn thao tác cho trận đấu hiện tại.'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Hủy'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () {
+            Navigator.pop(context);
+            _showDeclareLoss(context);
+          },
+          icon: const Icon(Icons.flag),
+          label: const Text('Xử thua'),
         ),
         FilledButton.icon(
           onPressed: () {
@@ -199,38 +269,83 @@ void _showSettings(BuildContext context) {
   );
 }
 
+void _showDeclareLoss(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Chọn người thua'),
+      content: const Text('Player nào bị xử thua trận này?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        TextButton(
+          onPressed: () {
+            gameInstance.declareLoss(1);
+            Navigator.pop(context);
+          },
+          child: const Text('Player 1 thua'),
+        ),
+        TextButton(
+          onPressed: () {
+            gameInstance.declareLoss(2);
+            Navigator.pop(context);
+          },
+          child: const Text('Player 2 thua'),
+        ),
+      ],
+    ),
+  );
+}
+
 Widget _buildPlayerCard(
   String name,
   Color color,
   bool isTurn,
+  int score,
   String groupLabel,
   List<int> groupBalls,
 ) {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     decoration: BoxDecoration(
-      color: isTurn ? color : Colors.black54,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.white24, width: isTurn ? 2 : 1),
-      boxShadow: isTurn
-          ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 10)]
-          : [],
+      color: Colors.transparent,
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isTurn)
+              Icon(
+                Icons.arrow_forward_ios,
+                color: Colors.white,
+                size: 12,
+              ),
+            if (isTurn) const SizedBox(width: 4),
+            Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
         Text(
-          name,
+          'Tỷ số: $score',
           style: TextStyle(
-            color: isTurn ? Colors.white : Colors.white54,
-            fontWeight: FontWeight.bold,
+            color: Colors.white70,
+            fontSize: 10,
           ),
         ),
         if (groupLabel.isNotEmpty)
           Text(
             groupLabel,
             style: TextStyle(
-              color: isTurn ? Colors.white70 : Colors.white38,
+              color: Colors.white70,
               fontSize: 10,
             ),
           ),
@@ -271,6 +386,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   );
   ValueNotifier<double> shotPower = ValueNotifier<double>(0.05);
   ValueNotifier<int> groupVersion = ValueNotifier<int>(0);
+  ValueNotifier<int> matchVersion = ValueNotifier<int>(0);
+  final Map<int, int> playerScores = {1: 0, 2: 0};
+  int? winningPlayer;
 
   late CueBall cueBall;
   final List<PoolBall> poolBalls = [];
@@ -451,6 +569,18 @@ class BilliardGame extends Forge2DGame with PanDetector {
     currentTurn.value = currentTurn.value == 1 ? 2 : 1;
   }
 
+  void declareLoss(int loser) {
+    if (rackOver || shotInProgress || (loser != 1 && loser != 2)) {
+      return;
+    }
+    winningPlayer = loser == 1 ? 2 : 1;
+    playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
+    ruleMessage.value = 'Player $loser bị xử thua';
+    rackOver = true;
+    ballInHand = false;
+    matchVersion.value++;
+  }
+
   void restartMatch() {
     if (!physicsReady) {
       return;
@@ -469,6 +599,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     shotInProgress = false;
     breakShot = true;
     rackOver = false;
+    winningPlayer = null;
     ballInHand = false;
     movingCueBall = false;
     settledTime = 0;
@@ -480,6 +611,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     add(cueBall);
     cueBall.isAiming = true;
     _updateAimVector(ballRadius * 2);
+    matchVersion.value++;
   }
 
   void setShotPower(double value) {
@@ -644,6 +776,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
     if (foul) {
       if (eightPocketed) {
         ruleMessage.value = 'Foul: 8-ball on an illegal shot';
+        winningPlayer = currentPlayer == 1 ? 2 : 1;
+        playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
         rackOver = true;
       } else {
         ruleMessage.value = 'Foul - ball in hand';
@@ -656,8 +790,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
       final canWin = group != null && allGroupBallsPocketed(group);
       if (canWin) {
         ruleMessage.value = 'Player $currentPlayer wins the rack!';
+        winningPlayer = currentPlayer;
+        playerScores[currentPlayer] = playerScores[currentPlayer]! + 1;
       } else {
         ruleMessage.value = 'Player $currentPlayer loses: 8-ball early';
+        winningPlayer = currentPlayer == 1 ? 2 : 1;
+        playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
       }
       rackOver = true;
     } else if (breakShot) {
@@ -681,6 +819,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
       switchTurn();
     }
     groupVersion.value++;
+    matchVersion.value++;
   }
 
   BallGroup ballGroup(int number) =>
