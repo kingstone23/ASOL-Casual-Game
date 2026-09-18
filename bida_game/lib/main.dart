@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flame/events.dart';
 import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
+import 'package:forge2d/forge2d.dart' as forge2d;
 
 enum BallGroup { solids, stripes }
 
@@ -23,215 +24,320 @@ Future<void> main() async {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: const Color(0xFF121212),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: AspectRatio(
-              aspectRatio: 2 / 1,
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: GameWidget(game: gameInstance),
-                  ),
-                  Positioned(
-                    left: 8,
-                    top: 56,
-                    bottom: 56,
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onVerticalDragUpdate: (details) {
-                        gameInstance.adjustShotPower(
-                          details.primaryDelta! / 180,
-                        );
-                      },
-                      onVerticalDragEnd: (_) => gameInstance.shootWithPower(),
-                      child: ValueListenableBuilder<double>(
-                        valueListenable: gameInstance.shotPower,
-                        builder: (context, power, child) {
-                          return Container(
-                            width: 42,
-                            padding: const EdgeInsets.all(7),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.58),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: Stack(
-                              alignment: Alignment.bottomCenter,
-                              children: [
-                                Container(color: Colors.white12),
-                                FractionallySizedBox(
-                                  heightFactor: power,
-                                  widthFactor: 1,
-                                  alignment: Alignment.bottomCenter,
-                                  child: DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      color: power > 0.75
-                                          ? Colors.redAccent
-                                          : Colors.amber,
-                                      borderRadius: BorderRadius.circular(5),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final screenPadding = (constraints.maxWidth * 0.012).clamp(
+                6.0,
+                16.0,
+              );
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(screenPadding),
+                  child: Column(
+                    children: [
+                      Builder(builder: (context) => _buildControlBar(context)),
+                      const SizedBox(height: 8),
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildPowerControl(),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: AspectRatio(
+                                aspectRatio: 2 / 1,
+                                child: Stack(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: GameWidget(game: gameInstance),
                                     ),
-                                  ),
+                                    ValueListenableBuilder<int>(
+                                      valueListenable:
+                                          gameInstance.matchVersion,
+                                      builder: (context, _, child) {
+                                        if (!gameInstance.rackOver) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Positioned.fill(
+                                          child: Container(
+                                            color: Colors.black.withOpacity(
+                                              0.72,
+                                            ),
+                                            child: Center(
+                                              child: Container(
+                                                constraints:
+                                                    const BoxConstraints(
+                                                      maxWidth: 360,
+                                                    ),
+                                                padding: const EdgeInsets.all(
+                                                  24,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF173A32,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(18),
+                                                  border: Border.all(
+                                                    color: Colors.amber,
+                                                    width: 2,
+                                                  ),
+                                                ),
+                                                child: Column(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.emoji_events,
+                                                      color: Colors.amber,
+                                                      size: 54,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      gameInstance.winningPlayer ==
+                                                              null
+                                                          ? 'Rack kết thúc'
+                                                          : 'Player ${gameInstance.winningPlayer} thắng!',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 24,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
+                                                      style: const TextStyle(
+                                                        color: Colors.white70,
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 20),
+                                                    FilledButton.icon(
+                                                      onPressed: gameInstance
+                                                          .restartMatch,
+                                                      icon: const Icon(
+                                                        Icons.replay,
+                                                      ),
+                                                      label: const Text(
+                                                        'Chơi lại',
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    Positioned(
+                                      bottom: 10,
+                                      left: 0,
+                                      right: 0,
+                                      child: ValueListenableBuilder<String>(
+                                        valueListenable:
+                                            gameInstance.ruleMessage,
+                                        builder: (context, message, child) {
+                                          return Center(
+                                            child: DecoratedBox(
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withOpacity(
+                                                  0.72,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6,
+                                                    ),
+                                                child: Text(
+                                                  message,
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  // Giao diện UI lắng nghe sự thay đổi lượt chơi từ Game
-                  Positioned(
-                    top: 10,
-                    left: 20,
-                    right: 20,
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: gameInstance.groupVersion,
-                      builder: (context, _, child) {
-                        return ValueListenableBuilder<int>(
-                          valueListenable: gameInstance.currentTurn,
-                          builder: (context, turn, child) {
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                _buildPlayerCard(
-                                  "Player 1",
-                                  Colors.blue,
-                                  turn == 1,
-                                  gameInstance.playerScores[1] ?? 0,
-                                  gameInstance.groupLabel(1),
-                                  gameInstance.groupBalls(1),
-                                ),
-                                _buildPlayerCard(
-                                  "Player 2",
-                                  Colors.red,
-                                  turn == 2,
-                                  gameInstance.playerScores[2] ?? 0,
-                                  gameInstance.groupLabel(2),
-                                  gameInstance.groupBalls(2),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    left: 0,
-                    right: 0,
-                    child: Builder(
-                      builder: (context) => Center(
-                        child: IconButton(
-                          tooltip: 'Cài đặt',
-                          icon: const Icon(Icons.settings),
-                          color: Colors.white,
-                          style: IconButton.styleFrom(
-                            backgroundColor: Colors.black54,
-                          ),
-                          onPressed: () => _showSettings(context),
+                          ],
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                  ValueListenableBuilder<int>(
-                    valueListenable: gameInstance.matchVersion,
-                    builder: (context, _, child) {
-                      if (!gameInstance.rackOver) {
-                        return const SizedBox.shrink();
-                      }
-                      return Positioned.fill(
-                        child: Container(
-                          color: Colors.black.withOpacity(0.72),
-                          child: Center(
-                            child: Container(
-                              constraints: const BoxConstraints(maxWidth: 360),
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF173A32),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: Colors.amber, width: 2),
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.emoji_events,
-                                    color: Colors.amber,
-                                    size: 54,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    gameInstance.winningPlayer == null
-                                        ? 'Rack kết thúc'
-                                        : 'Player ${gameInstance.winningPlayer} thắng!',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 20),
-                                  FilledButton.icon(
-                                    onPressed: gameInstance.restartMatch,
-                                    icon: const Icon(Icons.replay),
-                                    label: const Text('Chơi lại'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  Positioned(
-                    bottom: 10,
-                    left: 0,
-                    right: 0,
-                    child: ValueListenableBuilder<String>(
-                      valueListenable: gameInstance.ruleMessage,
-                      builder: (context, message, child) {
-                        return Center(
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.72),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              child: Text(
-                                message,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
+      ),
+    ),
+  );
+}
+
+Widget _buildControlBar(BuildContext context) {
+  return Container(
+    height: 70,
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+    decoration: BoxDecoration(
+      color: const Color(0xE620252A),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.white24),
+      boxShadow: const [
+        BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+      ],
+    ),
+    child: ValueListenableBuilder<int>(
+      valueListenable: gameInstance.groupVersion,
+      builder: (context, _, child) {
+        return ValueListenableBuilder<int>(
+          valueListenable: gameInstance.currentTurn,
+          builder: (context, turn, child) {
+            return Row(
+              children: [
+                Expanded(
+                  child: _buildPlayerCard(
+                    'Player 1',
+                    Colors.blue,
+                    turn == 1,
+                    gameInstance.playerScores[1] ?? 0,
+                    gameInstance.groupLabel(1),
+                    gameInstance.groupBalls(1),
+                    false,
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Cài đặt',
+                  icon: const Icon(Icons.settings),
+                  color: Colors.white,
+                  iconSize: 22,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 38,
+                    height: 38,
+                  ),
+                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                  onPressed: () => _showSettings(context),
+                ),
+                Expanded(
+                  child: _buildPlayerCard(
+                    'Player 2',
+                    Colors.red,
+                    turn == 2,
+                    gameInstance.playerScores[2] ?? 0,
+                    gameInstance.groupLabel(2),
+                    gameInstance.groupBalls(2),
+                    true,
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
+Widget _buildPowerControl() {
+  return Container(
+    width: 48,
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+    decoration: BoxDecoration(
+      color: const Color(0xFF20252A),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.white12),
+    ),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (details) {
+        gameInstance.beginPowerDrag(details.localPosition.dy);
+      },
+      onPanUpdate: (details) {
+        gameInstance.updatePowerDrag(details.localPosition.dy);
+      },
+      onPanEnd: (_) {
+        gameInstance.endPowerDrag();
+        gameInstance.shootWithPower();
+      },
+      onPanCancel: () => gameInstance.endPowerDrag(),
+      child: ValueListenableBuilder<double>(
+        valueListenable: gameInstance.shotPower,
+        builder: (context, power, child) {
+          return Column(
+            children: [
+              const Icon(Icons.flash_on, color: Colors.amber, size: 18),
+              const SizedBox(height: 6),
+              Text(
+                '${(power * 100).round()}%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(5),
+                  child: Stack(
+                    alignment: Alignment.bottomCenter,
+                    children: [
+                      Container(color: Colors.white12),
+                      FractionallySizedBox(
+                        heightFactor: power,
+                        widthFactor: 1,
+                        alignment: Alignment.bottomCenter,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: power > 0.75
+                                ? Colors.redAccent
+                                : Colors.amber,
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                        ),
+                      ),
+                      for (var mark = 1; mark < 20; mark++)
+                        Positioned.fill(
+                          child: Align(
+                            alignment: Alignment(0, 1 - mark / 10),
+                            child: Container(height: 1, color: Colors.black38),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+              const RotatedBox(
+                quarterTurns: 3,
+                child: Text(
+                  'LỰC',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     ),
   );
@@ -306,68 +412,109 @@ Widget _buildPlayerCard(
   int score,
   String groupLabel,
   List<int> groupBalls,
+  bool alignRight,
 ) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.transparent,
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isTurn)
-              Icon(
-                Icons.arrow_forward_ios,
-                color: Colors.white,
-                size: 12,
-              ),
-            if (isTurn) const SizedBox(width: 4),
-            Text(
-              name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+  return SizedBox(
+    height: 56,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: isTurn ? 0.16 : 0.04),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: color.withValues(alpha: isTurn ? 0.8 : 0.18),
+          width: isTurn ? 1.2 : 0.7,
         ),
-        Text(
-          'Tỷ số: $score',
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 10,
-          ),
-        ),
-        if (groupLabel.isNotEmpty)
-          Text(
-            groupLabel,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 10,
-            ),
-          ),
-        if (groupBalls.isNotEmpty)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final number in groupBalls)
-                Padding(
-                  padding: const EdgeInsets.only(right: 2, top: 3),
-                  child: Opacity(
-                    opacity: gameInstance.isBallPocketed(number) ? 0.25 : 1,
-                    child: Image.asset(
-                      'assets/images/ball_$number.png',
-                      width: 19,
-                      height: 19,
+      ),
+      child: Row(
+        textDirection: alignRight ? TextDirection.rtl : TextDirection.ltr,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: alignRight
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isTurn && !alignRight)
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                    if (isTurn && !alignRight) const SizedBox(width: 4),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
+                    if (isTurn && alignRight) const SizedBox(width: 4),
+                    if (isTurn && alignRight)
+                      const Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.white,
+                        size: 12,
+                      ),
+                  ],
                 ),
-            ],
+                Text(
+                  'Tỷ số: $score',
+                  style: const TextStyle(color: Colors.white70, fontSize: 9),
+                ),
+                if (groupLabel.isNotEmpty)
+                  Text(
+                    groupLabel,
+                    style: const TextStyle(color: Colors.white70, fontSize: 9),
+                  ),
+              ],
+            ),
           ),
-      ],
+          Expanded(
+            child: Align(
+              alignment: alignRight
+                  ? Alignment.centerLeft
+                  : Alignment.centerRight,
+              child: Wrap(
+                alignment: WrapAlignment.spaceAround,
+                runAlignment: WrapAlignment.center,
+                spacing: 2,
+                runSpacing: 0,
+                textDirection: alignRight
+                    ? TextDirection.rtl
+                    : TextDirection.ltr,
+                children: [
+                  for (final number in groupBalls)
+                    Opacity(
+                      opacity: gameInstance.isBallPocketed(number) ? 0.25 : 1,
+                      child: Container(
+                        width: 19,
+                        height: 19,
+                        padding: const EdgeInsets.all(1),
+                        decoration: BoxDecoration(
+                          color: Colors.black26,
+                          borderRadius: BorderRadius.circular(13),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Image.asset(
+                          'assets/images/ball_$number.png',
+                          width: 17,
+                          height: 17,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -405,11 +552,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
   int objectBallsHitRails = 0;
 
   double maxDragDistance = 180.0;
-  double forceMultiplier = 4400.0;
   double aimAngle = 0.0;
-  static const double rollingVelocityMultiplier = 10.0;
+  static const double rollingVelocityMultiplier = 1.0;
   static const double rollingFriction = 0.16;
-  static const double maximumBallSpeed = 1000.0;
+  static const double minimumShotSpeed = 60.0;
+  static const double maximumShotSpeed = 2500.0;
+  static const double powerCurveExponent = 1.55;
+  static const double maximumBallSpeed = maximumShotSpeed;
+  double? powerDragStartY;
 
   // Khai báo kích thước động
   late double ballRadius;
@@ -423,6 +573,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
+    forge2d.maxTranslation = 42.0;
+    forge2d.maxTranslationSquared = 1764.0;
     BilliardContactListener.activeGame = this;
 
     // Gắn trực tiếp bộ lắng nghe va chạm vào ContactManager của thế giới vật lý
@@ -436,8 +588,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
     playAreaTopLeft = Vector2(paddingX, paddingY);
     playAreaBottomRight = Vector2(size.x - paddingX, size.y - paddingY);
 
-    // Scale bi tự động bằng 4% chiều cao màn hình (Rất to và rõ)
-    ballRadius = size.y * 0.04;
+    // Bi chiếm khoảng 5.6% chiều cao mặt bàn, gần với tỷ lệ game mẫu.
+    ballRadius = size.y * 0.028;
 
     addAll(createBoundaries());
     addAll(createPockets());
@@ -471,21 +623,19 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   // Khởi tạo 6 Lỗ Bida
   List<Pocket> createPockets() {
-    final double pr = ballRadius * 1.5; // Kích thước lỗ to hơn bi một chút
+    final double pr = ballRadius * 2.2;
+    final pocketX = size.x * 0.045;
+    final pocketY = size.y * 0.082;
+    final rightX = size.x - pocketX;
+    final bottomY = size.y - pocketY;
     final midX = size.x / 2;
     return [
-      Pocket(playAreaTopLeft, pr), // Lỗ Góc trái trên
-      Pocket(Vector2(midX, playAreaTopLeft.y), pr), // Lỗ Giữa trên
-      Pocket(
-        Vector2(playAreaBottomRight.x, playAreaTopLeft.y),
-        pr,
-      ), // Góc phải trên
-      Pocket(
-        Vector2(playAreaTopLeft.x, playAreaBottomRight.y),
-        pr,
-      ), // Góc trái dưới
-      Pocket(Vector2(midX, playAreaBottomRight.y), pr), // Giữa dưới
-      Pocket(playAreaBottomRight, pr), // Góc phải dưới
+      Pocket(Vector2(pocketX, pocketY), pr),
+      Pocket(Vector2(midX, pocketY), pr),
+      Pocket(Vector2(rightX, pocketY), pr),
+      Pocket(Vector2(pocketX, bottomY), pr),
+      Pocket(Vector2(midX, bottomY), pr),
+      Pocket(Vector2(rightX, bottomY), pr),
     ];
   }
 
@@ -627,6 +777,33 @@ class BilliardGame extends Forge2DGame with PanDetector {
     cueBall.strokeDistance = maxDragDistance * shotPower.value;
   }
 
+  void beginPowerDrag(double startY) {
+    if (shotInProgress || rackOver || ballInHand) {
+      powerDragStartY = null;
+      return;
+    }
+    powerDragStartY = startY;
+  }
+
+  void updatePowerDrag(double currentY) {
+    final startY = powerDragStartY;
+    if (startY == null) {
+      return;
+    }
+    final pullDistance = math.max(0.0, currentY - startY);
+    final power = (0.05 + pullDistance / maxDragDistance * 0.95).clamp(
+      0.05,
+      1.0,
+    );
+    setShotPower(power);
+    cueBall.isAiming = true;
+    cueBall.strokeDistance = maxDragDistance * power;
+  }
+
+  void endPowerDrag() {
+    powerDragStartY = null;
+  }
+
   void shootWithPower() {
     if (!physicsReady ||
         shotInProgress ||
@@ -636,11 +813,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
       return;
     }
     final direction = Vector2(math.cos(aimAngle), math.sin(aimAngle));
+    final normalizedPower = ((shotPower.value - 0.05) / 0.95).clamp(0.0, 1.0);
+    final curvedPower = math
+        .pow(normalizedPower, powerCurveExponent)
+        .toDouble();
     final targetSpeed =
-        forceMultiplier * shotPower.value * rollingVelocityMultiplier;
-    cueBall.body.applyLinearImpulse(
-      direction * cueBall.body.mass * targetSpeed,
-    );
+        (minimumShotSpeed +
+            (maximumShotSpeed - minimumShotSpeed) * curvedPower) *
+        rollingVelocityMultiplier;
+    cueBall.body.setAwake(true);
     cueBall.body.linearVelocity.setFrom(direction * targetSpeed);
     shotInProgress = true;
     objectBallHitRailThisShot = false;
@@ -931,7 +1112,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
       final impactPoint =
           cueBall.body.position + normalizedDirection * impactDistance;
       final objectDirection = (ball.body.position - impactPoint).normalized();
-      guide = AimGuide(ball, impactPoint, objectDirection);
+      final ghostCenter =
+          ball.body.position - objectDirection * collisionDistance;
+      guide = AimGuide(ball, impactPoint, objectDirection, ghostCenter);
       nearestDistance = impactDistance;
     }
     return guide;
@@ -942,8 +1125,14 @@ class AimGuide {
   final PoolBall target;
   final Vector2 impactPoint;
   final Vector2 objectDirection;
+  final Vector2 ghostCenter;
 
-  AimGuide(this.target, this.impactPoint, this.objectDirection);
+  AimGuide(
+    this.target,
+    this.impactPoint,
+    this.objectDirection,
+    this.ghostCenter,
+  );
 }
 
 // ================= LỚP VẬT LÝ =================
@@ -951,7 +1140,7 @@ class AimGuide {
 class Wall extends BodyComponent {
   final Vector2 start;
   final Vector2 end;
-  Wall(this.start, this.end);
+  Wall(this.start, this.end) : super(renderBody: false);
 
   @override
   Body createBody() {
@@ -1135,7 +1324,7 @@ class CueBall extends BodyComponent {
       final callback = AimRayCastCallback(body);
       final p1 = body.position;
       final direction = aimVector!.normalized();
-      final p2 = p1 + (direction * 300.0);
+      final p2 = p1 + (direction * 2000.0);
       world.raycast(callback, p1, p2);
 
       if (callback.hitPoint != null &&
@@ -1212,8 +1401,9 @@ class CueBall extends BodyComponent {
       if (guide != null) {
         final targetOffset = guide.impactPoint - body.position;
         final targetCenterOffset = guide.target.body.position - body.position;
+        final ghostOffset = guide.ghostCenter - body.position;
         final targetLineEnd =
-            targetCenterOffset + guide.objectDirection * 180.0;
+            targetCenterOffset + guide.objectDirection * 220.0;
         canvas.drawLine(
           targetOffset.toOffset(),
           targetLineEnd.toOffset(),
@@ -1228,6 +1418,26 @@ class CueBall extends BodyComponent {
             ..color = Colors.white.withOpacity(0.7)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 0.8,
+        );
+        canvas.drawCircle(
+          ghostOffset.toOffset(),
+          radius,
+          Paint()
+            ..color = Colors.cyanAccent.withOpacity(0.85)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.8,
+        );
+        canvas.drawLine(
+          ghostOffset.toOffset(),
+          targetOffset.toOffset(),
+          Paint()
+            ..color = Colors.cyanAccent.withOpacity(0.65)
+            ..strokeWidth = 0.6,
+        );
+        canvas.drawCircle(
+          targetOffset.toOffset(),
+          radius * 0.28,
+          Paint()..color = Colors.cyanAccent.withOpacity(0.9),
         );
       }
       if (rayHitPoint != null && reflectionVector != null) {
