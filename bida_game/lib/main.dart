@@ -431,6 +431,7 @@ Widget _buildPlayerCard(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
+            flex: 3,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: alignRight
@@ -477,6 +478,7 @@ Widget _buildPlayerCard(
             ),
           ),
           Expanded(
+            flex: 5,
             child: Align(
               alignment: alignRight
                   ? Alignment.centerLeft
@@ -484,8 +486,8 @@ Widget _buildPlayerCard(
               child: Wrap(
                 alignment: WrapAlignment.spaceAround,
                 runAlignment: WrapAlignment.center,
-                spacing: 2,
-                runSpacing: 0,
+                spacing: 3,
+                runSpacing: 1,
                 textDirection: alignRight
                     ? TextDirection.rtl
                     : TextDirection.ltr,
@@ -494,8 +496,8 @@ Widget _buildPlayerCard(
                     Opacity(
                       opacity: gameInstance.isBallPocketed(number) ? 0.25 : 1,
                       child: Container(
-                        width: 19,
-                        height: 19,
+                        width: 24,
+                        height: 24,
                         padding: const EdgeInsets.all(1),
                         decoration: BoxDecoration(
                           color: Colors.black26,
@@ -504,8 +506,8 @@ Widget _buildPlayerCard(
                         ),
                         child: Image.asset(
                           'assets/images/ball_$number.png',
-                          width: 17,
-                          height: 17,
+                          width: 22,
+                          height: 22,
                         ),
                       ),
                     ),
