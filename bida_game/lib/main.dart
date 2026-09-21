@@ -31,139 +31,114 @@ Future<void> main() async {
                 6.0,
                 16.0,
               );
+              final compactLayout =
+                  constraints.maxWidth < 900 || constraints.maxHeight < 520;
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(screenPadding),
                   child: Column(
                     children: [
-                      Builder(builder: (context) => _buildControlBar(context)),
-                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (context) =>
+                            _buildControlBar(context, compact: compactLayout),
+                      ),
+                      SizedBox(height: compactLayout ? 5 : 8),
                       Expanded(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _buildPowerControl(),
-                            const SizedBox(width: 10),
+                            _buildPowerControl(compact: compactLayout),
+                            SizedBox(width: compactLayout ? 6 : 10),
                             Expanded(
-                              child: AspectRatio(
-                                aspectRatio: 2 / 1,
-                                child: Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: GameWidget(game: gameInstance),
-                                    ),
-                                    ValueListenableBuilder<int>(
-                                      valueListenable:
-                                          gameInstance.matchVersion,
-                                      builder: (context, _, child) {
-                                        if (!gameInstance.rackOver) {
-                                          return const SizedBox.shrink();
-                                        }
-                                        return Positioned.fill(
-                                          child: Container(
-                                            color: Colors.black.withOpacity(
-                                              0.72,
-                                            ),
-                                            child: Center(
-                                              child: Container(
-                                                constraints:
-                                                    const BoxConstraints(
-                                                      maxWidth: 360,
-                                                    ),
-                                                padding: const EdgeInsets.all(
-                                                  24,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(
-                                                    0xFF173A32,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(18),
-                                                  border: Border.all(
-                                                    color: Colors.amber,
-                                                    width: 2,
-                                                  ),
-                                                ),
-                                                child: Column(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    const Icon(
-                                                      Icons.emoji_events,
-                                                      color: Colors.amber,
-                                                      size: 54,
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    Text(
-                                                      gameInstance.winningPlayer ==
-                                                              null
-                                                          ? 'Rack kết thúc'
-                                                          : 'Player ${gameInstance.winningPlayer} thắng!',
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 24,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                      textAlign:
-                                                          TextAlign.center,
-                                                    ),
-                                                    const SizedBox(height: 8),
-                                                    Text(
-                                                      'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
-                                                      style: const TextStyle(
-                                                        color: Colors.white70,
-                                                        fontSize: 18,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 20),
-                                                    FilledButton.icon(
-                                                      onPressed: gameInstance
-                                                          .restartMatch,
-                                                      icon: const Icon(
-                                                        Icons.replay,
-                                                      ),
-                                                      label: const Text(
-                                                        'Chơi lại',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    Positioned(
-                                      bottom: 10,
-                                      left: 0,
-                                      right: 0,
-                                      child: ValueListenableBuilder<String>(
+                              child: Center(
+                                child: AspectRatio(
+                                  aspectRatio: 2 / 1,
+                                  child: Stack(
+                                    children: [
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: GameWidget(game: gameInstance),
+                                      ),
+                                      ValueListenableBuilder<int>(
                                         valueListenable:
-                                            gameInstance.ruleMessage,
-                                        builder: (context, message, child) {
-                                          return Center(
-                                            child: DecoratedBox(
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withOpacity(
-                                                  0.72,
-                                                ),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                            gameInstance.matchVersion,
+                                        builder: (context, _, child) {
+                                          if (!gameInstance.rackOver) {
+                                            return const SizedBox.shrink();
+                                          }
+                                          return Positioned.fill(
+                                            child: Container(
+                                              color: Colors.black.withOpacity(
+                                                0.72,
                                               ),
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
+                                              child: Center(
+                                                child: Container(
+                                                  constraints:
+                                                      const BoxConstraints(
+                                                        maxWidth: 360,
+                                                      ),
+                                                  padding: const EdgeInsets.all(
+                                                    24,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(
+                                                      0xFF173A32,
                                                     ),
-                                                child: Text(
-                                                  message,
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w600,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          18,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: Colors.amber,
+                                                      width: 2,
+                                                    ),
+                                                  ),
+                                                  child: Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(
+                                                        Icons.emoji_events,
+                                                        color: Colors.amber,
+                                                        size: 54,
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        gameInstance.winningPlayer ==
+                                                                null
+                                                            ? 'Rack kết thúc'
+                                                            : 'Player ${gameInstance.winningPlayer} thắng!',
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 24,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                      ),
+                                                      const SizedBox(height: 8),
+                                                      Text(
+                                                        'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
+                                                        style: const TextStyle(
+                                                          color: Colors.white70,
+                                                          fontSize: 18,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 20,
+                                                      ),
+                                                      FilledButton.icon(
+                                                        onPressed: gameInstance
+                                                            .restartMatch,
+                                                        icon: const Icon(
+                                                          Icons.replay,
+                                                        ),
+                                                        label: const Text(
+                                                          'Chơi lại',
+                                                        ),
+                                                      ),
+                                                    ],
                                                   ),
                                                 ),
                                               ),
@@ -171,8 +146,44 @@ Future<void> main() async {
                                           );
                                         },
                                       ),
-                                    ),
-                                  ],
+                                      Positioned(
+                                        bottom: 10,
+                                        left: 0,
+                                        right: 0,
+                                        child: ValueListenableBuilder<String>(
+                                          valueListenable:
+                                              gameInstance.ruleMessage,
+                                          builder: (context, message, child) {
+                                            return Center(
+                                              child: DecoratedBox(
+                                                decoration: BoxDecoration(
+                                                  color: Colors.black
+                                                      .withOpacity(0.72),
+                                                  borderRadius:
+                                                      BorderRadius.circular(8),
+                                                ),
+                                                child: Padding(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 6,
+                                                      ),
+                                                  child: Text(
+                                                    message,
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -191,9 +202,9 @@ Future<void> main() async {
   );
 }
 
-Widget _buildControlBar(BuildContext context) {
+Widget _buildControlBar(BuildContext context, {bool compact = false}) {
   return Container(
-    height: 70,
+    height: compact ? 58 : 70,
     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
     decoration: BoxDecoration(
       color: const Color(0xE620252A),
@@ -254,10 +265,13 @@ Widget _buildControlBar(BuildContext context) {
   );
 }
 
-Widget _buildPowerControl() {
+Widget _buildPowerControl({bool compact = false}) {
   return Container(
-    width: 48,
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
+    width: compact ? 40 : 48,
+    padding: EdgeInsets.symmetric(
+      horizontal: compact ? 4 : 6,
+      vertical: compact ? 8 : 12,
+    ),
     decoration: BoxDecoration(
       color: const Color(0xFF20252A),
       borderRadius: BorderRadius.circular(16),
@@ -675,6 +689,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         return;
       }
     }
+    _keepBallsInsideTable();
     _applyClothPhysics(dt);
     if (!shotInProgress) {
       return;
@@ -713,6 +728,52 @@ class BilliardGame extends Forge2DGame with PanDetector {
     }
     if (velocity.length < 0.08) {
       velocity.setZero();
+    }
+  }
+
+  void _keepBallsInsideTable() {
+    if (!cueBall.isSunk) {
+      _keepBodyInsideTable(cueBall);
+    }
+    for (final ball in poolBalls) {
+      if (!ball.isRemoved && !ball.isSunk) {
+        _keepBodyInsideTable(ball);
+      }
+    }
+  }
+
+  void _keepBodyInsideTable(BodyComponent ball) {
+    final body = ball.body;
+    final position = body.position;
+    final velocity = body.linearVelocity;
+    final minX = playAreaTopLeft.x + ballRadius;
+    final maxX = playAreaBottomRight.x - ballRadius;
+    final minY = playAreaTopLeft.y + ballRadius;
+    final maxY = playAreaBottomRight.y - ballRadius;
+    var corrected = false;
+
+    if (position.x < minX) {
+      position.x = minX;
+      if (velocity.x < 0) velocity.x = -velocity.x;
+      corrected = true;
+    } else if (position.x > maxX) {
+      position.x = maxX;
+      if (velocity.x > 0) velocity.x = -velocity.x;
+      corrected = true;
+    }
+    if (position.y < minY) {
+      position.y = minY;
+      if (velocity.y < 0) velocity.y = -velocity.y;
+      corrected = true;
+    } else if (position.y > maxY) {
+      position.y = maxY;
+      if (velocity.y > 0) velocity.y = -velocity.y;
+      corrected = true;
+    }
+
+    if (corrected) {
+      body.setTransform(position, 0);
+      body.setAwake(true);
     }
   }
 
@@ -911,6 +972,18 @@ class BilliardGame extends Forge2DGame with PanDetector {
     dragCurrent = null;
   }
 
+  void _prepareCueBallForPlacement() {
+    final position = initialCueBallPosition;
+    cueBall.isSunk = false;
+    cueBall.body.setTransform(position, 0);
+    cueBall.body.linearVelocity.setZero();
+    cueBall.body.angularVelocity = 0;
+    cueBall.isAiming = false;
+    cueBall.strokeDistance = 0;
+  }
+
+  Vector2 get initialCueBallPosition => Vector2(size.x * 0.25, size.y / 2);
+
   void moveCueBallTo(Vector2 requestedPosition) {
     final position = Vector2(
       requestedPosition.x.clamp(
@@ -966,8 +1039,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         ruleMessage.value = 'Foul - ball in hand';
         switchTurn();
         ballInHand = true;
-        cueBall.isSunk = false;
-        cueBall.isAiming = false;
+        _prepareCueBallForPlacement();
       }
     } else if (eightPocketed) {
       final canWin = group != null && allGroupBallsPocketed(group);
@@ -1301,6 +1373,7 @@ class CueBall extends BodyComponent {
       BodyDef(
         type: BodyType.dynamic,
         position: initialPosition,
+        bullet: true,
         fixedRotation: true,
         linearDamping: 0.08,
         angularDamping: 0.8,
@@ -1314,12 +1387,11 @@ class CueBall extends BodyComponent {
   void update(double dt) {
     super.update(dt);
 
-    // Nếu rớt lỗ -> Hồi sinh lại vị trí ban đầu (Hoặc bạn có thể tự thiết lập hệ thống giấu bi cái đi)
     if (isSunk) {
-      body.setTransform(initialPosition, 0);
       body.linearVelocity.setZero();
       body.angularVelocity = 0;
-      isSunk = false;
+      isAiming = false;
+      return;
     }
 
     if (aimVector != null && aimVector!.length > 0.0) {
@@ -1357,6 +1429,9 @@ class CueBall extends BodyComponent {
 
   @override
   void render(Canvas canvas) {
+    if (isSunk) {
+      return;
+    }
     if (isAiming &&
         aimVector != null &&
         aimVector!.length > 0.0 &&
@@ -1495,6 +1570,7 @@ class PoolBall extends BodyComponent {
       BodyDef(
         type: BodyType.dynamic,
         position: initialPosition,
+        bullet: true,
         fixedRotation: true,
         linearDamping: 0.08,
         angularDamping: 0.8,
