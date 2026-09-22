@@ -1,66 +1,77 @@
-# Bida Game 2D
+# 🎱 Game Bida 8 Bóng 2D (Billiard 8-Ball)
 
-Game bida 8 bóng dành cho 2 người chơi trên cùng một thiết bị. Game được làm bằng Flutter, Flame và Forge2D.
+Game Bida 8 Bóng (8-Ball Pool) phong cách hiện đại, trực quan, hỗ trợ chơi 2 người trên cùng thiết bị hoặc so tài với máy (CPU Bot). Trò chơi được tối ưu hóa giao diện xoay ngang, tự động vừa vặn trên mọi dòng điện thoại thông minh từ nhỏ đến lớn.
 
-## Tính năng
+---
 
-- Chơi 2 người theo lượt.
-- Bàn bida hiển thị ngang, phù hợp với điện thoại.
-- Điều khiển bằng cảm ứng hoặc chuột.
-- Kéo trên bàn để ngắm hướng đánh.
-- Kéo thanh lực bên trái xuống để tăng lực, thả ra để đánh.
-- Có đường ngắm và dự đoán hướng bi.
-- Bi có va chạm, nảy băng và ma sát giống chuyển động trên bàn bida.
-- Có 6 lỗ bida.
-- Có luật bi trơn, bi sọc, bi số 8 và foul.
-- Có chế độ di chuyển bi cái tự do khi bị `Ball in hand`.
-- Có nút cài đặt để bắt đầu lại trận đấu.
+## 🛠️ Công Nghệ Sử Dụng
 
-## Luật chơi chính
+Dự án được xây dựng trên nền tảng công nghệ đa nền tảng hiện đại, đảm bảo hiệu năng cao và chuyển động mượt mà:
 
-- Bi số 1 đến 7 là **bi trơn**.
-- Bi số 9 đến 15 là **bi sọc**.
-- Bi số 8 là bi cuối cùng cần đánh.
-- Sau khi chia nhóm, mỗi người chỉ được đánh nhóm bi của mình.
-- Đánh đúng bi và đưa bi vào lỗ thì được đánh tiếp.
-- Không đưa bi hợp lệ vào lỗ hoặc đánh sai nhóm thì đổi lượt.
-- Đánh bi cái vào lỗ sẽ bị foul và người chơi tiếp theo được đặt bi cái tự do.
-- Đánh bi số 8 quá sớm sẽ thua.
-- Đánh bi số 8 sau khi dọn hết nhóm của mình sẽ thắng.
+- **Flutter**: Bộ công cụ phát triển giao diện người dùng đa nền tảng hàng đầu của Google, giúp game chạy mượt trên Android, iOS, Web và Desktop.
+- **Flame Game Engine**: Engine game 2D chuyên dụng cho Flutter, quản lý vòng lặp game (game loop), thời gian thực và kết xuất hình ảnh 60 FPS ổn định.
+- **Forge2D (Box2D Physics Engine)**: Động cơ vật lý tiêu chuẩn quốc tế mô phỏng chân thực va chạm cơ học, góc nảy băng, ma sát lăn mặt nỉ và lực quán tính của bi.
+- **Đồ họa Vector Thuần (CustomPaint)**: Cây cơ trên thanh lực và hệ thống ngắm bắn được vẽ trực tiếp bằng vector, đảm bảo độ nét tuyệt đối trên mọi độ phân giải màn hình mà không lo giật lag hay lỗi tải ảnh.
 
-## Cách chơi
+---
 
-1. Kéo ngón tay trên bàn để chọn hướng cây cơ.
-2. Kéo thanh lực bên trái xuống để tăng lực.
-3. Thả thanh lực để đánh.
-4. Nếu được `Ball in hand`, chạm vào bi cái và kéo đến vị trí mong muốn rồi thả ra.
-5. Nhấn nút bánh răng để bắt đầu lại trận đấu.
+## 🌟 Tính Năng Nổi Bật
 
-## Cài đặt và chạy
+- 🤖 **Chế độ chơi đa dạng**:
+  - **Chơi 2 Người (PvP)**: Thi đấu lần lượt với bạn bè trên cùng màn hình.
+  - **Đấu với Máy (Vs CPU)**: Tùy chọn 2 cấp độ: **Bot Dễ** (dành cho người mới tập chơi) và **Bot Khó** (AI phân tích hình học thông minh, ngắm bóng và căn lực chính xác, biết tự né phạm lỗi).
+- 🌪️ **Vật lý xoáy bi thực tế**:
+  - Tùy chỉnh điểm chạm đầu cơ trên bi cái để tạo hiệu ứng: **Cu-lê** (tiến tới sau va chạm), **Trô bóng** (giật lùi lại) và **Áp-phê Trái / Phải** (đổi góc nảy khi đập băng).
+  - Tự động hoàn trả vị trí tâm bi sau mỗi cú đánh.
+- ⚡ **Thanh lực tương tác sống động**:
+  - Cây cơ trên thanh đo tự động **lún sâu xuống** theo mức kéo lực của ngón tay (kèm vệt hào quang năng lượng đổi màu Xanh $\to$ Vàng $\to$ Đỏ).
+- 📱 **Giao diện tự co giãn (Responsive)**:
+  - Tự động thích ứng hoàn hảo với mọi kích cỡ màn hình điện thoại (kể cả các dòng máy nhỏ như iPhone SE, Android phổ thông hay máy có tai thỏ / camera nốt ruồi), không bao giờ bị tràn viền hay che mất bàn chơi.
+- 🎯 **Tia ngắm thông minh**: Hiển thị đường đi dự kiến của bi cái và hướng chuyển động của bi mục tiêu sau va chạm.
 
-### Yêu cầu
+---
 
-- Flutter SDK.
-- Android Studio nếu chạy Android.
-- Xcode và macOS nếu chạy iOS.
+## 📖 Luật Chơi Chi Tiết (Chuẩn 8-Ball)
 
-## Tài nguyên chính
+### 1. Phân chia nhóm bi
+Bàn bida gồm 1 bi cái (bi trắng) và 15 bi mục tiêu được chia làm 2 nhóm:
+- **Bi Trơn (Solids)**: Đánh số từ **1 đến 7** (màu đơn sắc).
+- **Bi Sọc (Stripes)**: Đánh số từ **9 đến 15** (có dải sọc trắng ở giữa).
+- **Bi Đen Số 8**: Bi quyết định ván đấu.
 
-- `lib/main.dart`: mã nguồn game.
-- `assets/images/`: hình bàn, bi và cây cơ.
-- `pubspec.yaml`: thư viện và tài nguyên của project.
+> *Nhóm bi của mỗi người chơi chỉ được xác định sau cú đánh khai cuộc khi có người đưa thành công quả bi đầu tiên vào lỗ một cách hợp lệ.*
 
-## Giới hạn hiện tại
+### 2. Quy tắc đánh theo lượt
+- Mỗi người chơi chỉ được ngắm và chạm cơ vào **nhóm bi của mình** đầu tiên.
+- Nếu đưa được ít nhất một bi thuộc nhóm của mình vào lỗ hợp lệ, người chơi sẽ **được đánh tiếp**.
+- Nếu không có bi nào vào lỗ hoặc phạm luật, lượt chơi sẽ **chuyển sang đối thủ**.
 
-- Chưa có âm thanh.
-- Chưa có chơi online.
-- Chưa có đối thủ máy.
-- Một số luật thi đấu chuyên nghiệp chưa được mô phỏng đầy đủ.
+### 3. Các lỗi phạm luật (Foul)
+Người chơi sẽ bị tính là phạm lỗi nếu:
+1. Đánh bi cái rơi vào lỗ.
+2. Đánh bi cái không chạm trúng bất kỳ quả bi nào trên bàn.
+3. Đánh bi cái chạm bi của đối thủ hoặc chạm bi số 8 đầu tiên (khi chưa dọn hết nhóm của mình).
+4. Bi cái và bi mục tiêu sau va chạm không có quả nào chạm băng hoặc rơi vào lỗ.
 
-## Hướng phát triển
+### 4. Quyền đặt bi tự do (Ball-in-Hand)
+- Khi một bên phạm lỗi (Foul), người chơi kế tiếp sẽ nhận quyền **Ball-in-Hand**.
+- Người chơi có quyền dùng tay chạm và đặt bi cái ở **bất kỳ vị trí nào** trên mặt bàn để thực hiện cú đánh tiếp theo.
 
-- Thêm âm thanh và hiệu ứng.
-- Thêm chế độ chơi với máy.
-- Thêm chơi online.
-- Thêm hiệu ứng xoáy bi.
-- Cải thiện giao diện và luật thi đấu.
+### 5. Điều kiện Thắng / Thua
+- **Chiến Thắng**: Người chơi dọn sạch toàn bộ các bi thuộc nhóm của mình và sau đó đánh bi số 8 vào lỗ một cách hợp lệ.
+- **Thua Ngay Lập Tức**:
+  - Đánh rơi bi số 8 vào lỗ khi chưa ăn hết nhóm bi của mình.
+  - Đánh bi số 8 vào lỗ đồng thời làm bi cái rơi vào lỗ.
+  - Làm bi số 8 văng ra khỏi bàn thi đấu.
+
+---
+
+## 🎮 Hướng Dẫn Thao Tác
+
+1. **Ngắm hướng**: Chạm và rê ngón tay trên mặt bàn để xoay hướng ngắm của cây cơ.
+2. **Chỉnh xoáy (nếu muốn)**: Bấm vào biểu tượng bi cái ở góc trên bên phải để chọn điểm tiếp xúc cơ (Cu-lê, Trô bóng hoặc Áp-phê).
+3. **Kéo lực & Bắn**:
+   - Chạm vào thanh đo bên trái và vuốt xuống dưới. Cây cơ sẽ lún dần theo tay bạn.
+   - Thả tay ra để thực hiện cú đánh với lực tương ứng.
+4. **Di chuyển bi cái (khi có Ball-in-Hand)**: Chạm giữ trực tiếp vào bi cái, kéo đến vị trí mong muốn trên bàn và thả tay.
+5. **Cài đặt / Chơi lại**: Bấm vào biểu tượng bánh răng cưa ở thanh trên cùng để đổi đối thủ (Bot Dễ, Bot Khó, Người) hoặc khởi động lại ván đấu mới.
