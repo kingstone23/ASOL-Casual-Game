@@ -37,6 +37,7 @@ dependencies:
   flame: ^1.38.2
   flame_forge2d: ^0.19.3+7
   forge2d: ^0.14.2+1
+  shared_preferences: ^2.5.5
 
 dev_dependencies:
   flutter_test:

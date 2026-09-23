@@ -8,6 +8,18 @@ import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart' hide Transform;
 import 'package:forge2d/forge2d.dart' as forge2d;
 
+import 'models/cue_model.dart';
+import 'models/bot_stage_model.dart';
+import 'models/daily_puzzle_model.dart';
+import 'services/progression_service.dart';
+import 'services/local_multiplayer_service.dart';
+import 'ui/player_profile_bar.dart';
+import 'ui/bot_stages_dialog.dart';
+import 'ui/daily_puzzle_dialog.dart';
+import 'ui/local_multiplayer_dialog.dart';
+import 'ui/cue_power_slider.dart';
+import 'ui/aim_ruler_slider.dart';
+
 enum BallGroup { solids, stripes }
 
 // Khởi tạo instance của game ở ngoài cùng để UI có thể lắng nghe trạng thái (Turn-base)
@@ -15,6 +27,7 @@ final BilliardGame gameInstance = BilliardGame();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await ProgressionService.instance.init();
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -35,40 +48,23 @@ class _BilliardHomeState extends State<BilliardHome> {
   bool showGame = false;
 
   void _startPlayerMatch() {
-    gameInstance.setBotMode(false);
+    gameInstance.startPlayerMatch();
     setState(() => showGame = true);
   }
 
-  void _chooseCpuDifficulty() {
-    showDialog<int>(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Chọn độ khó CPU'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 1),
-            child: const ListTile(
-              leading: Icon(Icons.sentiment_satisfied_alt),
-              title: Text('Dễ'),
-            ),
-          ),
-          SimpleDialogOption(
-            onPressed: () => Navigator.pop(context, 2),
-            child: const ListTile(
-              leading: Icon(Icons.psychology),
-              title: Text('Khó'),
-            ),
-          ),
-        ],
-      ),
-    ).then((difficulty) {
-      if (!mounted || difficulty == null) {
-        return;
-      }
-      gameInstance.setBotDifficulty(difficulty);
-      gameInstance.setBotMode(true);
-      setState(() => showGame = true);
-    });
+  void _startBotStage(BotStageModel stage) {
+    gameInstance.startBotStage(stage);
+    setState(() => showGame = true);
+  }
+
+  void _startDailyPuzzle(DailyPuzzleModel puzzle) {
+    gameInstance.startDailyPuzzle(puzzle);
+    setState(() => showGame = true);
+  }
+
+  void _startLocalMultiplayerMatch() {
+    gameInstance.startLocalMultiplayer();
+    setState(() => showGame = true);
   }
 
   @override
@@ -92,90 +88,137 @@ class _BilliardHomeState extends State<BilliardHome> {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact = constraints.maxHeight < 620;
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 560),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 20 : 38,
-                      vertical: compact ? 22 : 34,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF11633F),
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: const Color(0xFFB77A35),
-                        width: 8,
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 24,
-                          offset: Offset(0, 12),
+              return Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 20 : 38,
+                          vertical: compact ? 22 : 34,
                         ),
-                      ],
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: compact ? 78 : 96,
-                          height: compact ? 78 : 96,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black,
-                            border: Border.all(color: Colors.white70, width: 2),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black45, blurRadius: 10),
-                            ],
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF11633F),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: const Color(0xFFB77A35),
+                            width: 8,
                           ),
-                          child: Image.asset('assets/images/ball_8.png'),
-                        ),
-                        const SizedBox(height: 14),
-                        const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            '8 POOL BILLIARDS',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 2.5,
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black54,
+                              blurRadius: 24,
+                              offset: Offset(0, 12),
                             ),
-                          ),
+                          ],
                         ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'CHOOSE YOUR MATCH',
-                          style: TextStyle(
-                            color: Color(0xFFFFD166),
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: compact ? 78 : 96,
+                              height: compact ? 78 : 96,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black,
+                                border: Border.all(color: Colors.white70, width: 2),
+                                boxShadow: const [
+                                  BoxShadow(color: Colors.black45, blurRadius: 10),
+                                ],
+                              ),
+                              child: Image.asset('assets/images/ball_8.png'),
+                            ),
+                            const SizedBox(height: 14),
+                            const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                '8 POOL BILLIARDS',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2.5,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            const Text(
+                              'CHOOSE YOUR MATCH',
+                              style: TextStyle(
+                                color: Color(0xFFFFD166),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            const SizedBox(height: 22),
+                            _buildMenuButton(
+                              icon: Icons.people,
+                              label: 'P1 vs P2 (CÙNG MÁY)',
+                              detail: '2 người chơi trên 1 thiết bị',
+                              background: const Color(0xFF1D4ED8),
+                              onPressed: _startPlayerMatch,
+                            ),
+                            const SizedBox(height: 10),
+                            _buildMenuButton(
+                              icon: Icons.wifi_tethering,
+                              label: 'ĐẤU MẠNG LOCAL (WIFI)',
+                              detail: 'Chơi 2 máy chung WiFi / Hotspot',
+                              background: const Color(0xFF00897B),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => LocalMultiplayerDialog(
+                                    onConnected: _startLocalMultiplayerMatch,
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _buildMenuButton(
+                              icon: Icons.military_tech,
+                              label: '7 ẢI THỬ THÁCH BOT',
+                              detail: 'Độ khó tăng dần theo cấp gậy Shop',
+                              background: const Color(0xFFE65100),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => BotStagesDialog(
+                                    onSelectStage: _startBotStage,
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            _buildMenuButton(
+                              icon: Icons.event_note,
+                              label: 'THẾ BI HÀNG NGÀY',
+                              detail: 'Nhiệm vụ 1 thế bi ngẫu nhiên/ngày',
+                              background: const Color(0xFF7B1FA2),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => DailyPuzzleDialog(
+                                    onStartPuzzle: _startDailyPuzzle,
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 26),
-                        _buildMenuButton(
-                          icon: Icons.people,
-                          label: 'P1 vs P2',
-                          detail: 'Đấu cùng bạn bè',
-                          background: const Color(0xFF1D4ED8),
-                          onPressed: _startPlayerMatch,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildMenuButton(
-                          icon: Icons.smart_toy,
-                          label: 'P1 vs CPU',
-                          detail: 'Thử sức với máy',
-                          background: const Color(0xFF171717),
-                          onPressed: _chooseCpuDifficulty,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                  // Thanh trạng thái người chơi ở góc trên màn hình chính
+                  Positioned(
+                    top: compact ? 8 : 14,
+                    right: compact ? 12 : 20,
+                    child: PlayerProfileBar(compact: compact),
+                  ),
+                ],
               );
             },
           ),
@@ -246,9 +289,6 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
             ultraCompact ? 3.0 : 5.0,
             12.0,
           );
-          final topBarHeight = ultraCompact
-              ? 44.0
-              : (compactLayout ? 52.0 : 66.0);
           final topBarSpacing = ultraCompact ? 3.0 : (compactLayout ? 5.0 : 8.0);
 
           return Center(
@@ -269,7 +309,8 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _buildPowerControl(
+                            CuePowerSliderControl(
+                              game: gameInstance,
                               compact: compactLayout,
                               ultraCompact: ultraCompact,
                             ),
@@ -286,7 +327,7 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                         ),
                                         child: GameWidget(game: gameInstance),
                                       ),
-                                      _buildRackOverlay(),
+                                      _buildRackOverlay(onHome: onHome),
                                       Positioned(
                                         bottom: ultraCompact ? 5 : 10,
                                         left: 0,
@@ -328,22 +369,16 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                 ),
                               ),
                             ),
+                            SizedBox(width: ultraCompact ? 4 : (compactLayout ? 6 : 10)),
+                            _buildRightSideControls(
+                              context,
+                              compact: compactLayout,
+                              ultraCompact: ultraCompact,
+                            ),
                           ],
                         ),
                       ),
                     ],
-                  ),
-                  // Nút bấm bắn xoáy góc phải nằm ngay dưới bảng player (Player 2)
-                  Positioned(
-                    top: topBarHeight +
-                        topBarSpacing +
-                        (ultraCompact ? 3.0 : (compactLayout ? 5.0 : 8.0)),
-                    right: ultraCompact ? 3.0 : (compactLayout ? 6.0 : 12.0),
-                    child: _buildTopRightSpinButton(
-                      context,
-                      compact: compactLayout,
-                      ultraCompact: ultraCompact,
-                    ),
                   ),
                 ],
               ),
@@ -355,105 +390,24 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
   );
 }
 
-// Widget Nút bấm bi cái góc phải nằm dưới bảng player
-Widget _buildTopRightSpinButton(
+// Widget tổ hợp cột điều khiển bên phải: Thanh Trượt Thước Đo Vi Chỉnh Góc Bắn + Nút Áp-phê Xoáy Chuẩn 8 Ball Pool
+Widget _buildRightSideControls(
   BuildContext context, {
   bool compact = false,
   bool ultraCompact = false,
 }) {
-  final buttonSize = ultraCompact ? 36.0 : (compact ? 44.0 : 54.0);
-  return GestureDetector(
-    onTap: () {
-      if (gameInstance.isBotMode.value &&
-          gameInstance.currentTurn.value == 2) {
-        return;
-      }
+  return AimRulerSliderControl(
+    game: gameInstance,
+    compact: compact,
+    ultraCompact: ultraCompact,
+    onOpenSpinDialog: () {
+      if (!gameInstance.canUserControl) return;
       _showCueSpinDialog(context);
     },
-    onPanUpdate: (details) {
-      if (gameInstance.isBotMode.value &&
-          gameInstance.currentTurn.value == 2) {
-        return;
-      }
-      _updateSpinFromTouch(details.localPosition, buttonSize);
-    },
-    onPanEnd: (_) => gameInstance.commitCueSpin(),
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: buttonSize,
-          height: buttonSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: const Color(0xDD1B2129),
-            border: Border.all(color: Colors.white70, width: 2),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black54,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(5.0),
-                child: Image.asset('assets/images/cue_bal.png'),
-              ),
-              // Chấm đỏ hiển thị điểm chạm cơ, luôn nằm chuẩn xác bên trong quả bi cái
-              ValueListenableBuilder<Offset>(
-                valueListenable: gameInstance.cueSpin,
-                builder: (context, spin, child) {
-                  final visualRadius = (buttonSize / 2 - 5.0) * 0.78;
-                  final dotSize = compact ? 8.0 : 9.5;
-                  return Transform.translate(
-                    offset: Offset(
-                      spin.dx * visualRadius,
-                      spin.dy * visualRadius,
-                    ),
-                    child: Container(
-                      width: dotSize,
-                      height: dotSize,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.redAccent,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                        boxShadow: const [
-                          BoxShadow(color: Colors.red, blurRadius: 4),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 3),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-          decoration: BoxDecoration(
-            color: const Color(0xCC15191E),
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.white24, width: 0.7),
-          ),
-          child: const Text(
-            'XOÁY',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 9,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.6,
-            ),
-          ),
-        ),
-      ],
-    ),
   );
 }
+
+
 
 void _showCueSpinDialog(BuildContext context) {
   showDialog<void>(
@@ -519,7 +473,7 @@ void _showCueSpinDialog(BuildContext context) {
                             color: Colors.white,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.cyanAccent.withOpacity(0.25),
+                                color: Colors.cyanAccent.withValues(alpha: 0.25),
                                 blurRadius: 18,
                                 spreadRadius: 2,
                               ),
@@ -553,7 +507,7 @@ void _showCueSpinDialog(BuildContext context) {
                                 height: 26,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Colors.redAccent.withOpacity(0.9),
+                                  color: Colors.redAccent.withValues(alpha: 0.9),
                                   border: Border.all(color: Colors.white, width: 2.5),
                                   boxShadow: const [
                                     BoxShadow(
@@ -720,51 +674,258 @@ void _updateSpinFromTouch(Offset localPosition, double controlSize) {
   gameInstance.setCueSpin(Offset(limited.dx / maxRadius, limited.dy / maxRadius));
 }
 
-Widget _buildRackOverlay() {
+MatchRewardResult? _lastMatchReward;
+
+Widget _buildRackOverlay({VoidCallback? onHome}) {
   return ValueListenableBuilder<int>(
     valueListenable: gameInstance.matchVersion,
-    builder: (context, _, child) {
+    builder: (context, matchVersion, child) {
       if (!gameInstance.rackOver) {
         return const SizedBox.shrink();
       }
+
+      final reward = _lastMatchReward;
+
+      String titleText;
+      if (gameInstance.activeDailyPuzzle != null) {
+        titleText = gameInstance.winningPlayer == 1
+            ? '🎉 PHÁ GIẢI THẾ BI THÀNH CÔNG!'
+            : '😢 THẾ BI CHƯA HOÀN THÀNH';
+      } else if (gameInstance.activeBotStage != null) {
+        titleText = gameInstance.winningPlayer == 1
+            ? '🎉 VƯỢT ẢI ${gameInstance.activeBotStage!.stageNumber} THÀNH CÔNG!'
+            : '😢 ${gameInstance.activeBotStage!.botName.toUpperCase()} ĐÃ CHIẾN THẮNG!';
+      } else {
+        titleText = gameInstance.winningPlayer == null
+            ? 'Ván đấu kết thúc'
+            : (gameInstance.winningPlayer == 1
+                ? '🎉 BẠN ĐÃ CHIẾN THẮNG!'
+                : (gameInstance.isBotMode.value
+                    ? '🤖 BOT ĐÃ CHIẾN THẮNG!'
+                    : 'ĐỐI THỦ CHIẾN THẮNG'));
+      }
+
+      final subtitleText = gameInstance.activeDailyPuzzle != null
+          ? 'Đã dùng: ${gameInstance.dailyPuzzleShotsTaken} / ${gameInstance.activeDailyPuzzle!.maxShotsAllowed} cơ'
+          : 'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}';
+
       return Positioned.fill(
         child: Container(
-          color: Colors.black.withOpacity(0.72),
+          color: Colors.black.withValues(alpha: 0.75),
           child: Center(
             child: Container(
-              constraints: const BoxConstraints(maxWidth: 360),
-              padding: const EdgeInsets.all(24),
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               decoration: BoxDecoration(
-                color: const Color(0xFF173A32),
-                borderRadius: BorderRadius.circular(18),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF133E32), Color(0xFF0D251E)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.amber, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black87, blurRadius: 20),
+                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.emoji_events, color: Colors.amber, size: 54),
-                  const SizedBox(height: 8),
+                  Icon(
+                    gameInstance.winningPlayer == 1
+                        ? Icons.emoji_events
+                        : Icons.sentiment_dissatisfied,
+                    color: Colors.amber,
+                    size: 52,
+                  ),
+                  const SizedBox(height: 6),
                   Text(
-                    gameInstance.winningPlayer == null
-                        ? 'Rack kết thúc'
-                        : 'Player ${gameInstance.winningPlayer} thắng!',
+                    titleText,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
-                    'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}',
-                    style: const TextStyle(color: Colors.white70, fontSize: 18),
+                    subtitleText,
+                    style: const TextStyle(color: Colors.white70, fontSize: 15),
                   ),
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: gameInstance.restartMatch,
-                    icon: const Icon(Icons.replay),
-                    label: const Text('Chơi lại'),
+
+                  // Phần thưởng
+                  if (reward != null) ...[
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.black38,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white12),
+                      ),
+                      child: Column(
+                        children: [
+                          if (reward.customMessage != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              margin: const EdgeInsets.only(bottom: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                reward.customMessage!,
+                                style: const TextStyle(
+                                  color: Color(0xFFFFD54F),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            const Text(
+                              'PHẦN THƯỞNG',
+                              style: TextStyle(
+                                color: Color(0xFFFFD54F),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                          ],
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.teal.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  '+${reward.earnedXP} XP',
+                                  style: const TextStyle(
+                                    color: Color(0xFF69F0AE),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withValues(alpha: 0.3),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.monetization_on, color: Color(0xFFFFD54F), size: 14),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      '+${reward.earnedCoins}',
+                                      style: const TextStyle(
+                                        color: Color(0xFFFFD54F),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (reward.bonusDiamonds > 0) ...[
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.lightBlue.withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.diamond, color: Color(0xFF29B6F6), size: 14),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        '+${reward.bonusDiamonds}',
+                                        style: const TextStyle(
+                                          color: Color(0xFF81D4FA),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (reward.didLevelUp) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '🎉 LÊN CẤP ${reward.newLevel}! (+${reward.bonusDiamonds} Kim Cương)',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  const SizedBox(height: 18),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (onHome != null) ...[
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            if (gameInstance.isLocalMultiplayer.value) {
+                              LocalMultiplayerService.instance.disconnect();
+                            }
+                            onHome();
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white70,
+                            side: const BorderSide(color: Colors.white30),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          icon: const Icon(Icons.home, size: 18),
+                          label: const Text('Menu Chính', style: TextStyle(fontWeight: FontWeight.bold)),
+                        ),
+                        const SizedBox(width: 10),
+                      ],
+                      FilledButton.icon(
+                        onPressed: () {
+                          if (gameInstance.isLocalMultiplayer.value) {
+                            LocalMultiplayerService.instance.sendRestart();
+                          }
+                          gameInstance.restartMatch();
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF00E676),
+                          foregroundColor: Colors.black87,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        icon: const Icon(Icons.replay, size: 18),
+                        label: const Text('Chơi lại', style: TextStyle(fontWeight: FontWeight.w900)),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -782,31 +943,184 @@ Widget _buildControlBar(
   bool ultraCompact = false,
   required VoidCallback onHome,
 }) {
-  return Container(
-    height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
-    padding: EdgeInsets.symmetric(
-      horizontal: ultraCompact ? 4 : 8,
-      vertical: ultraCompact ? 3 : 5,
-    ),
-    decoration: BoxDecoration(
-      color: const Color(0xE620252A),
-      borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
-      border: Border.all(color: Colors.white24),
-      boxShadow: const [
-        BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
-      ],
-    ),
-    child: ValueListenableBuilder<int>(
-      valueListenable: gameInstance.groupVersion,
-      builder: (context, _, child) {
-        return ValueListenableBuilder<int>(
-          valueListenable: gameInstance.currentTurn,
-          builder: (context, turn, child) {
-            return Row(
+  return ValueListenableBuilder<int>(
+    valueListenable: gameInstance.groupVersion,
+    builder: (context, _, child) {
+      return ValueListenableBuilder<int>(
+        valueListenable: gameInstance.currentTurn,
+        builder: (context, turn, child) {
+          // Giao diện thanh trạng thái riêng cho Thế Bi Hàng Ngày (Daily Trickshot)
+          if (gameInstance.activeDailyPuzzle != null) {
+            final puzzle = gameInstance.activeDailyPuzzle!;
+            return Container(
+              height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xE620252A),
+                borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
+                border: Border.all(color: const Color(0xFFAB47BC), width: 1.5),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Thoát về menu',
+                    icon: const Icon(Icons.arrow_back, color: Colors.white70),
+                    iconSize: ultraCompact ? 18 : 22,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: onHome,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7B1FA2),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'DAILY PUZZLE',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                puzzle.title,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: ultraCompact ? 11 : 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          puzzle.description,
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: ultraCompact ? 9 : 10.5,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFD54F)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.sports_baseball, color: Color(0xFFFFD54F), size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Cơ: ${gameInstance.dailyPuzzleShotsTaken} / ${puzzle.maxShotsAllowed}',
+                          style: const TextStyle(
+                            color: Color(0xFFFFD54F),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    tooltip: 'Gợi ý: ${puzzle.hint}',
+                    icon: const Icon(Icons.lightbulb, color: Color(0xFFFFEB3B)),
+                    iconSize: ultraCompact ? 18 : 22,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('💡 Gợi ý: ${puzzle.hint}'),
+                          backgroundColor: const Color(0xFF4A148C),
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    tooltip: 'Cài đặt',
+                    icon: const Icon(Icons.settings),
+                    color: Colors.white,
+                    iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
+                    padding: EdgeInsets.zero,
+                    constraints: BoxConstraints.tightFor(
+                      width: ultraCompact ? 28 : (compact ? 32 : 38),
+                      height: ultraCompact ? 28 : (compact ? 32 : 38),
+                    ),
+                    style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                    onPressed: () => _showSettings(context, onHome: onHome),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Tên hiển thị người chơi P1 và P2 theo chế độ
+          String p1Name = 'Player 1';
+          if (gameInstance.isLocalMultiplayer.value) {
+            p1Name = LocalMultiplayerService.instance.isHost
+                ? 'Bạn (Host P1)'
+                : 'Đối thủ (Host P1)';
+          }
+
+          String p2Name = 'Player 2';
+          if (gameInstance.activeBotStage != null) {
+            p2Name = '${gameInstance.activeBotStage!.botName} (Ải ${gameInstance.activeBotStage!.stageNumber})';
+          } else if (gameInstance.isBotMode.value) {
+            p2Name = 'CPU (${gameInstance.botDifficulty.value == 1 ? 'Dễ' : 'Khó'})';
+          } else if (gameInstance.isLocalMultiplayer.value) {
+            p2Name = LocalMultiplayerService.instance.isHost
+                ? 'Đối thủ (P2)'
+                : 'Bạn (Client P2)';
+          }
+
+          return Container(
+            height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
+            padding: EdgeInsets.symmetric(
+              horizontal: ultraCompact ? 4 : 8,
+              vertical: ultraCompact ? 3 : 5,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xE620252A),
+              borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
+              border: Border.all(color: Colors.white24),
+              boxShadow: const [
+                BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+              ],
+            ),
+            child: Row(
               children: [
                 Expanded(
                   child: _buildPlayerCard(
-                    'Player 1',
+                    p1Name,
                     Colors.blue,
                     turn == 1,
                     gameInstance.playerScores[1] ?? 0,
@@ -817,7 +1131,8 @@ Widget _buildControlBar(
                     ultraCompact: ultraCompact,
                   ),
                 ),
-                SizedBox(width: ultraCompact ? 2 : 4),
+                SizedBox(width: ultraCompact ? 2 : 6),
+                // Nút Cài đặt ở giữa (Shop đã đưa về góc phải màn hình chính theo yêu cầu)
                 IconButton(
                   tooltip: 'Cài đặt',
                   icon: const Icon(Icons.settings),
@@ -831,10 +1146,10 @@ Widget _buildControlBar(
                   style: IconButton.styleFrom(backgroundColor: Colors.black54),
                   onPressed: () => _showSettings(context, onHome: onHome),
                 ),
-                SizedBox(width: ultraCompact ? 2 : 4),
+                SizedBox(width: ultraCompact ? 2 : 6),
                 Expanded(
                   child: _buildPlayerCard(
-                    'Player 2',
+                    p2Name,
                     Colors.red,
                     turn == 2,
                     gameInstance.playerScores[2] ?? 0,
@@ -846,429 +1161,15 @@ Widget _buildControlBar(
                   ),
                 ),
               ],
-            );
-          },
-        );
-      },
-    ),
-  );
-}
-
-Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
-  final controlWidth = ultraCompact ? 36.0 : (compact ? 44.0 : 52.0);
-  return Container(
-    width: controlWidth,
-    padding: EdgeInsets.symmetric(
-      horizontal: ultraCompact ? 2.5 : (compact ? 4 : 5),
-      vertical: ultraCompact ? 4 : (compact ? 6 : 8),
-    ),
-    decoration: BoxDecoration(
-      color: const Color(0xFF1B2026),
-      borderRadius: BorderRadius.circular(ultraCompact ? 10 : 14),
-      border: Border.all(color: Colors.white24, width: 1.0),
-      boxShadow: const [
-        BoxShadow(
-          color: Colors.black45,
-          blurRadius: 8,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onPanStart: (details) {
-        if (gameInstance.isBotMode.value &&
-            gameInstance.currentTurn.value == 2) {
-          return;
-        }
-        gameInstance.beginPowerDrag(details.localPosition.dy);
-      },
-      onPanUpdate: (details) {
-        if (gameInstance.isBotMode.value &&
-            gameInstance.currentTurn.value == 2) {
-          return;
-        }
-        gameInstance.updatePowerDrag(details.localPosition.dy);
-      },
-      onPanEnd: (_) {
-        if (gameInstance.isBotMode.value &&
-            gameInstance.currentTurn.value == 2) {
-          return;
-        }
-        gameInstance.endPowerDrag();
-        gameInstance.shootWithPower();
-      },
-      onPanCancel: () {
-        if (gameInstance.isBotMode.value &&
-            gameInstance.currentTurn.value == 2) {
-          return;
-        }
-        gameInstance.endPowerDrag();
-      },
-      child: ValueListenableBuilder<double>(
-        valueListenable: gameInstance.shotPower,
-        builder: (context, power, child) {
-          final powerColor = power > 0.80
-              ? Colors.redAccent
-              : power > 0.45
-                  ? Colors.amber
-                  : const Color(0xFF00E676);
-
-          return Column(
-            children: [
-              Icon(
-                Icons.flash_on,
-                color: powerColor,
-                size: ultraCompact ? 13 : (compact ? 15 : 18),
-              ),
-              const SizedBox(height: 1),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ultraCompact ? 2 : 4,
-                  vertical: 1,
-                ),
-                decoration: BoxDecoration(
-                  color: powerColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(
-                    color: powerColor.withValues(alpha: 0.6),
-                    width: 0.7,
-                  ),
-                ),
-                child: Text(
-                  '${(power * 100).round()}%',
-                  style: TextStyle(
-                    color: powerColor,
-                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.5),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(height: ultraCompact ? 3 : 5),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Thanh đo lực neon
-                    Container(
-                      width: ultraCompact ? 5.5 : (compact ? 7.0 : 8.5),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: Colors.white24, width: 0.6),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(2.5),
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            Container(color: Colors.white10),
-                            FractionallySizedBox(
-                              heightFactor: power,
-                              widthFactor: 1.0,
-                              alignment: Alignment.bottomCenter,
-                              child: DecoratedBox(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Color(0xFF00E676),
-                                      Colors.amber,
-                                      Colors.redAccent,
-                                    ],
-                                    stops: [0.0, 0.6, 1.0],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            for (var mark = 1; mark < 10; mark++)
-                              Positioned.fill(
-                                child: Align(
-                                  alignment: Alignment(0, 1.0 - mark / 5.0),
-                                  child: Container(
-                                    height: 1,
-                                    color: Colors.black45,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: ultraCompact ? 3 : (compact ? 4 : 6)),
-                    // Cây cơ bida tương tác - lún sâu theo lực
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final trackHeight = constraints.maxHeight;
-                          // Khi tăng lực từ 5% -> 100%, cây cơ lún sâu xuống dọc theo thanh lực
-                          final maxTravel = trackHeight * 0.72;
-                          final normalizedPower =
-                              ((power - 0.05) / 0.95).clamp(0.0, 1.0);
-                          final pullOffset = normalizedPower * maxTravel;
-
-                          final stickWidth = ultraCompact ? 10.0 : (compact ? 12.0 : 15.0);
-
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
-                            child: Stack(
-                              alignment: Alignment.topCenter,
-                              children: [
-                                // Rãnh cơ bóng mờ tinh tế
-                                Container(
-                                  width: stickWidth,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black38,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: Colors.white10,
-                                      width: 0.6,
-                                    ),
-                                  ),
-                                ),
-                                // Vệt sáng năng lượng chạy phía trên đầu cơ khi lún xuống
-                                if (pullOffset > 2)
-                                  Positioned(
-                                    top: 0,
-                                    height: pullOffset,
-                                    width: stickWidth * 0.65,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(2),
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            powerColor.withValues(alpha: 0.12),
-                                            powerColor.withValues(alpha: 0.70),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                // Cây cơ di chuyển lún sâu xuống theo lực kéo
-                                Transform.translate(
-                                  offset: Offset(0, pullOffset),
-                                  child: _CueStickWidget(
-                                    height: trackHeight,
-                                    width: stickWidth,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: ultraCompact ? 3 : 5),
-              // Chữ LỰC xoay xuôi chuẩn ngang
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ultraCompact ? 3 : 5,
-                  vertical: 1.5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xDD15191E),
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: Colors.white24, width: 0.7),
-                ),
-                child: Text(
-                  'LỰC',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.0),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
-            ],
+            ),
           );
         },
-      ),
-    ),
+      );
+    },
   );
 }
 
-class _CueStickWidget extends StatelessWidget {
-  final double height;
-  final double width;
-  const _CueStickWidget({required this.height, this.width = 16.0});
 
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      size: Size(width, height),
-      painter: _VerticalCueStickPainter(),
-    );
-  }
-}
-
-class _VerticalCueStickPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final centerX = w / 2;
-
-    final topR = (w * 0.22).clamp(2.5, 3.8);
-    final botR = (w * 0.42).clamp(5.0, 7.5);
-
-    double radiusAt(double y) => topR + (botR - topR) * (y / h);
-
-    void drawSection({
-      required double yTop,
-      required double yBot,
-      required List<Color> colors,
-      List<double>? stops,
-    }) {
-      final rTop = radiusAt(yTop);
-      final rBot = radiusAt(yBot);
-      final path = Path()
-        ..moveTo(centerX - rTop, yTop)
-        ..lineTo(centerX + rTop, yTop)
-        ..lineTo(centerX + rBot, yBot)
-        ..lineTo(centerX - rBot, yBot)
-        ..close();
-
-      final maxR = math.max(rTop, rBot);
-      final paint = Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: colors,
-          stops: stops,
-        ).createShader(
-          Rect.fromLTWH(centerX - maxR, yTop, maxR * 2, yBot - yTop),
-        );
-
-      canvas.drawPath(path, paint);
-    }
-
-    // A. Đầu lơ (Chalk tip) ở trên cùng: y = 0 -> y = 7
-    final tipH = 7.0;
-    final tipR = radiusAt(tipH);
-    final tipPath = Path()
-      ..moveTo(centerX - radiusAt(0), 0)
-      ..lineTo(centerX + radiusAt(0), 0)
-      ..lineTo(centerX + tipR, tipH)
-      ..lineTo(centerX - tipR, tipH)
-      ..close();
-    canvas.drawPath(
-      tipPath,
-      Paint()
-        ..shader = const LinearGradient(
-          colors: [Color(0xFF26A69A), Color(0xFF00897B), Color(0xFF004D40)],
-        ).createShader(Rect.fromLTWH(centerX - tipR, 0, tipR * 2, tipH)),
-    );
-
-    // B. Phíp cơ (Ferrule): y = 7 -> y = 17
-    drawSection(
-      yTop: 7,
-      yBot: 17,
-      colors: const [Color(0xFFFFFFFF), Color(0xFFE8E8E8), Color(0xFFBDBDBD)],
-    );
-
-    // C. Ngọn cơ gỗ phong (Shaft): y = 17 -> y = h * 0.58
-    final shaftBot = h * 0.58;
-    drawSection(
-      yTop: 17,
-      yBot: shaftBot,
-      colors: const [
-        Color(0xFFFDE8C4),
-        Color(0xFFDDB075),
-        Color(0xFFB58045),
-        Color(0xFF8D5B28),
-      ],
-      stops: const [0.0, 0.35, 0.75, 1.0],
-    );
-
-    // D. Ren nối kim loại (Joint collar): y = shaftBot -> y = shaftBot + 12
-    drawSection(
-      yTop: shaftBot,
-      yBot: shaftBot + 3,
-      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
-    );
-    drawSection(
-      yTop: shaftBot + 3,
-      yBot: shaftBot + 9,
-      colors: const [Color(0xFF303030), Color(0xFF151515), Color(0xFF000000)],
-    );
-    drawSection(
-      yTop: shaftBot + 9,
-      yBot: shaftBot + 12,
-      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
-    );
-
-    // E. Chuôi cơ (Butt Sleeve): y = shaftBot + 12 -> y = h - 14
-    final buttTop = shaftBot + 12;
-    final buttBot = h - 14;
-    drawSection(
-      yTop: buttTop,
-      yBot: buttBot,
-      colors: const [
-        Color(0xFF2979FF),
-        Color(0xFF1565C0),
-        Color(0xFF0D47A1),
-        Color(0xFF062B66),
-      ],
-      stops: const [0.0, 0.3, 0.7, 1.0],
-    );
-
-    // Họa tiết hoa văn chuôi cơ
-    final wrapTop = buttTop + (buttBot - buttTop) * 0.22;
-    final wrapBot = buttTop + (buttBot - buttTop) * 0.78;
-    drawSection(
-      yTop: wrapTop,
-      yBot: wrapBot,
-      colors: const [
-        Color(0xFFEEEEEE),
-        Color(0xFFCFD8DC),
-        Color(0xFF90A4AE),
-        Color(0xFF455A64),
-      ],
-    );
-
-    // F. Bịt đáy chuôi (Butt Cap): y = buttBot -> y = h - 6
-    drawSection(
-      yTop: buttBot,
-      yBot: h - 6,
-      colors: const [Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E)],
-    );
-
-    // G. Đệm chân cao su (Bumper): y = h - 6 -> y = h
-    final bumpR = radiusAt(h);
-    final bumperPath = Path()
-      ..moveTo(centerX - radiusAt(h - 6), h - 6)
-      ..lineTo(centerX + radiusAt(h - 6), h - 6)
-      ..lineTo(centerX + bumpR, h - 2)
-      ..quadraticBezierTo(centerX, h + 2, centerX - bumpR, h - 2)
-      ..close();
-    canvas.drawPath(
-      bumperPath,
-      Paint()..color = const Color(0xFF1E1E1E),
-    );
-
-    // H. Đường bóng sáng (Glossy highlight)
-    final shinePath = Path()
-      ..moveTo(centerX - topR * 0.3, 2)
-      ..lineTo(centerX - topR * 0.1, 2)
-      ..lineTo(centerX - botR * 0.1, h - 8)
-      ..lineTo(centerX - botR * 0.3, h - 8)
-      ..close();
-    canvas.drawPath(
-      shinePath,
-      Paint()..color = Colors.white.withValues(alpha: 0.28),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 void _showSettings(BuildContext context, {required VoidCallback onHome}) {
   showDialog<void>(
@@ -1295,7 +1196,7 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
                   labelText: 'Độ khó Bot',
                   border: OutlineInputBorder(),
                 ),
-                value: gameInstance.botDifficulty.value,
+                initialValue: gameInstance.botDifficulty.value,
                 items: const [
                   DropdownMenuItem(value: 1, child: Text('Dễ')),
                   DropdownMenuItem(value: 2, child: Text('Khó')),
@@ -1526,6 +1427,58 @@ class BilliardGame extends Forge2DGame with PanDetector {
   final Map<int, int> playerScores = {1: 0, 2: 0};
   int? winningPlayer;
 
+  // Chế độ Ải Bot Campaign, Thế Bi Hàng Ngày, Mạng Local WiFi
+  BotStageModel? activeBotStage;
+  DailyPuzzleModel? activeDailyPuzzle;
+  int dailyPuzzleShotsTaken = 0;
+  final ValueNotifier<bool> isLocalMultiplayer = ValueNotifier<bool>(false);
+
+  bool get isMyTurn {
+    if (isLocalMultiplayer.value) {
+      final isHost = LocalMultiplayerService.instance.isHost;
+      return (isHost && currentTurn.value == 1) || (!isHost && currentTurn.value == 2);
+    }
+    return true;
+  }
+
+  bool get canUserControl =>
+      !shotInProgress &&
+      !rackOver &&
+      !(isBotMode.value && currentTurn.value == 2) &&
+      isMyTurn;
+
+  void initMultiplayer() {
+    LocalMultiplayerService.instance.onMessageReceived = (data) {
+      if (!_hasGameLoaded) return;
+      final type = data['type'] as String?;
+      if (type == 'aim') {
+        aimAngle = (data['angle'] as num).toDouble();
+        shotPower.value = (data['power'] as num).toDouble();
+        cueBall.isAiming = true;
+        cueBall.strokeDistance = maxDragDistance * shotPower.value;
+        _updateAimVector(ballRadius * 2);
+      } else if (type == 'spin') {
+        final spin = Offset(
+          (data['dx'] as num).toDouble(),
+          (data['dy'] as num).toDouble(),
+        );
+        cueSpin.value = spin;
+        cueBall.spinInfluence = spin;
+      } else if (type == 'ball_in_hand') {
+        final x = (data['x'] as num).toDouble();
+        final y = (data['y'] as num).toDouble();
+        cueBall.body.setTransform(Vector2(x, y), 0);
+        cueBall.body.linearVelocity.setZero();
+        _updateAimVector(ballRadius * 2);
+      } else if (type == 'shoot') {
+        shotPower.value = (data['power'] as num).toDouble();
+        shootWithPower(fromNetwork: true);
+      } else if (type == 'restart') {
+        restartMatch();
+      }
+    };
+  }
+
   late CueBall cueBall;
   final List<PoolBall> poolBalls = [];
   List<Pocket> pockets = [];
@@ -1542,7 +1495,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   int objectBallsHitRails = 0;
 
   double maxDragDistance = 180.0;
-  double aimAngle = 0.0;
+  final ValueNotifier<double> aimAngleNotifier = ValueNotifier<double>(0.0);
+  double get aimAngle => aimAngleNotifier.value;
+  set aimAngle(double val) => aimAngleNotifier.value = val;
 
   // Tinh chỉnh lực, độ dốc mượt và tốc độ bóng theo yêu cầu
   static const double rollingVelocityMultiplier = 1.0;
@@ -1565,6 +1520,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
   late Vector2 playAreaTopLeft;
   late Vector2 playAreaBottomRight;
   bool physicsReady = false;
+  bool _hasGameLoaded = false;
+  bool get hasGameLoaded => _hasGameLoaded;
 
   @override
   Color backgroundColor() => const Color(0xFF0F7A3E);
@@ -1589,11 +1546,29 @@ class BilliardGame extends Forge2DGame with PanDetector {
     addAll(createBoundaries());
     pockets = createPockets();
     addAll(pockets);
-    spawnTriangleBalls();
 
-    cueBall = CueBall(Vector2(size.x * 0.25, size.y / 2), ballRadius);
+    if (activeDailyPuzzle != null) {
+      ruleMessage.value = 'Thế bi: ${activeDailyPuzzle!.title}';
+      dailyPuzzleShotsTaken = 0;
+      breakShot = false;
+      _spawnDailyPuzzleBalls(activeDailyPuzzle!);
+      cueBall = CueBall(
+        Vector2(
+          size.x * activeDailyPuzzle!.cueBallNormX,
+          size.y * activeDailyPuzzle!.cueBallNormY,
+        ),
+        ballRadius,
+      );
+    } else {
+      spawnTriangleBalls();
+      cueBall = CueBall(Vector2(size.x * 0.25, size.y / 2), ballRadius);
+    }
+
     add(cueBall);
+    cueBall.isAiming = true;
+    _hasGameLoaded = true;
     _updateAimVector(ballRadius * 2);
+    initMultiplayer();
   }
 
   List<Wall> createBoundaries() {
@@ -1776,6 +1751,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   @override
   void update(double dt) {
     super.update(dt);
+    if (!_hasGameLoaded) {
+      return;
+    }
     if (!physicsReady) {
       physicsReady =
           cueBall.isMounted && poolBalls.every((ball) => ball.isMounted);
@@ -1812,6 +1790,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void _applyClothPhysics(double dt) {
+    if (!_hasGameLoaded) return;
     _applyClothPhysicsToBody(cueBall.body, dt);
     for (final ball in poolBalls) {
       if (ball.isRemoved) {
@@ -1872,6 +1851,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void _keepBallsInsideTable() {
+    if (!_hasGameLoaded) return;
     if (!cueBall.isSunk) {
       _keepBodyInsideTable(cueBall);
     }
@@ -1939,13 +1919,49 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void resetCueSpin() {
     cueSpin.value = Offset.zero;
-    cueBall.spinInfluence = Offset.zero;
-    cueBall.activeSpin = Offset.zero;
+    if (_hasGameLoaded) {
+      cueBall.spinInfluence = Offset.zero;
+      cueBall.activeSpin = Offset.zero;
+    }
   }
 
   void switchTurn() {
     resetCueSpin();
     currentTurn.value = currentTurn.value == 1 ? 2 : 1;
+  }
+
+  void startPlayerMatch() {
+    activeBotStage = null;
+    activeDailyPuzzle = null;
+    isLocalMultiplayer.value = false;
+    isBotMode.value = false;
+    restartMatch();
+  }
+
+  void startBotStage(BotStageModel stage) {
+    activeBotStage = stage;
+    activeDailyPuzzle = null;
+    isLocalMultiplayer.value = false;
+    isBotMode.value = true;
+    botDifficulty.value = stage.stageNumber <= 3 ? 1 : 2;
+    restartMatch();
+  }
+
+  void startDailyPuzzle(DailyPuzzleModel puzzle) {
+    activeDailyPuzzle = puzzle;
+    dailyPuzzleShotsTaken = 0;
+    activeBotStage = null;
+    isLocalMultiplayer.value = false;
+    isBotMode.value = false;
+    restartMatch();
+  }
+
+  void startLocalMultiplayer() {
+    activeBotStage = null;
+    activeDailyPuzzle = null;
+    isLocalMultiplayer.value = true;
+    isBotMode.value = false;
+    restartMatch();
   }
 
   void setBotMode(bool enabled) {
@@ -1979,23 +1995,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void restartMatch() {
-    if (!physicsReady) {
-      return;
-    }
-    resetCueSpin();
-    for (final ball in poolBalls) {
-      ball.removeFromParent();
-    }
-    poolBalls.clear();
-    cueBall.removeFromParent();
-
     currentTurn.value = 1;
-    ruleMessage.value = 'Player 1: break shot';
     shotPower.value = 0.05;
     playerGroups.clear();
     groupVersion.value++;
     shotInProgress = false;
-    breakShot = true;
+    breakShot = activeDailyPuzzle == null;
     rackOver = false;
     winningPlayer = null;
     ballInHand = false;
@@ -2005,6 +2010,65 @@ class BilliardGame extends Forge2DGame with PanDetector {
     botState = 0;
     aimAngle = 0;
     physicsReady = false;
+    _lastMatchReward = null;
+
+    if (activeDailyPuzzle != null) {
+      ruleMessage.value = 'Thế bi: ${activeDailyPuzzle!.title}';
+      dailyPuzzleShotsTaken = 0;
+    } else if (activeBotStage != null) {
+      ruleMessage.value = '${activeBotStage!.title} - Bắt đầu!';
+    } else if (isLocalMultiplayer.value) {
+      ruleMessage.value = LocalMultiplayerService.instance.isHost
+          ? 'Đấu mạng: Lượt của bạn (P1 break shot)'
+          : 'Đấu mạng: Lượt đối thủ (P1 break shot)';
+    } else {
+      ruleMessage.value = 'Player 1: break shot';
+    }
+
+    resetCueSpin();
+
+    if (!_hasGameLoaded) {
+      matchVersion.value++;
+      return;
+    }
+
+    // Dọn dẹp an toàn các bi cũ khỏi cây Component của Flame
+    for (final child in children.whereType<PoolBall>().toList()) {
+      if (child.isMounted && !child.isRemoved && !child.isRemoving) {
+        child.removeFromParent();
+      }
+    }
+    for (final ball in poolBalls) {
+      if (ball.isMounted && !ball.isRemoved && !ball.isRemoving) {
+        ball.removeFromParent();
+      }
+    }
+    poolBalls.clear();
+
+    for (final child in children.whereType<CueBall>().toList()) {
+      if (child.isMounted && !child.isRemoved && !child.isRemoving) {
+        child.removeFromParent();
+      }
+    }
+    if (cueBall.isMounted && !cueBall.isRemoved && !cueBall.isRemoving) {
+      cueBall.removeFromParent();
+    }
+
+    if (activeDailyPuzzle != null) {
+      _spawnDailyPuzzleBalls(activeDailyPuzzle!);
+      cueBall = CueBall(
+        Vector2(
+          size.x * activeDailyPuzzle!.cueBallNormX,
+          size.y * activeDailyPuzzle!.cueBallNormY,
+        ),
+        ballRadius,
+      );
+      add(cueBall);
+      cueBall.isAiming = true;
+      _updateAimVector(ballRadius * 2);
+      matchVersion.value++;
+      return;
+    }
 
     spawnTriangleBalls();
     cueBall = CueBall(Vector2(size.x * 0.25, size.y / 2), ballRadius);
@@ -2014,27 +2078,55 @@ class BilliardGame extends Forge2DGame with PanDetector {
     matchVersion.value++;
   }
 
+  void _spawnDailyPuzzleBalls(DailyPuzzleModel puzzle) {
+    for (final cfg in puzzle.balls) {
+      final x = size.x * cfg.normX;
+      final y = size.y * cfg.normY;
+      final ball = PoolBall(
+        Vector2(x, y),
+        'ball_${cfg.ballNumber}.png',
+        ballRadius,
+        cfg.ballNumber,
+      );
+      poolBalls.add(ball);
+      add(ball);
+    }
+  }
+
   void setShotPower(double value) {
-    shotPower.value = value;
+    shotPower.value = value.clamp(0.05, 1.0);
+    if (_hasGameLoaded) {
+      cueBall.isAiming = true;
+      cueBall.strokeDistance = maxDragDistance * shotPower.value;
+    }
+    if (isLocalMultiplayer.value && isMyTurn) {
+      LocalMultiplayerService.instance.sendAim(
+        angle: aimAngle,
+        power: shotPower.value,
+      );
+    }
   }
 
   void setCueSpin(Offset value) {
-    if (shotInProgress ||
-        rackOver ||
-        ballInHand ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl) {
       return;
     }
     final dist = value.distance;
     final clamped = dist > 1.0 ? value / dist : value;
     cueSpin.value = clamped;
-    cueBall.spinInfluence = clamped;
-    if (cueBall.isAiming && cueBall.aimVector != null) {
-      _updateAimVector(cueBall.aimVector!.length);
+    if (_hasGameLoaded) {
+      cueBall.spinInfluence = clamped;
+      if (cueBall.isAiming && cueBall.aimVector != null) {
+        _updateAimVector(cueBall.aimVector!.length);
+      }
+    }
+    if (isLocalMultiplayer.value && isMyTurn) {
+      LocalMultiplayerService.instance.sendSpin(dx: clamped.dx, dy: clamped.dy);
     }
   }
 
   void commitCueSpin() {
+    if (!_hasGameLoaded) return;
     cueBall.spinInfluence = cueSpin.value;
     if (cueBall.isAiming && cueBall.aimVector != null) {
       _updateAimVector(cueBall.aimVector!.length);
@@ -2042,22 +2134,24 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void adjustShotPower(double delta) {
-    if (shotInProgress ||
-        rackOver ||
-        ballInHand ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl) {
       return;
     }
     shotPower.value = (shotPower.value + delta).clamp(0.05, 1.0);
-    cueBall.isAiming = true;
-    cueBall.strokeDistance = maxDragDistance * shotPower.value;
+    if (_hasGameLoaded) {
+      cueBall.isAiming = true;
+      cueBall.strokeDistance = maxDragDistance * shotPower.value;
+    }
+    if (isLocalMultiplayer.value && isMyTurn) {
+      LocalMultiplayerService.instance.sendAim(
+        angle: aimAngle,
+        power: shotPower.value,
+      );
+    }
   }
 
   void beginPowerDrag(double startY) {
-    if (shotInProgress ||
-        rackOver ||
-        ballInHand ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl) {
       powerDragStartY = null;
       return;
     }
@@ -2066,7 +2160,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void updatePowerDrag(double currentY) {
     final startY = powerDragStartY;
-    if (startY == null) {
+    if (startY == null || !canUserControl) {
       return;
     }
     final pullDistance = math.max(0.0, currentY - startY);
@@ -2075,40 +2169,67 @@ class BilliardGame extends Forge2DGame with PanDetector {
       1.0,
     );
     setShotPower(power);
-    cueBall.isAiming = true;
-    cueBall.strokeDistance = maxDragDistance * power;
+    if (_hasGameLoaded) {
+      cueBall.isAiming = true;
+      cueBall.strokeDistance = maxDragDistance * power;
+    }
+    if (isLocalMultiplayer.value && isMyTurn) {
+      LocalMultiplayerService.instance.sendAim(angle: aimAngle, power: power);
+    }
   }
 
   void endPowerDrag() {
     powerDragStartY = null;
   }
 
-  void shootWithPower({bool fromBot = false}) {
-    if (!physicsReady ||
+  void shootWithPower({bool fromBot = false, bool fromNetwork = false}) {
+    if (!_hasGameLoaded ||
+        !physicsReady ||
         shotInProgress ||
         ballInHand ||
         rackOver ||
-        (!fromBot && isBotMode.value && currentTurn.value == 2) ||
+        (!fromBot && !fromNetwork && !canUserControl) ||
         shotPower.value <= 0.05) {
       return;
     }
+
+    if (isLocalMultiplayer.value && !fromBot && !fromNetwork) {
+      LocalMultiplayerService.instance.sendShoot(power: shotPower.value);
+    }
+
     final direction = Vector2(math.cos(aimAngle), math.sin(aimAngle));
     final normalizedPower = ((shotPower.value - 0.05) / 0.95).clamp(0.0, 1.0);
     final curvedPower = math
         .pow(normalizedPower, powerCurveExponent)
         .toDouble();
+
+    // Áp dụng chỉ số Lực (Force) và Xoáy (Spin) từ cây gậy cơ đang trang bị hoặc gậy của Bot
+    final cue = ProgressionService.instance.equippedCue;
+    final level = ProgressionService.instance.equippedCueLevel;
+    
+    double forceMult = 1.0;
+    double spinMult = 1.0;
+    if (fromBot && activeBotStage != null) {
+      forceMult = activeBotStage!.cue.getForceMultiplier(activeBotStage!.stageNumber);
+      spinMult = activeBotStage!.cue.getSpinMultiplier(activeBotStage!.stageNumber);
+    } else if (!fromBot && currentTurn.value == 1) {
+      forceMult = cue.getForceMultiplier(level);
+      spinMult = cue.getSpinMultiplier(level);
+    }
+
     final targetSpeed =
         (minimumShotSpeed +
             (maximumShotSpeed - minimumShotSpeed) * curvedPower) *
-        rollingVelocityMultiplier;
+        rollingVelocityMultiplier *
+        forceMult;
 
     cueBall.body.setAwake(true);
     // Vận tốc góc xoáy áp-phê quanh trục Z (áp-phê phải dx > 0 thì quay thuận chiều kim đồng hồ)
-    cueBall.body.angularVelocity = -cueSpin.value.dx * 18.0;
+    cueBall.body.angularVelocity = -cueSpin.value.dx * 18.0 * spinMult;
     cueBall.body.linearVelocity.setFrom(direction * targetSpeed);
 
     // Khởi tạo các trạng thái động lực học xoáy
-    cueBall.activeSpin = cueSpin.value;
+    cueBall.activeSpin = cueSpin.value * spinMult;
     cueBall.shotDirection = direction.clone();
     cueBall.hasCollidedBall = false;
     cueBall.drawFollowTimer = 0.0;
@@ -2150,18 +2271,50 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
         final shot = _chooseBotShot();
         if (shot != null && shot.direction.length2 > 1) {
-          aimAngle = math.atan2(shot.direction.y, shot.direction.x);
+          double angle = math.atan2(shot.direction.y, shot.direction.x);
+          double pwr = shot.power;
+          Offset spin = shot.spin;
 
-          // Cập nhật ngắm, UI Cơ, Lực và Xoáy chính xác do Bot tính toán
-          shotPower.value = shot.power;
-          cueSpin.value = shot.spin;
-          cueBall.spinInfluence = shot.spin;
+          if (activeBotStage != null) {
+            final stage = activeBotStage!;
+            final angleErr = (math.Random().nextDouble() * 2 - 1) * stage.aimErrorRad;
+            angle += angleErr;
+            final pwrErr = (math.Random().nextDouble() * 2 - 1) * (1.0 - stage.powerAccuracy) * 0.20;
+            pwr = (pwr + pwrErr).clamp(0.15, 0.95);
+            if (!stage.useSpin) {
+              spin = Offset.zero;
+            }
+          }
+
+          aimAngle = angle;
+          shotPower.value = pwr;
+          cueSpin.value = spin;
+          cueBall.spinInfluence = spin;
           cueBall.isAiming = true;
-          cueBall.strokeDistance = maxDragDistance * shot.power;
+          cueBall.strokeDistance = maxDragDistance * pwr;
           _updateAimVector(ballRadius * 2);
 
           botState = 1; // Chuyển sang giai đoạn chờ đánh
           botWaitTime = 0;
+        } else {
+          // Phòng ngừa trường hợp bot không tìm thấy đường bi lý tưởng: tự động nhắm bi 8 hoặc bi gần nhất
+          final aliveBalls = poolBalls.where((b) => !b.isSunk && !b.isRemoved).toList();
+          if (aliveBalls.isNotEmpty) {
+            final targetBall = aliveBalls.firstWhere(
+              (b) => b.number == 8,
+              orElse: () => aliveBalls.first,
+            );
+            final aimDir = targetBall.body.position - cueBall.body.position;
+            aimAngle = math.atan2(aimDir.y, aimDir.x);
+            shotPower.value = 0.42;
+            cueSpin.value = Offset.zero;
+            cueBall.spinInfluence = Offset.zero;
+            cueBall.isAiming = true;
+            cueBall.strokeDistance = maxDragDistance * 0.42;
+            _updateAimVector(ballRadius * 2);
+            botState = 1;
+            botWaitTime = 0;
+          }
         }
       }
     }
@@ -2177,7 +2330,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   bool _isBallLegalTarget(PoolBall ball, int player) {
     if (ball.isRemoved || ball.isSunk) return false;
-    final group = playerGroups[player] ?? (player == 2 ? _inferBotGroup() : null);
+    final group = getPlayerGroup(player);
     if (ball.number == 8) {
       if (group == null) return false;
       return allGroupBallsPocketed(group);
@@ -2322,30 +2475,58 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   BotShot? _chooseBotShot() {
-    // 1. Pha phá bóng (Break Shot): Đánh chuẩn xác vào đỉnh tam giác với lực mạnh và trô nhẹ
+    // 1. Pha phá bóng (Break Shot): Đánh chuẩn xác vào đỉnh tam giác
     if (breakShot) {
       final apexPos = Vector2(size.x * 0.70, size.y / 2);
       final aimDir = apexPos - cueBall.body.position;
+      final useSpin = activeBotStage != null
+          ? activeBotStage!.useSpin
+          : (botDifficulty.value == 2);
+      final pwr = activeBotStage != null
+          ? (0.70 + activeBotStage!.powerAccuracy * 0.25).clamp(0.65, 0.95)
+          : (botDifficulty.value == 2 ? 0.90 : 0.75);
       return BotShot(
         direction: aimDir,
         totalDistance: aimDir.length,
-        spin: const Offset(0.0, 0.22), // Trô nhẹ giữ bi cái ở trung tâm bàn, tránh rơi lỗ
-        power: botDifficulty.value == 2 ? 0.90 : 0.75,
+        spin: useSpin ? const Offset(0.0, 0.22) : Offset.zero,
+        power: pwr,
       );
     }
 
     // 2. Lọc danh sách các bi hợp lệ (tuyệt đối không nhắm bi đối thủ hay bi 8 khi chưa đến lượt)
-    final legalBalls = poolBalls.where((b) => _isBallLegalTarget(b, 2)).toList();
+    var legalBalls = poolBalls.where((b) => _isBallLegalTarget(b, 2)).toList();
     if (legalBalls.isEmpty) {
-      return null;
+      final botGroup = getPlayerGroup(2);
+      final allPotted = botGroup != null && allGroupBallsPocketed(botGroup);
+      final eightBall = poolBalls.firstWhere(
+        (b) => b.number == 8 && !b.isSunk && !b.isRemoved,
+        orElse: () => poolBalls.firstWhere(
+          (b) => !b.isSunk && !b.isRemoved,
+          orElse: () => poolBalls.first,
+        ),
+      );
+      if (allPotted && !eightBall.isSunk && !eightBall.isRemoved) {
+        legalBalls = [eightBall];
+      } else {
+        return null;
+      }
     }
 
     final pockets = _botPocketPositions();
     BotShot? bestShot;
     var bestScore = double.infinity;
 
+    final isSimplePocketSearch = (activeBotStage != null && activeBotStage!.stageNumber <= 2) ||
+        (activeBotStage == null && botDifficulty.value == 1);
+    final isAdvanced = (activeBotStage != null && activeBotStage!.stageNumber >= 4) ||
+        (activeBotStage == null && botDifficulty.value == 2);
+    final enableSpin = activeBotStage != null ? activeBotStage!.useSpin : (botDifficulty.value == 2);
+    final enableScratchPrevention = activeBotStage != null
+        ? activeBotStage!.useScratchPrevention
+        : (botDifficulty.value == 2);
+
     for (final ball in legalBalls) {
-      final candidatePockets = botDifficulty.value == 1
+      final candidatePockets = isSimplePocketSearch
           ? [_nearestPocket(ball.body.position, pockets)]
           : pockets;
 
@@ -2373,7 +2554,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         final cutCosine = cueDirection.dot(objectDirection);
 
         // Góc cắt quá lớn (> 74 độ) không thể ăn bi trực tiếp
-        final minCutCosine = botDifficulty.value == 2 ? 0.28 : 0.20;
+        final minCutCosine = isAdvanced ? 0.28 : 0.20;
         if (cutCosine < minCutCosine) {
           continue;
         }
@@ -2389,13 +2570,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
         }
 
         Offset chosenSpin = Offset.zero;
-        if (botDifficulty.value == 2) {
-          // Nếu đánh gần thẳng mặt (cutCosine >= 0.85): bi cái rất dễ theo đà lăn tọt vào cùng lỗ đó!
-          // Áp dụng trô mạnh (Backspin) để bi cái khựng lại và giật lùi an toàn
+        if (enableSpin) {
           if (cutCosine >= 0.82) {
             chosenSpin = const Offset(0.0, 0.65);
           } else {
-            // Áp-phê ngang và Cu-lê/Trô tùy khoảng cách
             final cutAngle =
                 cueDirection.x * objectDirection.y -
                 cueDirection.y * objectDirection.x;
@@ -2404,28 +2582,27 @@ class BilliardGame extends Forge2DGame with PanDetector {
             chosenSpin = Offset(spinDx, spinDy);
           }
 
-          // Kiểm tra xem hướng văng của bi cái có đâm vào lỗ nào không
-          Vector2 cueDeflection = tangent;
-          if (chosenSpin.dy > 0.05) {
-            cueDeflection = (tangent * (1.0 - chosenSpin.dy * 0.45) - normal * (chosenSpin.dy * 0.75)).normalized();
-          } else if (chosenSpin.dy < -0.05) {
-            final f = -chosenSpin.dy;
-            cueDeflection = (tangent * (1.0 - f * 0.45) + cueDirection * (f * 0.75)).normalized();
-          }
+          if (enableScratchPrevention) {
+            Vector2 cueDeflection = tangent;
+            if (chosenSpin.dy > 0.05) {
+              cueDeflection = (tangent * (1.0 - chosenSpin.dy * 0.45) - normal * (chosenSpin.dy * 0.75)).normalized();
+            } else if (chosenSpin.dy < -0.05) {
+              final f = -chosenSpin.dy;
+              cueDeflection = (tangent * (1.0 - f * 0.45) + cueDirection * (f * 0.75)).normalized();
+            }
 
-          final maxCueTravel = cueDistance * 0.8 + 120.0;
-          final hasScratchRisk = _checkCueBallScratchRisk(aimPoint, cueDeflection, pockets, maxCueTravel);
-          if (hasScratchRisk) {
-            // Thử đổi sang xoáy khác để né lỗ
-            final alternateSpin = chosenSpin.dy > 0 ? const Offset(0.0, -0.6) : const Offset(0.0, 0.7);
-            Vector2 altDeflection = alternateSpin.dy > 0
-                ? (tangent * 0.6 - normal * 0.6).normalized()
-                : (tangent * 0.6 + cueDirection * 0.6).normalized();
-            if (_checkCueBallScratchRisk(aimPoint, altDeflection, pockets, maxCueTravel)) {
-              // Bỏ qua lỗ này nếu không thể tránh được rơi bi cái
-              continue;
-            } else {
-              chosenSpin = alternateSpin;
+            final maxCueTravel = cueDistance * 0.8 + 120.0;
+            final hasScratchRisk = _checkCueBallScratchRisk(aimPoint, cueDeflection, pockets, maxCueTravel);
+            if (hasScratchRisk) {
+              final alternateSpin = chosenSpin.dy > 0 ? const Offset(0.0, -0.6) : const Offset(0.0, 0.7);
+              Vector2 altDeflection = alternateSpin.dy > 0
+                  ? (tangent * 0.6 - normal * 0.6).normalized()
+                  : (tangent * 0.6 + cueDirection * 0.6).normalized();
+              if (_checkCueBallScratchRisk(aimPoint, altDeflection, pockets, maxCueTravel)) {
+                continue;
+              } else {
+                chosenSpin = alternateSpin;
+              }
             }
           }
         }
@@ -2436,7 +2613,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         final calculatedPower = (0.24 + 0.46 * (effectiveDistance / tableLength)).clamp(0.28, 0.75);
 
         // Tính điểm ưu tiên (Score càng nhỏ càng tốt)
-        final cutPenalty = (1.0 - cutCosine) * (botDifficulty.value == 2 ? cueDistance * 0.8 : cueDistance * 0.3);
+        final cutPenalty = (1.0 - cutCosine) * (isAdvanced ? cueDistance * 0.8 : cueDistance * 0.3);
         final score = cueDistance + objectDistance * 1.15 + cutPenalty;
 
         if (score < bestScore) {
@@ -2455,9 +2632,23 @@ class BilliardGame extends Forge2DGame with PanDetector {
       return bestShot;
     }
 
-    // 3. Nếu không có cơ hội ăn bi trực tiếp: Thực hiện cú đánh an toàn (Safety / Kick Shot)
-    // Tuyệt đối không bắn bừa vào bi đối thủ hay bi 8 để tránh bị xử phạt lỗi!
-    return _findSafeLegalContactShot(legalBalls, pockets);
+    // 3. Nếu không có cơ hội ăn bi trực tiếp:
+    final enableSafety = activeBotStage != null
+        ? activeBotStage!.useSafetyShot
+        : (botDifficulty.value == 2);
+    if (enableSafety) {
+      return _findSafeLegalContactShot(legalBalls, pockets);
+    }
+
+    // Bot chưa biết đánh safety: đánh bi mục tiêu đầu tiên
+    final firstBall = legalBalls.first;
+    final aimDir = firstBall.body.position - cueBall.body.position;
+    return BotShot(
+      direction: aimDir,
+      totalDistance: aimDir.length,
+      spin: Offset.zero,
+      power: 0.32,
+    );
   }
 
   BotShot _findSafeLegalContactShot(List<PoolBall> legalBalls, List<Vector2> pockets) {
@@ -2564,12 +2755,25 @@ class BilliardGame extends Forge2DGame with PanDetector {
         : BallGroup.solids;
   }
 
+  BallGroup? getPlayerGroup(int player) {
+    if (playerGroups.containsKey(player)) {
+      return playerGroups[player];
+    }
+    if (player == 2 && playerGroups.containsKey(1)) {
+      return _inferBotGroup();
+    }
+    if (player == 1 && playerGroups.containsKey(2)) {
+      return playerGroups[2] == BallGroup.solids
+          ? BallGroup.stripes
+          : BallGroup.solids;
+    }
+    return null;
+  }
+
   Vector2 _nearestPocket(Vector2 ballPosition, List<Vector2> pockets) {
-    pockets.sort(
-      (a, b) =>
-          (a - ballPosition).length2.compareTo((b - ballPosition).length2),
+    return pockets.reduce(
+      (a, b) => (a - ballPosition).length2 < (b - ballPosition).length2 ? a : b,
     );
-    return pockets.first;
   }
 
   bool _isBotPathClear(Vector2 start, Vector2 end, {PoolBall? excluded}) {
@@ -2611,10 +2815,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void rotateAimToPoint(Vector2 touchPosition) {
-    if (shotInProgress ||
-        rackOver ||
-        ballInHand ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl || ballInHand || !physicsReady || !_hasGameLoaded) {
       return;
     }
     final offset = touchPosition - cueBall.body.position;
@@ -2622,33 +2823,41 @@ class BilliardGame extends Forge2DGame with PanDetector {
       aimAngle = math.atan2(offset.y, offset.x);
       cueBall.isAiming = true;
       _updateAimVector(ballRadius * 2);
+      if (isLocalMultiplayer.value && isMyTurn) {
+        LocalMultiplayerService.instance.sendAim(
+          angle: aimAngle,
+          power: shotPower.value,
+        );
+      }
     }
   }
 
   void rotateAim(double delta) {
-    if (shotInProgress ||
-        rackOver ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl) {
       return;
     }
     aimAngle += delta;
-    if (dragStart != null) {
-      _updateAimVector(
-        dragCurrent == null ? 0 : (dragStart! - dragCurrent!).length,
+    if (_hasGameLoaded && physicsReady) {
+      cueBall.isAiming = true;
+      _updateAimVector(ballRadius * 2);
+    }
+    if (isLocalMultiplayer.value && isMyTurn) {
+      LocalMultiplayerService.instance.sendAim(
+        angle: aimAngle,
+        power: shotPower.value,
       );
     }
   }
 
   void _updateAimVector(double length) {
+    if (!_hasGameLoaded) return;
     cueBall.aimVector =
         Vector2(math.cos(aimAngle), math.sin(aimAngle)) * length;
   }
 
   @override
   void onPanStart(DragStartInfo info) {
-    if (shotInProgress ||
-        rackOver ||
-        (isBotMode.value && currentTurn.value == 2)) {
+    if (!canUserControl || !_hasGameLoaded || !physicsReady) {
       return;
     }
     dragStart = info.eventPosition.widget;
@@ -2666,7 +2875,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   @override
   void onPanUpdate(DragUpdateInfo info) {
-    if (isBotMode.value && currentTurn.value == 2) return;
+    if (!canUserControl || !_hasGameLoaded || !physicsReady) return;
     dragCurrent = info.eventPosition.widget;
     if (dragStart != null) {
       if (movingCueBall) {
@@ -2679,7 +2888,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   @override
   void onPanEnd(DragEndInfo info) {
-    if (isBotMode.value && currentTurn.value == 2) return;
+    if (!canUserControl || !_hasGameLoaded || !physicsReady) return;
     if (movingCueBall) {
       movingCueBall = false;
       ballInHand = false;
@@ -2724,6 +2933,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.body.setTransform(position, 0);
       cueBall.body.linearVelocity.setZero();
       cueBall.body.angularVelocity = 0;
+      if (isLocalMultiplayer.value && isMyTurn) {
+        LocalMultiplayerService.instance.sendBallInHand(
+          x: position.x,
+          y: position.y,
+        );
+      }
     }
   }
 
@@ -2732,12 +2947,57 @@ class BilliardGame extends Forge2DGame with PanDetector {
     shotInProgress = false;
     cueBall.isAiming = true;
     _updateAimVector(ballRadius * 2);
+
+    // Xử lý riêng cho chế độ Thế Bi Hàng Ngày (Daily Puzzle)
+    if (activeDailyPuzzle != null) {
+      dailyPuzzleShotsTaken++;
+      final targetBalls = activeDailyPuzzle!.balls
+          .where((b) => !b.isObstacle)
+          .map((b) => b.ballNumber)
+          .toSet();
+      final obstacleBalls = activeDailyPuzzle!.balls
+          .where((b) => b.isObstacle)
+          .map((b) => b.ballNumber)
+          .toSet();
+
+      final cueScratched = cueBall.pocketedThisShot;
+      final obstacleSunk = poolBalls.any(
+        (b) => b.isSunk && obstacleBalls.contains(b.number),
+      );
+      final allTargetsSunk = poolBalls
+          .where((b) => targetBalls.contains(b.number))
+          .every((b) => b.isSunk);
+
+      if (cueScratched || obstacleSunk) {
+        ruleMessage.value = cueScratched
+            ? 'Thất bại: Bi cái rơi lỗ!'
+            : 'Thất bại: Bi chướng ngại rơi lỗ!';
+        winningPlayer = 2; // Thất bại
+        rackOver = true;
+      } else if (allTargetsSunk) {
+        ruleMessage.value = 'Chúc mừng! Phá giải thế bi thành công!';
+        winningPlayer = 1; // Thắng cuộc
+        rackOver = true;
+      } else if (dailyPuzzleShotsTaken >= activeDailyPuzzle!.maxShotsAllowed) {
+        ruleMessage.value =
+            'Thất bại: Hết số cơ cho phép (${activeDailyPuzzle!.maxShotsAllowed})!';
+        winningPlayer = 2;
+        rackOver = true;
+      } else {
+        ruleMessage.value =
+            'Lượt $dailyPuzzleShotsTaken/${activeDailyPuzzle!.maxShotsAllowed} - Đánh tiếp!';
+      }
+      groupVersion.value++;
+      matchVersion.value++;
+      return;
+    }
+
     final currentPlayer = currentTurn.value;
     final pocketedThisShot = poolBalls
         .where((ball) => ball.pocketedThisShot)
         .toList();
     final eightPocketed = pocketedThisShot.any((ball) => ball.number == 8);
-    final group = playerGroups[currentPlayer];
+    final group = getPlayerGroup(currentPlayer);
     final firstHit = cueBall.firstObjectBallHit;
     final legalTargetHit =
         firstHit == null ||
@@ -2753,7 +3013,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
       if (eightPocketed) {
         ruleMessage.value = 'Foul: 8-ball on an illegal shot';
         winningPlayer = currentPlayer == 1 ? 2 : 1;
-        playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
+        playerScores[winningPlayer!] = (playerScores[winningPlayer!] ?? 0) + 1;
         rackOver = true;
       } else {
         ruleMessage.value = 'Foul - ball in hand';
@@ -2766,11 +3026,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
       if (canWin) {
         ruleMessage.value = 'Player $currentPlayer wins the rack!';
         winningPlayer = currentPlayer;
-        playerScores[currentPlayer] = playerScores[currentPlayer]! + 1;
+        playerScores[currentPlayer] = (playerScores[currentPlayer] ?? 0) + 1;
       } else {
         ruleMessage.value = 'Player $currentPlayer loses: 8-ball early';
         winningPlayer = currentPlayer == 1 ? 2 : 1;
-        playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
+        playerScores[winningPlayer!] = (playerScores[winningPlayer!] ?? 0) + 1;
       }
       rackOver = true;
     } else if (breakShot) {
@@ -2793,29 +3053,40 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ruleMessage.value = 'Player ${currentPlayer == 1 ? 2 : 1} turn';
       switchTurn();
     }
+    if (isLocalMultiplayer.value && !rackOver) {
+      ruleMessage.value = isMyTurn
+          ? 'Đấu mạng: Lượt của bạn!'
+          : 'Đấu mạng: Lượt của đối thủ...';
+    }
+    if (rackOver) {
+      _processMatchRewards();
+    }
     groupVersion.value++;
     matchVersion.value++;
   }
 
-  BallGroup ballGroup(int number) =>
-      number < 8 ? BallGroup.solids : BallGroup.stripes;
+  BallGroup? ballGroup(int number) {
+    if (number < 8) return BallGroup.solids;
+    if (number > 8) return BallGroup.stripes;
+    return null; // Bi 8 là bi đen trung lập, không thuộc nhóm bi trơn hay bi sọc
+  }
 
   void assignGroupAfterBreak(List<PoolBall> pocketed) {
     final candidates = pocketed.where((ball) => ball.number != 8).toList();
     final firstObject = candidates.isEmpty ? null : candidates.first;
     if (firstObject != null) {
-      playerGroups[currentTurn.value] = ballGroup(firstObject.number);
-      playerGroups[currentTurn.value == 1
-          ? 2
-          : 1] = ballGroup(firstObject.number) == BallGroup.solids
-          ? BallGroup.stripes
-          : BallGroup.solids;
-      groupVersion.value++;
+      final grp = ballGroup(firstObject.number);
+      if (grp != null) {
+        playerGroups[currentTurn.value] = grp;
+        playerGroups[currentTurn.value == 1 ? 2 : 1] =
+            grp == BallGroup.solids ? BallGroup.stripes : BallGroup.solids;
+        groupVersion.value++;
+      }
     }
   }
 
   String groupLabel(int player) {
-    final group = playerGroups[player];
+    final group = getPlayerGroup(player);
     if (group == BallGroup.solids) {
       return 'Bi trơn 1-7';
     }
@@ -2826,7 +3097,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   List<int> groupBalls(int player) {
-    final group = playerGroups[player];
+    final group = getPlayerGroup(player);
     if (group == null) {
       return const [];
     }
@@ -2840,8 +3111,42 @@ class BilliardGame extends Forge2DGame with PanDetector {
   );
 
   bool allGroupBallsPocketed(BallGroup group) => poolBalls
-      .where((ball) => ballGroup(ball.number) == group)
+      .where((ball) => ball.number != 8 && ballGroup(ball.number) == group)
       .every((ball) => ball.isRemoved || ball.isSunk);
+
+  void _processMatchRewards() {
+    final isWinner = winningPlayer == 1;
+    final p1Balls = groupBalls(1);
+    final pocketed = p1Balls.isEmpty
+        ? 0
+        : p1Balls.where((bNum) => isBallPocketed(bNum)).length;
+
+    if (activeDailyPuzzle != null) {
+      if (isWinner) {
+        _lastMatchReward = ProgressionService.instance.claimDailyPuzzleReward(
+          activeDailyPuzzle!,
+        );
+      } else {
+        _lastMatchReward = null;
+      }
+    } else if (activeBotStage != null) {
+      if (isWinner) {
+        _lastMatchReward = ProgressionService.instance.completeBotStage(
+          activeBotStage!,
+        );
+      } else {
+        _lastMatchReward = ProgressionService.instance.handleMatchRewards(
+          isWinner: false,
+          pottedBallsCount: pocketed,
+        );
+      }
+    } else {
+      _lastMatchReward = ProgressionService.instance.handleMatchRewards(
+        isWinner: isWinner,
+        pottedBallsCount: pocketed,
+      );
+    }
+  }
 
   void registerRailHit(Object bodyOwner) {
     if (bodyOwner is PoolBall && !bodyOwner.isSunk) {
@@ -2851,6 +3156,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   PoolBall? targetForAim(Vector2 direction) {
+    if (!_hasGameLoaded) return null;
     PoolBall? target;
     var nearestDistance = double.infinity;
     for (final ball in poolBalls) {
@@ -2873,6 +3179,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   AimGuide? guideForAim(Vector2 direction) {
+    if (!_hasGameLoaded) return null;
     final normalizedDirection = direction.normalized();
     AimGuide? guide;
     var nearestDistance = double.infinity;
@@ -3108,6 +3415,22 @@ class BilliardContactListener extends ContactListener {
     if (cue != null && target != null) {
       cue.hitObjectThisShot = true;
       cue.firstObjectBallHit ??= target.number;
+      if (!cue.hasCollidedBall) {
+        cue.hasCollidedBall = true;
+        // Áp dụng lực giật lùi (Trô) hoặc đẩy tới (Cu-lê) dựa trên activeSpin
+        if (cue.shotDirection != null) {
+          final dir = cue.shotDirection!;
+          if (cue.activeSpin.dy > 0.08) {
+            // Trô bóng (draw shot) - giật ngược lại
+            cue.drawFollowForce = -dir * (cue.activeSpin.dy * 340.0);
+            cue.drawFollowTimer = 0.35;
+          } else if (cue.activeSpin.dy < -0.08) {
+            // Cu-lê (follow shot) - đẩy tiến tới
+            cue.drawFollowForce = dir * (-cue.activeSpin.dy * 320.0);
+            cue.drawFollowTimer = 0.35;
+          }
+        }
+      }
     }
   }
 
@@ -3305,28 +3628,26 @@ class CueBall extends BodyComponent {
     canvas.rotate(-body.angle);
     if (isAiming &&
         aimVector != null &&
-        aimVector!.length > 0.0 &&
-        cueStickSprite != null) {
+        aimVector!.length > 0.0) {
       final direction = aimVector!.normalized();
-      final stickLength = radius * 18.0;
-      final stickHeight = stickLength * 433 / 575;
-      // The sprite artwork is diagonal inside its image bounds, so cancel
-      // that built-in angle before aligning it with the aiming line.
-      final spriteAngle = math.atan2(433, 575);
-      final cueAngle = math.atan2(direction.y, direction.x) + spriteAngle;
 
-      canvas.save();
-      canvas.translate(
-        -direction.x * (radius + strokeDistance),
-        -direction.y * (radius + strokeDistance),
-      );
-      canvas.rotate(cueAngle);
-      cueStickSprite!.render(
+      // Cây cơ hiển thị theo gậy người chơi đang trang bị (hoặc gậy của Bot khi đến lượt Bot)
+      CueModel activeCue = ProgressionService.instance.equippedCue;
+      int activeLevel = ProgressionService.instance.equippedCueLevel;
+      if (gameInstance.isBotMode.value &&
+          gameInstance.currentTurn.value == 2 &&
+          gameInstance.activeBotStage != null) {
+        activeCue = gameInstance.activeBotStage!.cue;
+        activeLevel = gameInstance.activeBotStage!.stageNumber;
+      }
+
+      _renderEquippedCueStick(
         canvas,
-        position: Vector2(-stickLength, 0),
-        size: Vector2(stickLength, stickHeight),
+        direction,
+        strokeDistance,
+        activeCue,
+        activeLevel,
       );
-      canvas.restore();
     }
 
     if (cueSprite != null) {
@@ -3342,10 +3663,17 @@ class CueBall extends BodyComponent {
     if (isAiming && aimVector != null) {
       canvas.save();
       final aimPaint = Paint()
-        ..color = Colors.white.withOpacity(0.5)
+        ..color = Colors.white.withValues(alpha: 0.5)
         ..strokeWidth = 0.4;
       final direction = aimVector!.normalized();
       final guide = (game as BilliardGame).guideForAim(direction);
+
+      final cue = ProgressionService.instance.equippedCue;
+      final level = ProgressionService.instance.equippedCueLevel;
+      final aimMult = (gameInstance.currentTurn.value == 1 && !gameInstance.isBotMode.value) || (!gameInstance.isBotMode.value)
+          ? cue.getAimMultiplier(level)
+          : 1.0;
+
       if (guide != null) {
         final targetOffset = guide.impactPoint - body.position;
         final targetCenterOffset = guide.target.body.position - body.position;
@@ -3357,21 +3685,34 @@ class CueBall extends BodyComponent {
             ) -
             body.position;
 
+        // Vệt hào quang ma pháp nếu gậy đạt Lv >= 7 (Epic/Legendary)
+        if (level >= 7) {
+          canvas.drawCircle(
+            ghostOffset.toOffset(),
+            radius * 1.35,
+            Paint()
+              ..color = cue.auraColor.withValues(alpha: 0.4)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 1.5,
+          );
+        }
+
         // 1. Đường ngắm bi cái tới điểm tiếp xúc (Ghost Ball)
         canvas.drawLine(
           Offset.zero,
           ghostOffset.toOffset(),
           Paint()
-            ..color = Colors.cyanAccent.withOpacity(0.9)
-            ..strokeWidth = 1.1,
+            ..color = (level >= 8 ? cue.ballTrailColor : Colors.cyanAccent).withValues(alpha: 0.9)
+            ..strokeWidth = 1.1 + (level >= 8 ? 0.3 : 0.0),
         );
 
-        // 2. Đường lăn dự kiến của bi mục tiêu
+        // 2. Đường lăn dự kiến của bi mục tiêu (kéo dài theo aimMult)
+        final extendedEnd = targetOffset + (targetLineEnd - targetOffset) * aimMult.clamp(0.8, 1.4);
         canvas.drawLine(
           targetOffset.toOffset(),
-          targetLineEnd.toOffset(),
+          extendedEnd.toOffset(),
           Paint()
-            ..color = Colors.white.withOpacity(0.75)
+            ..color = Colors.white.withValues(alpha: 0.75)
             ..strokeWidth = 0.7,
         );
 
@@ -3380,7 +3721,7 @@ class CueBall extends BodyComponent {
           targetCenterOffset.toOffset(),
           radius,
           Paint()
-            ..color = Colors.white.withOpacity(0.7)
+            ..color = Colors.white.withValues(alpha: 0.7)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 0.8,
         );
@@ -3388,7 +3729,7 @@ class CueBall extends BodyComponent {
           ghostOffset.toOffset(),
           radius,
           Paint()
-            ..color = Colors.cyanAccent.withOpacity(0.85)
+            ..color = (level >= 8 ? cue.ballTrailColor : Colors.cyanAccent).withValues(alpha: 0.85)
             ..style = PaintingStyle.stroke
             ..strokeWidth = 0.8,
         );
@@ -3396,29 +3737,29 @@ class CueBall extends BodyComponent {
           ghostOffset.toOffset(),
           targetOffset.toOffset(),
           Paint()
-            ..color = Colors.orangeAccent.withOpacity(0.9)
+            ..color = Colors.orangeAccent.withValues(alpha: 0.9)
             ..strokeWidth = 0.9,
         );
         canvas.drawCircle(
           targetOffset.toOffset(),
           radius * 0.22,
-          Paint()..color = Colors.orangeAccent.withOpacity(0.95),
+          Paint()..color = Colors.orangeAccent.withValues(alpha: 0.95),
         );
 
-        // 4. Đường rẽ của bi cái sau va chạm (hiển thị tác động xoáy Cu-lê, Trô bóng, Áp-phê)
-        final deflectionLength = (50.0 + gameInstance.shotPower.value * 120.0).clamp(40.0, 160.0);
+        // 4. Đường rẽ của bi cái sau va chạm (hiển thị tác động xoáy Cu-lê, Trô bóng, Áp-phê có nhân aimMult)
+        final deflectionLength = (50.0 + gameInstance.shotPower.value * 120.0).clamp(40.0, 160.0) * aimMult;
         final cueDeflectionEnd = ghostOffset + guide.cueDeflection * deflectionLength;
         canvas.drawLine(
           ghostOffset.toOffset(),
           cueDeflectionEnd.toOffset(),
           Paint()
-            ..color = Colors.amberAccent.withOpacity(0.88)
+            ..color = Colors.amberAccent.withValues(alpha: 0.88)
             ..strokeWidth = 0.9,
         );
         canvas.drawCircle(
           cueDeflectionEnd.toOffset(),
           radius * 0.22,
-          Paint()..color = Colors.amberAccent.withOpacity(0.95),
+          Paint()..color = Colors.amberAccent.withValues(alpha: 0.95),
         );
       } else if (rayHitPoint != null && reflectionVector != null) {
         // Ngắm A-băng (đập băng trực tiếp): phản ánh góc nảy có xoáy áp-phê
@@ -3427,7 +3768,7 @@ class CueBall extends BodyComponent {
         canvas.drawCircle(
           localHitPoint.toOffset(),
           0.6,
-          Paint()..color = Colors.red.withOpacity(0.8),
+          Paint()..color = Colors.red.withValues(alpha: 0.8),
         );
 
         // Điều chỉnh góc phản xạ của tia A-băng theo áp-phê
@@ -3441,16 +3782,174 @@ class CueBall extends BodyComponent {
 
         canvas.drawLine(
           localHitPoint.toOffset(),
-          (localHitPoint + (adjustedReflection * 45.0)).toOffset(),
+          (localHitPoint + (adjustedReflection * 45.0 * aimMult)).toOffset(),
           Paint()
-            ..color = Colors.yellow.withOpacity(0.7)
+            ..color = Colors.yellow.withValues(alpha: 0.7)
             ..strokeWidth = 0.6,
         );
       } else {
-        canvas.drawLine(Offset.zero, (aimVector! * 2.5).toOffset(), aimPaint);
+        canvas.drawLine(Offset.zero, (aimVector! * 2.5 * aimMult).toOffset(), aimPaint);
       }
       canvas.restore();
     }
+
+    canvas.restore();
+  }
+
+  void _renderEquippedCueStick(
+    Canvas canvas,
+    Vector2 direction,
+    double strokeDistance,
+    CueModel cue,
+    int level,
+  ) {
+    final stickLength = radius * 19.5;
+    final angle = math.atan2(direction.y, direction.x);
+
+    canvas.save();
+    // Dịch chuyển đến vị trí đầu cơ cách mép bi cái một khoảng strokeDistance
+    canvas.translate(
+      -direction.x * (radius * 1.05 + strokeDistance),
+      -direction.y * (radius * 1.05 + strokeDistance),
+    );
+    canvas.rotate(angle);
+
+    // Tip nằm tại x = 0, gậy kéo dài về phía âm trục X (từ 0 đến -stickLength)
+    final tipR = radius * 0.22;
+    final ferruleR = radius * 0.24;
+    final jointR = radius * 0.33;
+    final buttR = radius * 0.44;
+
+    // 0. Hào quang tỏa sáng (Aura Glow) cho gậy cấp cao (Lv >= 3 hoặc Epic/Legendary)
+    if (level >= 3 || cue.rarity == CueRarity.epic || cue.rarity == CueRarity.legendary) {
+      final auraColor = cue.auraColor;
+      final auraAlpha = level >= 7 ? 0.60 : 0.38;
+      final auraPaint = Paint()
+        ..color = auraColor.withValues(alpha: auraAlpha)
+        ..strokeWidth = radius * (level >= 7 ? 1.4 : 0.9)
+        ..style = PaintingStyle.stroke
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, level >= 7 ? 4.5 : 2.5);
+      canvas.drawLine(const Offset(-2, 0), Offset(-stickLength + 2, 0), auraPaint);
+    }
+
+    void drawSegment({
+      required double xStart,
+      required double xEnd,
+      required double rStart,
+      required double rEnd,
+      required List<Color> colors,
+    }) {
+      final path = Path()
+        ..moveTo(xStart, -rStart)
+        ..lineTo(xEnd, -rEnd)
+        ..lineTo(xEnd, rEnd)
+        ..lineTo(xStart, rStart)
+        ..close();
+
+      final maxR = math.max(rStart, rEnd);
+      final c0 = colors[0];
+      final cMid = colors.length > 2 ? colors[1] : colors[0];
+      final cLast = colors.last;
+
+      final paint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            c0,
+            cMid,
+            const Color(0xFFFFFFFF).withValues(alpha: 0.65), // Vệt phản chiếu ánh sáng trụ 3D
+            cMid,
+            cLast.withValues(alpha: 0.85),
+          ],
+          stops: const [0.0, 0.25, 0.48, 0.72, 1.0],
+        ).createShader(Rect.fromLTRB(xEnd, -maxR, xStart, maxR));
+
+      canvas.drawPath(path, paint);
+    }
+
+    // 1. Đầu lơ (Chalk Tip) bo cong vòm ở đỉnh x = 0
+    final tipLen = radius * 0.35;
+    final tipPath = Path()
+      ..moveTo(0, 0)
+      ..arcToPoint(
+        Offset(-tipLen, -tipR),
+        radius: Radius.circular(tipR),
+        clockwise: false,
+      )
+      ..lineTo(-tipLen, tipR)
+      ..arcToPoint(
+        const Offset(0, 0),
+        radius: Radius.circular(tipR),
+        clockwise: false,
+      )
+      ..close();
+    canvas.drawPath(tipPath, Paint()..color = cue.tipColor);
+
+    // 2. Phíp cơ trắng ngà (White Ferrule)
+    final ferruleLen = radius * 0.70;
+    drawSegment(
+      xStart: -tipLen,
+      xEnd: -(tipLen + ferruleLen),
+      rStart: tipR,
+      rEnd: ferruleR,
+      colors: const [Color(0xFFDCDCDC), Color(0xFFFFFFFF), Color(0xFFB0B0B0)],
+    );
+
+    // Vòng chỉ đen giữa phíp và thân ngọn
+    canvas.drawLine(
+      Offset(-(tipLen + ferruleLen), -ferruleR),
+      Offset(-(tipLen + ferruleLen), ferruleR),
+      Paint()
+        ..color = const Color(0xFF222222)
+        ..strokeWidth = 0.6,
+    );
+
+    // 3. Ngọn cơ (Shaft) - thể hiện màu sắc skin đặc trưng của cây gậy
+    final jointX = -stickLength * 0.52;
+    drawSegment(
+      xStart: -(tipLen + ferruleLen),
+      xEnd: jointX,
+      rStart: ferruleR,
+      rEnd: jointR,
+      colors: cue.shaftColors,
+    );
+
+    // 4. Khớp ren kim loại trang trí dát vàng / chrome (Joint Rings)
+    final jointLen = radius * 0.55;
+    drawSegment(
+      xStart: jointX,
+      xEnd: jointX - jointLen,
+      rStart: jointR,
+      rEnd: jointR + 0.05,
+      colors: const [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFF5A440D)],
+    );
+
+    // 5. Chuôi gậy (Handle / Butt) - hoa văn tay cầm của skin
+    final buttCapX = -stickLength + radius * 0.50;
+    drawSegment(
+      xStart: jointX - jointLen,
+      xEnd: buttCapX,
+      rStart: jointR + 0.05,
+      rEnd: buttR,
+      colors: cue.handleColors,
+    );
+
+    // 6. Đệm cao su chống va đập ở đuôi gậy (Bumper)
+    final bumperPath = Path()
+      ..moveTo(buttCapX, -buttR)
+      ..arcToPoint(
+        Offset(-stickLength, 0),
+        radius: Radius.circular(buttR),
+        clockwise: false,
+      )
+      ..arcToPoint(
+        Offset(buttCapX, buttR),
+        radius: Radius.circular(buttR),
+        clockwise: false,
+      )
+      ..close();
+    canvas.drawPath(bumperPath, Paint()..color = const Color(0xFF141414));
 
     canvas.restore();
   }
@@ -3506,13 +4005,16 @@ class PoolBall extends BodyComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    if (isSunk && !isRemoved) {
+    if (isSunk && !isRemoved && !isRemoving) {
       removeFromParent(); // Xóa bi khỏi bàn khi lọt lỗ
     }
   }
 
   @override
   void render(Canvas canvas) {
+    if (isSunk || isRemoved || isRemoving) {
+      return;
+    }
     if (ballSprite != null) {
       canvas.save();
       // ĐÃ BỎ KHÓA GÓC XOAY
