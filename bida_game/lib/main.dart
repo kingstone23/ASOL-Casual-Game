@@ -17,7 +17,6 @@ import 'ui/player_profile_bar.dart';
 import 'ui/bot_stages_dialog.dart';
 import 'ui/daily_puzzle_dialog.dart';
 import 'ui/local_multiplayer_dialog.dart';
-import 'ui/cue_power_slider.dart';
 import 'ui/aim_ruler_slider.dart';
 
 enum BallGroup { solids, stripes }
@@ -309,8 +308,7 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            CuePowerSliderControl(
-                              game: gameInstance,
+                            _buildPowerControl(
                               compact: compactLayout,
                               ultraCompact: ultraCompact,
                             ),
@@ -405,6 +403,436 @@ Widget _buildRightSideControls(
       _showCueSpinDialog(context);
     },
   );
+}
+
+Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
+  final controlWidth = ultraCompact ? 36.0 : (compact ? 44.0 : 52.0);
+  return Container(
+    width: controlWidth,
+    padding: EdgeInsets.symmetric(
+      horizontal: ultraCompact ? 2.5 : (compact ? 4 : 5),
+      vertical: ultraCompact ? 4 : (compact ? 6 : 8),
+    ),
+    decoration: BoxDecoration(
+      color: const Color(0xFF1B2026),
+      borderRadius: BorderRadius.circular(ultraCompact ? 10 : 14),
+      border: Border.all(color: Colors.white24, width: 1.0),
+      boxShadow: const [
+        BoxShadow(
+          color: Colors.black45,
+          blurRadius: 8,
+          offset: Offset(0, 3),
+        ),
+      ],
+    ),
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onPanStart: (details) {
+        if (!gameInstance.canUserControl) {
+          return;
+        }
+        gameInstance.beginPowerDrag(details.localPosition.dy);
+      },
+      onPanUpdate: (details) {
+        if (!gameInstance.canUserControl) {
+          return;
+        }
+        gameInstance.updatePowerDrag(details.localPosition.dy);
+      },
+      onPanEnd: (_) {
+        if (!gameInstance.canUserControl) {
+          return;
+        }
+        gameInstance.endPowerDrag();
+        gameInstance.shootWithPower();
+      },
+      onPanCancel: () {
+        if (!gameInstance.canUserControl) {
+          return;
+        }
+        gameInstance.endPowerDrag();
+      },
+      child: ValueListenableBuilder<double>(
+        valueListenable: gameInstance.shotPower,
+        builder: (context, power, child) {
+          final powerColor = power > 0.80
+              ? Colors.redAccent
+              : power > 0.45
+                  ? Colors.amber
+                  : const Color(0xFF00E676);
+
+          return Column(
+            children: [
+              Icon(
+                Icons.flash_on,
+                color: powerColor,
+                size: ultraCompact ? 13 : (compact ? 15 : 18),
+              ),
+              const SizedBox(height: 1),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ultraCompact ? 2 : 4,
+                  vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: powerColor.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: powerColor.withValues(alpha: 0.6),
+                    width: 0.7,
+                  ),
+                ),
+                child: Text(
+                  '${(power * 100).round()}%',
+                  style: TextStyle(
+                    color: powerColor,
+                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.5),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              SizedBox(height: ultraCompact ? 3 : 5),
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Thanh đo lực neon
+                    Container(
+                      width: ultraCompact ? 5.5 : (compact ? 7.0 : 8.5),
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(3),
+                        border: Border.all(color: Colors.white24, width: 0.6),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(2.5),
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            Container(color: Colors.white10),
+                            FractionallySizedBox(
+                              heightFactor: power,
+                              widthFactor: 1.0,
+                              alignment: Alignment.bottomCenter,
+                              child: DecoratedBox(
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.bottomCenter,
+                                    end: Alignment.topCenter,
+                                    colors: [
+                                      Color(0xFF00E676),
+                                      Colors.amber,
+                                      Colors.redAccent,
+                                    ],
+                                    stops: [0.0, 0.6, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            for (var mark = 1; mark < 10; mark++)
+                              Positioned.fill(
+                                child: Align(
+                                  alignment: Alignment(0, 1.0 - mark / 5.0),
+                                  child: Container(
+                                    height: 1,
+                                    color: Colors.black45,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: ultraCompact ? 3 : (compact ? 4 : 6)),
+                    // Cây cơ bida tương tác - lún sâu theo lực
+                    Expanded(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final trackHeight = constraints.maxHeight;
+                          // Khi tăng lực từ 5% -> 100%, cây cơ lún sâu xuống dọc theo thanh lực
+                          final maxTravel = trackHeight * 0.72;
+                          final normalizedPower =
+                              ((power - 0.05) / 0.95).clamp(0.0, 1.0);
+                          final pullOffset = normalizedPower * maxTravel;
+
+                          final stickWidth = ultraCompact ? 10.0 : (compact ? 12.0 : 15.0);
+
+                          return ClipRRect(
+                            borderRadius: BorderRadius.circular(5),
+                            child: Stack(
+                              alignment: Alignment.topCenter,
+                              children: [
+                                // Rãnh cơ bóng mờ tinh tế
+                                Container(
+                                  width: stickWidth,
+                                  decoration: BoxDecoration(
+                                    color: Colors.black38,
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: Colors.white10,
+                                      width: 0.6,
+                                    ),
+                                  ),
+                                ),
+                                // Vệt sáng năng lượng chạy phía trên đầu cơ khi lún xuống
+                                if (pullOffset > 2)
+                                  Positioned(
+                                    top: 0,
+                                    height: pullOffset,
+                                    width: stickWidth * 0.65,
+                                    child: DecoratedBox(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(2),
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            powerColor.withValues(alpha: 0.12),
+                                            powerColor.withValues(alpha: 0.70),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                // Cây cơ di chuyển lún sâu xuống theo lực kéo
+                                Transform.translate(
+                                  offset: Offset(0, pullOffset),
+                                  child: ListenableBuilder(
+                                    listenable: ProgressionService.instance,
+                                    builder: (context, _) {
+                                      final equippedCue =
+                                          ProgressionService.instance.equippedCue;
+                                      return _CueStickWidget(
+                                        height: trackHeight,
+                                        width: stickWidth,
+                                        cue: equippedCue,
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: ultraCompact ? 3 : 5),
+              // Chữ LỰC xoay xuôi chuẩn ngang
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: ultraCompact ? 3 : 5,
+                  vertical: 1.5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xDD15191E),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: Colors.white24, width: 0.7),
+                ),
+                child: Text(
+                  'LỰC',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.0),
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    ),
+  );
+}
+
+class _CueStickWidget extends StatelessWidget {
+  final double height;
+  final double width;
+  final CueModel? cue;
+  const _CueStickWidget({required this.height, this.width = 16.0, this.cue});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      size: Size(width, height),
+      painter: _VerticalCueStickPainter(cue: cue),
+    );
+  }
+}
+
+class _VerticalCueStickPainter extends CustomPainter {
+  final CueModel? cue;
+  _VerticalCueStickPainter({this.cue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final centerX = w / 2;
+
+    final topR = (w * 0.22).clamp(2.5, 3.8);
+    final botR = (w * 0.42).clamp(5.0, 7.5);
+
+    double radiusAt(double y) => topR + (botR - topR) * (y / h);
+
+    void drawSection({
+      required double yTop,
+      required double yBot,
+      required List<Color> colors,
+      List<double>? stops,
+    }) {
+      final rTop = radiusAt(yTop);
+      final rBot = radiusAt(yBot);
+      final path = Path()
+        ..moveTo(centerX - rTop, yTop)
+        ..lineTo(centerX + rTop, yTop)
+        ..lineTo(centerX + rBot, yBot)
+        ..lineTo(centerX - rBot, yBot)
+        ..close();
+
+      final maxR = math.max(rTop, rBot);
+      final paint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: colors,
+          stops: stops,
+        ).createShader(
+          Rect.fromLTWH(centerX - maxR, yTop, maxR * 2, yBot - yTop),
+        );
+
+      canvas.drawPath(path, paint);
+    }
+
+    // A. Đầu lơ (Chalk tip) ở trên cùng: y = 0 -> y = 7
+    final tipH = 7.0;
+    final tipR = radiusAt(tipH);
+    final tipPath = Path()
+      ..moveTo(centerX - radiusAt(0), 0)
+      ..lineTo(centerX + radiusAt(0), 0)
+      ..lineTo(centerX + tipR, tipH)
+      ..lineTo(centerX - tipR, tipH)
+      ..close();
+    final tipColor = cue?.tipColor ?? const Color(0xFF26A69A);
+    canvas.drawPath(
+      tipPath,
+      Paint()
+        ..shader = LinearGradient(
+          colors: [
+            tipColor,
+            tipColor.withValues(alpha: 0.8),
+            const Color(0xFF004D40),
+          ],
+        ).createShader(Rect.fromLTWH(centerX - tipR, 0, tipR * 2, tipH)),
+    );
+
+    // B. Phíp cơ (Ferrule): y = 7 -> y = 17
+    drawSection(
+      yTop: 7,
+      yBot: 17,
+      colors: const [Color(0xFFFFFFFF), Color(0xFFE8E8E8), Color(0xFFBDBDBD)],
+    );
+
+    // C. Ngọn cơ gỗ phong (Shaft): y = 17 -> y = h * 0.58
+    final shaftBot = h * 0.58;
+    drawSection(
+      yTop: 17,
+      yBot: shaftBot,
+      colors: cue?.shaftColors ?? const [
+        Color(0xFFFDE8C4),
+        Color(0xFFDDB075),
+        Color(0xFFB58045),
+        Color(0xFF8D5B28),
+      ],
+      stops: cue != null ? null : const [0.0, 0.35, 0.75, 1.0],
+    );
+
+    // D. Ren nối kim loại (Joint collar): y = shaftBot -> y = shaftBot + 12
+    drawSection(
+      yTop: shaftBot,
+      yBot: shaftBot + 3,
+      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
+    );
+    drawSection(
+      yTop: shaftBot + 3,
+      yBot: shaftBot + 9,
+      colors: const [Color(0xFF303030), Color(0xFF151515), Color(0xFF000000)],
+    );
+    drawSection(
+      yTop: shaftBot + 9,
+      yBot: shaftBot + 12,
+      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
+    );
+
+    // E. Chuôi cơ (Butt Sleeve): y = shaftBot + 12 -> y = h - 14
+    final buttTop = shaftBot + 12;
+    final buttBot = h - 14;
+    drawSection(
+      yTop: buttTop,
+      yBot: buttBot,
+      colors: cue?.handleColors ?? const [
+        Color(0xFF2979FF),
+        Color(0xFF1565C0),
+        Color(0xFF0D47A1),
+        Color(0xFF062B66),
+      ],
+      stops: cue != null ? null : const [0.0, 0.3, 0.7, 1.0],
+    );
+
+    // Họa tiết hoa văn chuôi cơ
+    final wrapTop = buttTop + (buttBot - buttTop) * 0.22;
+    final wrapBot = buttTop + (buttBot - buttTop) * 0.78;
+    drawSection(
+      yTop: wrapTop,
+      yBot: wrapBot,
+      colors: const [
+        Color(0xFFEEEEEE),
+        Color(0xFFCFD8DC),
+        Color(0xFF90A4AE),
+        Color(0xFF455A64),
+      ],
+    );
+
+    // F. Bịt đáy chuôi (Butt Cap): y = buttBot -> y = h - 6
+    drawSection(
+      yTop: buttBot,
+      yBot: h - 6,
+      colors: const [Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E)],
+    );
+
+    // G. Đệm chân cao su (Bumper): y = h - 6 -> y = h
+    final bumpR = radiusAt(h);
+    final bumperPath = Path()
+      ..moveTo(centerX - radiusAt(h - 6), h - 6)
+      ..lineTo(centerX + radiusAt(h - 6), h - 6)
+      ..lineTo(centerX + bumpR, h - 2)
+      ..quadraticBezierTo(centerX, h + 2, centerX - bumpR, h - 2)
+      ..close();
+    canvas.drawPath(
+      bumperPath,
+      Paint()..color = const Color(0xFF1E1E1E),
+    );
+
+    // H. Đường bóng sáng (Glossy highlight)
+    final shinePath = Path()
+      ..moveTo(centerX - topR * 0.3, 2)
+      ..lineTo(centerX - topR * 0.1, 2)
+      ..lineTo(centerX - botR * 0.1, h - 8)
+      ..lineTo(centerX - botR * 0.3, h - 8)
+      ..close();
+    canvas.drawPath(
+      shinePath,
+      Paint()..color = Colors.white.withValues(alpha: 0.28),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _VerticalCueStickPainter oldDelegate) =>
+      oldDelegate.cue != cue;
 }
 
 
