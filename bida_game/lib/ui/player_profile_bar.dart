@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/progression_service.dart';
+import '../services/auth_service.dart';
 import 'cue_shop_dialog.dart';
+import 'auth_dialog.dart';
+import 'leaderboard_dialog.dart';
 
 class PlayerProfileBar extends StatelessWidget {
   final bool compact;
@@ -15,8 +18,12 @@ class PlayerProfileBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: ProgressionService.instance,
+      listenable: Listenable.merge([
+        ProgressionService.instance,
+        AuthService.instance,
+      ]),
       builder: (context, _) {
+        final auth = AuthService.instance;
         final service = ProgressionService.instance;
         final level = service.playerLevel;
         final xp = service.currentXP;
@@ -178,7 +185,7 @@ class PlayerProfileBar extends StatelessWidget {
 
               // 5. Nút mở Cửa hàng (Shop)
               if (showShopButton) ...[
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 InkWell(
                   onTap: () {
                     showDialog(
@@ -189,7 +196,7 @@ class PlayerProfileBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 8 : 12,
+                      horizontal: compact ? 8 : 11,
                       vertical: compact ? 4 : 6,
                     ),
                     decoration: BoxDecoration(
@@ -210,7 +217,7 @@ class PlayerProfileBar extends StatelessWidget {
                         Icon(
                           Icons.shopping_bag,
                           color: Colors.white,
-                          size: compact ? 14 : 16,
+                          size: compact ? 13 : 15,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -219,7 +226,7 @@ class PlayerProfileBar extends StatelessWidget {
                             color: Colors.white,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.0,
-                            fontSize: compact ? 11 : 12,
+                            fontSize: compact ? 10 : 12,
                           ),
                         ),
                       ],
@@ -227,6 +234,115 @@ class PlayerProfileBar extends StatelessWidget {
                   ),
                 ),
               ],
+
+              // 6. Nút mở Bảng Xếp Hạng (BXH)
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const LeaderboardDialog(),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 8 : 11,
+                    vertical: compact ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.emoji_events,
+                        color: Colors.black87,
+                        size: compact ? 13 : 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'BXH',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                          fontSize: compact ? 10 : 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 7. Nút Tài khoản / Đăng nhập
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AuthDialog(),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 8 : 11,
+                    vertical: compact ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: auth.isLoggedIn
+                          ? (auth.isAdmin
+                              ? [const Color(0xFFFFD54F), const Color(0xFFFFA000)]
+                              : [const Color(0xFF00B0FF), const Color(0xFF0288D1)])
+                          : [const Color(0xFF26A69A), const Color(0xFF00796B)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (auth.isLoggedIn && auth.isAdmin ? Colors.amber : Colors.cyan)
+                            .withValues(alpha: 0.35),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        auth.isLoggedIn
+                            ? (auth.isAdmin ? Icons.shield : Icons.person)
+                            : Icons.login,
+                        color: auth.isLoggedIn && auth.isAdmin ? Colors.black87 : Colors.white,
+                        size: compact ? 13 : 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        auth.isLoggedIn
+                            ? (auth.isAdmin ? 'ADMIN' : auth.displayName)
+                            : 'ĐĂNG NHẬP',
+                        style: TextStyle(
+                          color: auth.isLoggedIn && auth.isAdmin ? Colors.black87 : Colors.white,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.6,
+                          fontSize: compact ? 10 : 11,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),

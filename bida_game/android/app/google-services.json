@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "698398921018",
+    "project_id": "asol-game",
+    "storage_bucket": "asol-game.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:698398921018:android:8e374218aee57484994003",
+        "android_client_info": {
+          "package_name": "com.example.bida_game"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgWTqvG2lBRnPCGKqd3K6yKdGpGlGUQIc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -8,15 +8,19 @@ import 'package:flame/components.dart';
 import 'package:flame_forge2d/flame_forge2d.dart' hide Transform;
 import 'package:forge2d/forge2d.dart' as forge2d;
 
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'models/cue_model.dart';
 import 'models/bot_stage_model.dart';
 import 'models/daily_puzzle_model.dart';
 import 'services/progression_service.dart';
 import 'services/local_multiplayer_service.dart';
+import 'services/auth_service.dart';
 import 'ui/player_profile_bar.dart';
 import 'ui/bot_stages_dialog.dart';
 import 'ui/daily_puzzle_dialog.dart';
 import 'ui/local_multiplayer_dialog.dart';
+import 'ui/auth_screen.dart';
 import 'ui/aim_ruler_slider.dart';
 
 enum BallGroup { solids, stripes }
@@ -26,7 +30,19 @@ final BilliardGame gameInstance = BilliardGame();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
   await ProgressionService.instance.init();
+  try {
+    await AuthService.instance.init();
+  } catch (e) {
+    debugPrint('AuthService initialization error: $e');
+  }
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -44,9 +60,27 @@ Future<void> main() async {
           onSurface: Colors.white,
         ),
       ),
-      home: const BilliardHome(),
+      home: const AuthGate(),
     ),
   );
+}
+
+/// Cổng kiểm tra đăng nhập: Phải đăng nhập mới được vào Main Menu
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: AuthService.instance,
+      builder: (context, _) {
+        if (AuthService.instance.isLoggedIn) {
+          return const BilliardHome();
+        }
+        return const AuthScreen();
+      },
+    );
+  }
 }
 
 class BilliardHome extends StatefulWidget {
@@ -3901,6 +3935,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
         pottedBallsCount: pocketed,
       );
     }
+
+    if (isWinner) {
+      ProgressionService.instance.recordWin();
+    }
+    AuthService.instance.syncCurrentPlayerStats();
   }
 
   void registerRailHit(Object bodyOwner) {

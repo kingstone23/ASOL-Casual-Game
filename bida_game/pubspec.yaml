@@ -38,6 +38,9 @@ dependencies:
   flame_forge2d: ^0.19.3+7
   forge2d: ^0.14.2+1
   shared_preferences: ^2.5.5
+  firebase_core: ^4.15.0
+  firebase_auth: ^6.7.0
+  firebase_database: ^12.6.0
 
 dev_dependencies:
   flutter_test:

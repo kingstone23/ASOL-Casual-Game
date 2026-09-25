@@ -34,6 +34,7 @@ class ProgressionService extends ChangeNotifier {
   int _currentXP = 0;
   int _coins = 1200;
   int _diamonds = 30;
+  int _totalWins = 0;
   String _equippedCueId = 'standard_cue';
   final Map<String, int> _ownedCueLevels = {'standard_cue': 1};
 
@@ -50,6 +51,7 @@ class ProgressionService extends ChangeNotifier {
   int get currentXP => _currentXP;
   int get coins => _coins;
   int get diamonds => _diamonds;
+  int get totalWins => _totalWins;
   String get equippedCueId => _equippedCueId;
   Map<String, int> get ownedCueLevels => Map.unmodifiable(_ownedCueLevels);
   int get unlockedBotStage => _unlockedBotStage;
@@ -80,6 +82,7 @@ class ProgressionService extends ChangeNotifier {
       _currentXP = prefs.getInt('progression_xp') ?? 0;
       _coins = prefs.getInt('progression_coins') ?? 1200;
       _diamonds = prefs.getInt('progression_diamonds') ?? 30;
+      _totalWins = prefs.getInt('progression_total_wins') ?? 0;
       _equippedCueId = prefs.getString('progression_equipped_cue') ?? 'standard_cue';
       _unlockedBotStage = prefs.getInt('progression_unlocked_bot_stage') ?? 1;
       _lastDailyPuzzleDateCompleted = prefs.getString('progression_last_daily_puzzle');
@@ -121,6 +124,7 @@ class ProgressionService extends ChangeNotifier {
       await prefs.setInt('progression_xp', _currentXP);
       await prefs.setInt('progression_coins', _coins);
       await prefs.setInt('progression_diamonds', _diamonds);
+      await prefs.setInt('progression_total_wins', _totalWins);
       await prefs.setString('progression_equipped_cue', _equippedCueId);
       await prefs.setInt('progression_unlocked_bot_stage', _unlockedBotStage);
       await prefs.setStringList(
@@ -154,6 +158,94 @@ class ProgressionService extends ChangeNotifier {
   void addDiamonds(int amount) {
     if (amount <= 0) return;
     _diamonds += amount;
+    _save();
+    notifyListeners();
+  }
+
+  void recordWin() {
+    _totalWins++;
+    _save();
+    notifyListeners();
+  }
+
+  /// Kích hoạt đặc quyền và chỉ số tài khoản Admin:
+  /// Cấp độ 99, 9.999.999 Vàng, 99.999 Kim Cương, 999 Trận thắng,
+  /// Mở khóa tất cả Ải Bot và sở hữu toàn bộ gậy Max Cấp (Lv.10).
+  void applyAdminPrivileges() {
+    _playerLevel = 99;
+    _currentXP = 0;
+    _coins = 9999999;
+    _diamonds = 99999;
+    _totalWins = 999;
+    _unlockedBotStage = 7;
+    for (int i = 1; i <= 7; i++) {
+      _completedBotStages.add(i);
+    }
+    for (final cue in CueCatalog.allCues) {
+      _ownedCueLevels[cue.id] = 10;
+    }
+    _equippedCueId = 'dragon_god';
+    _save();
+    notifyListeners();
+  }
+
+  /// Áp dụng dữ liệu đồng bộ từ Firebase Realtime Database cho người chơi
+  void applyCloudStats({
+    int? level,
+    int? xp,
+    int? coins,
+    int? diamonds,
+    int? wins,
+    String? equippedCue,
+  }) {
+    bool hasChanged = false;
+    if (level != null && level > 0 && level != _playerLevel) {
+      _playerLevel = level;
+      hasChanged = true;
+    }
+    if (xp != null && xp >= 0) {
+      _currentXP = xp;
+      hasChanged = true;
+    }
+    if (coins != null && coins >= 0 && coins != _coins) {
+      _coins = coins;
+      hasChanged = true;
+    }
+    if (diamonds != null && diamonds >= 0 && diamonds != _diamonds) {
+      _diamonds = diamonds;
+      hasChanged = true;
+    }
+    if (wins != null && wins >= 0 && wins != _totalWins) {
+      _totalWins = wins;
+      hasChanged = true;
+    }
+    if (equippedCue != null && CueCatalog.getById(equippedCue).id == equippedCue) {
+      _equippedCueId = equippedCue;
+      if (!_ownedCueLevels.containsKey(equippedCue)) {
+        _ownedCueLevels[equippedCue] = 1;
+      }
+      hasChanged = true;
+    }
+
+    if (hasChanged) {
+      _save();
+      notifyListeners();
+    }
+  }
+
+  /// Đặt lại chỉ số về mặc định khi đăng xuất
+  void resetToDefault() {
+    _playerLevel = 1;
+    _currentXP = 0;
+    _coins = 1200;
+    _diamonds = 30;
+    _totalWins = 0;
+    _equippedCueId = 'standard_cue';
+    _ownedCueLevels.clear();
+    _ownedCueLevels['standard_cue'] = 1;
+    _unlockedBotStage = 1;
+    _completedBotStages.clear();
+    _lastDailyPuzzleDateCompleted = null;
     _save();
     notifyListeners();
   }
