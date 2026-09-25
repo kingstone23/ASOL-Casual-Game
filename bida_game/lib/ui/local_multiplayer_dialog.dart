@@ -88,11 +88,12 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: ListenableBuilder(
         listenable: LocalMultiplayerService.instance,
         builder: (context, _) {
           final service = LocalMultiplayerService.instance;
+          final screenHeight = MediaQuery.of(context).size.height;
 
           // Nếu máy Host đã có đối thủ kết nối -> tự động đóng dialog vào game
           if (service.isConnected && service.isHost) {
@@ -105,7 +106,10 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
           }
 
           return Container(
-            constraints: const BoxConstraints(maxWidth: 580, maxHeight: 460),
+            constraints: BoxConstraints(
+              maxWidth: 580,
+              maxHeight: (screenHeight * 0.94).clamp(320.0, 480.0),
+            ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,

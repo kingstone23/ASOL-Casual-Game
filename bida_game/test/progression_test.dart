@@ -6,8 +6,11 @@ import 'package:bida_game/models/cue_model.dart';
 import 'package:bida_game/models/bot_stage_model.dart';
 import 'package:bida_game/models/daily_puzzle_model.dart';
 import 'package:bida_game/services/progression_service.dart';
+import 'package:flame/game.dart';
+import 'package:bida_game/ui/player_profile_bar.dart';
 import 'package:bida_game/ui/cue_power_slider.dart';
 import 'package:bida_game/ui/aim_ruler_slider.dart';
+import 'package:bida_game/ui/cue_shop_dialog.dart';
 import 'package:bida_game/main.dart';
 
 void main() {
@@ -167,7 +170,6 @@ void main() {
     testWidgets('AimRulerSliderControl renders yellow 0° and vertical capsule track', (tester) async {
       gameInstance.startPlayerMatch();
       gameInstance.aimAngle = 0.0;
-      bool spinOpened = false;
 
       await tester.pumpWidget(
         MaterialApp(
@@ -177,7 +179,7 @@ void main() {
               width: 80,
               child: AimRulerSliderControl(
                 game: gameInstance,
-                onOpenSpinDialog: () => spinOpened = true,
+                onOpenSpinDialog: () {},
               ),
             ),
           ),
@@ -358,6 +360,119 @@ void main() {
       // Chuyển lại về standard_cue
       ProgressionService.instance.equipCue('standard_cue');
       expect(ProgressionService.instance.equippedCue.id, equals('standard_cue'));
+    });
+  });
+
+  group('Mobile Main Menu UI Layout Tests', () {
+    testWidgets('BilliardHome renders classic green felt card without overflow on mobile landscape (720x360)', (tester) async {
+      tester.view.physicalSize = const Size(720, 360);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BilliardHome(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Kiểm tra tiêu đề và logo
+      expect(find.text('8 POOL BILLIARDS'), findsOneWidget);
+      expect(find.text('CHOOSE YOUR MATCH'), findsOneWidget);
+
+      // Kiểm tra 4 nút chế độ cổ điển
+      expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
+      expect(find.text('ĐẤU MẠNG LOCAL'), findsOneWidget);
+      expect(find.text('7 ẢI THỬ THÁCH BOT'), findsOneWidget);
+      expect(find.text('THẾ BI HÀNG NGÀY'), findsOneWidget);
+
+      // Kiểm tra thanh người chơi
+      expect(find.byType(PlayerProfileBar), findsOneWidget);
+    });
+
+    testWidgets('BilliardHome renders cleanly without overflow on mobile portrait (360x640)', (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BilliardHome(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('8 POOL BILLIARDS'), findsOneWidget);
+      expect(find.text('CHOOSE YOUR MATCH'), findsOneWidget);
+      expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
+    });
+  });
+
+  group('Physics & Ball Racking Algorithms Tests', () {
+    test('onGameResize recalculates ballRadius and table bounds dynamically', () {
+      final game = BilliardGame();
+      // Giả lập kích thước mobile 600x300
+      game.onGameResize(Vector2(600, 300));
+      expect(game.ballRadius, closeTo(300 * 0.0235, 0.01));
+      expect(game.playAreaTopLeft.x, closeTo(600 * 0.0574, 0.01));
+      expect(game.playAreaTopLeft.y, closeTo(300 * 0.1034, 0.01));
+
+      // Giả lập xoay hoặc đổi kích thước mobile 800x400
+      game.onGameResize(Vector2(800, 400));
+      expect(game.ballRadius, closeTo(400 * 0.0235, 0.01));
+      expect(game.playAreaTopLeft.x, closeTo(800 * 0.0574, 0.01));
+      expect(game.playAreaTopLeft.y, closeTo(400 * 0.1034, 0.01));
+    });
+
+    test('safeCueBallPlacementPosition always stays inside table kitchen area', () {
+      final game = BilliardGame();
+      game.onGameResize(Vector2(800, 400));
+      final pos = game.initialCueBallPosition;
+      expect(pos.x, equals(800 * 0.25));
+      expect(pos.y, equals(200));
+    });
+  });
+
+  group('Shop In-Dialog Notification & Setting Bot Option Removal Tests', () {
+    testWidgets('CueShopDialog displays in-shop error toast immediately when user cannot afford cue', (tester) async {
+      tester.view.physicalSize = const Size(1280, 720);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await ProgressionService.instance.init();
+      ProgressionService.instance.addXPAndCoins(xpGained: 10000, coinsGained: 0);
+      ProgressionService.instance.spendCoins(ProgressionService.instance.coins);
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: CueShopDialog(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final titanFinder = find.text('Cơ Titan Thép');
+      expect(titanFinder, findsOneWidget);
+      await tester.tap(titanFinder);
+      await tester.pumpAndSettle();
+
+      final buyButton = find.textContaining('MUA NGAY');
+      expect(buyButton, findsOneWidget);
+
+      await tester.tap(buyButton);
+      await tester.pump();
+
+      expect(find.textContaining('Bạn không đủ Vàng để mua cây cơ này'), findsOneWidget);
     });
   });
 }

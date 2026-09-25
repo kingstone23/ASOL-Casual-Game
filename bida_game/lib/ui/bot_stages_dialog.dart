@@ -12,15 +12,19 @@ class BotStagesDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: ListenableBuilder(
         listenable: ProgressionService.instance,
         builder: (context, _) {
           final service = ProgressionService.instance;
           final stages = BotStageCatalog.stages;
+          final screenHeight = MediaQuery.of(context).size.height;
 
           return Container(
-            constraints: const BoxConstraints(maxWidth: 820, maxHeight: 520),
+            constraints: BoxConstraints(
+              maxWidth: 820,
+              maxHeight: (screenHeight * 0.94).clamp(320.0, 520.0),
+            ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,

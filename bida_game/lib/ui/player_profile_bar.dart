@@ -45,8 +45,11 @@ class PlayerProfileBar extends StatelessWidget {
               ),
             ],
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
             children: [
               // 1. Level Badge
               Container(
@@ -226,7 +229,8 @@ class PlayerProfileBar extends StatelessWidget {
               ],
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }

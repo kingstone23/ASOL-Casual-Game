@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/cue_model.dart';
 import '../services/progression_service.dart';
@@ -11,6 +12,9 @@ class CueShopDialog extends StatefulWidget {
 
 class _CueShopDialogState extends State<CueShopDialog> {
   late String _selectedCueId;
+  String? _toastMessage;
+  bool _toastIsError = false;
+  Timer? _toastTimer;
 
   @override
   void initState() {
@@ -19,10 +23,16 @@ class _CueShopDialogState extends State<CueShopDialog> {
   }
 
   @override
+  void dispose() {
+    _toastTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: ListenableBuilder(
         listenable: ProgressionService.instance,
         builder: (context, _) {
@@ -32,9 +42,13 @@ class _CueShopDialogState extends State<CueShopDialog> {
           final isEquipped = service.isCueEquipped(selectedCue.id);
           final isUnlocked = service.canUnlockCue(selectedCue);
           final currentLevel = service.getCueLevel(selectedCue.id);
+          final screenHeight = MediaQuery.of(context).size.height;
 
           return Container(
-            constraints: const BoxConstraints(maxWidth: 880, maxHeight: 520),
+            constraints: BoxConstraints(
+              maxWidth: 880,
+              maxHeight: (screenHeight * 0.94).clamp(320.0, 520.0),
+            ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
                 begin: Alignment.topLeft,
@@ -56,43 +70,58 @@ class _CueShopDialogState extends State<CueShopDialog> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: Column(
+              child: Stack(
                 children: [
-                  // --- TOP BAR ---
-                  _buildHeader(service),
+                  Column(
+                    children: [
+                      // --- TOP BAR ---
+                      _buildHeader(service),
 
-                  // --- MAIN BODY (SPLIT VIEW) ---
-                  Expanded(
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // CỘT TRÁI: DANH SÁCH GẬY CƠ
-                        Expanded(
-                          flex: 5,
-                          child: _buildCueList(service),
-                        ),
+                      // --- MAIN BODY (SPLIT VIEW) ---
+                      Expanded(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // CỘT TRÁI: DANH SÁCH GẬY CƠ
+                            Expanded(
+                              flex: 5,
+                              child: _buildCueList(service),
+                            ),
 
-                        // PHÂN TÁCH DỌC
-                        Container(
-                          width: 1.5,
-                          color: Colors.white.withValues(alpha: 0.1),
-                        ),
+                            // PHÂN TÁCH DỌC
+                            Container(
+                              width: 1.5,
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
 
-                        // CỘT PHẢI: CHI TIẾT GẬY & NÂNG CẤP
-                        Expanded(
-                          flex: 6,
-                          child: _buildCueDetailPanel(
-                            service,
-                            selectedCue,
-                            isOwned: isOwned,
-                            isEquipped: isEquipped,
-                            isUnlocked: isUnlocked,
-                            currentLevel: currentLevel,
-                          ),
+                            // CỘT PHẢI: CHI TIẾT GẬY & NÂNG CẤP
+                            Expanded(
+                              flex: 6,
+                              child: _buildCueDetailPanel(
+                                service,
+                                selectedCue,
+                                isOwned: isOwned,
+                                isEquipped: isEquipped,
+                                isUnlocked: isUnlocked,
+                                currentLevel: currentLevel,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
+
+                  // In-Shop Floating Notification Banner
+                  if (_toastMessage != null)
+                    Positioned(
+                      top: 54,
+                      left: 16,
+                      right: 16,
+                      child: Center(
+                        child: _buildInShopToast(),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -327,12 +356,24 @@ class _CueShopDialogState extends State<CueShopDialog> {
                             ),
                             if (isEquipped) ...[
                               const SizedBox(width: 6),
-                              const Text(
-                                '• Đang dùng',
-                                style: TextStyle(
-                                  color: Color(0xFFFFD54F),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00E676).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: const Color(0xFF00E676),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'ĐANG DÙNG',
+                                  style: TextStyle(
+                                    color: Color(0xFF00E676),
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
+                                  ),
                                 ),
                               ),
                             ],
@@ -733,9 +774,16 @@ class _CueShopDialogState extends State<CueShopDialog> {
       return SizedBox(
         width: double.infinity,
         child: FilledButton.icon(
-          onPressed: null,
+          onPressed: () {
+            _showToast(
+              context,
+              'Cây cơ này yêu cầu đạt Cấp ${cue.requiredLevel} để mở khóa!',
+              isError: true,
+            );
+          },
           style: FilledButton.styleFrom(
             backgroundColor: Colors.white12,
+            foregroundColor: Colors.white54,
             padding: const EdgeInsets.symmetric(vertical: 12),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
@@ -764,11 +812,12 @@ class _CueShopDialogState extends State<CueShopDialog> {
         child: FilledButton.icon(
           onPressed: () {
             if (!canAfford) {
+              final missing = price - (isDiamond ? service.diamonds : service.coins);
               _showToast(
                 context,
                 isDiamond
-                    ? 'Bạn không đủ Kim Cương để mua cây cơ này!'
-                    : 'Bạn không đủ Vàng để mua cây cơ này!',
+                    ? 'Bạn không đủ Kim Cương để mua cây cơ này (còn thiếu $missing Kim Cương)!'
+                    : 'Bạn không đủ Vàng để mua cây cơ này (còn thiếu $missing Vàng)!',
                 isError: true,
               );
               return;
@@ -776,6 +825,12 @@ class _CueShopDialogState extends State<CueShopDialog> {
             final success = service.buyCue(cue);
             if (success) {
               _showToast(context, 'Chúc mừng! Đã sở hữu và trang bị ${cue.name}!');
+            } else {
+              _showToast(
+                context,
+                'Không thể mua cây cơ này. Vui lòng kiểm tra lại số dư!',
+                isError: true,
+              );
             }
           },
           style: FilledButton.styleFrom(
@@ -806,36 +861,66 @@ class _CueShopDialogState extends State<CueShopDialog> {
         // Nút Trang Bị / Đang dùng
         Expanded(
           flex: 4,
-          child: OutlinedButton.icon(
-            onPressed: isEquipped
-                ? null
-                : () {
+          child: isEquipped
+              ? Container(
+                  height: 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: const Color(0xFF00E676),
+                      width: 1.8,
+                    ),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle, color: Color(0xFF00E676), size: 18),
+                      SizedBox(width: 6),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'ĐANG DÙNG',
+                          style: TextStyle(
+                            color: Color(0xFF00E676),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 12,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : FilledButton.icon(
+                  onPressed: () {
                     service.equipCue(cue.id);
                     _showToast(context, 'Đã trang bị ${cue.name} thành công!');
                   },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: isEquipped ? const Color(0xFF00E676) : Colors.white,
-              side: BorderSide(
-                color: isEquipped ? const Color(0xFF00E676) : Colors.white38,
-                width: 1.5,
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            icon: Icon(isEquipped ? Icons.check_circle : Icons.colorize, size: 18),
-            label: FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                isEquipped ? 'ĐANG DÙNG' : 'TRANG BỊ',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF00B0FF),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 2,
+                  ),
+                  icon: const Icon(Icons.colorize, size: 18, color: Colors.white),
+                  label: const FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      'TRANG BỊ',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 12,
+                        letterSpacing: 0.8,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          ),
         ),
         const SizedBox(width: 10),
 
@@ -848,9 +933,10 @@ class _CueShopDialogState extends State<CueShopDialog> {
                 : () {
                     final canUpgrade = service.coins >= upgradeCost;
                     if (!canUpgrade) {
+                      final missing = upgradeCost - service.coins;
                       _showToast(
                         context,
-                        'Bạn cần $upgradeCost Vàng để nâng cấp gậy này!',
+                        'Bạn cần thêm $missing Vàng để nâng cấp gậy này (tổng $upgradeCost Vàng)!',
                         isError: true,
                       );
                       return;
@@ -859,7 +945,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                     if (ok) {
                       _showToast(
                         context,
-                        'Nâng cấp ${cue.name} lên Cấp ${currentLevel + 1} thành công!',
+                        'Chúc mừng! Nâng cấp ${cue.name} lên Cấp ${currentLevel + 1} thành công!',
                       );
                     }
                   },
@@ -867,7 +953,11 @@ class _CueShopDialogState extends State<CueShopDialog> {
               backgroundColor: currentLevel >= 10
                   ? Colors.white12
                   : const Color(0xFFFFB300),
-              foregroundColor: Colors.black87,
+              foregroundColor: currentLevel >= 10
+                  ? Colors.white38
+                  : Colors.black87,
+              disabledBackgroundColor: Colors.white12,
+              disabledForegroundColor: Colors.white38,
               padding: const EdgeInsets.symmetric(vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -896,16 +986,100 @@ class _CueShopDialogState extends State<CueShopDialog> {
   }
 
   void _showToast(BuildContext context, String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+    _toastTimer?.cancel();
+    setState(() {
+      _toastMessage = message;
+      _toastIsError = isError;
+    });
+    _toastTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _toastMessage = null;
+        });
+      }
+    });
+  }
+
+  Widget _buildInShopToast() {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(_toastMessage),
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, anim, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - anim) * -16),
+          child: Opacity(
+            opacity: anim.clamp(0.0, 1.0),
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 540),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _toastIsError
+                ? [const Color(0xFFD32F2F), const Color(0xFF8B0000)]
+                : [const Color(0xFF2E7D32), const Color(0xFF1B5E20)],
+          ),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _toastIsError ? const Color(0xFFFF8A80) : const Color(0xFF69F0AE),
+            width: 1.8,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: (_toastIsError ? Colors.redAccent : Colors.greenAccent)
+                  .withValues(alpha: 0.4),
+              blurRadius: 18,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
+            ),
+            const BoxShadow(
+              color: Colors.black54,
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
         ),
-        backgroundColor: isError ? const Color(0xFFD32F2F) : const Color(0xFF2E7D32),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _toastIsError ? Icons.error_rounded : Icons.check_circle_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Text(
+                _toastMessage ?? '',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () {
+                _toastTimer?.cancel();
+                setState(() => _toastMessage = null);
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: const Padding(
+                padding: EdgeInsets.all(4.0),
+                child: Icon(Icons.close, color: Colors.white70, size: 18),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

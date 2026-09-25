@@ -32,7 +32,20 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   runApp(
-    MaterialApp(debugShowCheckedModeBanner: false, home: const BilliardHome()),
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF071B16),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF00E676),
+          secondary: Color(0xFF00B0FF),
+          surface: Color(0xFF142E25),
+          onSurface: Colors.white,
+        ),
+      ),
+      home: const BilliardHome(),
+    ),
   );
 }
 
@@ -86,136 +99,109 @@ class _BilliardHomeState extends State<BilliardHome> {
         child: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final compact = constraints.maxHeight < 620;
-              return Stack(
+              final isLandscape = constraints.maxWidth >= 540;
+              final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
+
+              return Column(
                 children: [
-                  Center(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Container(
-                        constraints: const BoxConstraints(maxWidth: 560),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 20 : 38,
-                          vertical: compact ? 22 : 34,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF11633F),
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(
-                            color: const Color(0xFFB77A35),
-                            width: 8,
-                          ),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black54,
-                              blurRadius: 24,
-                              offset: Offset(0, 12),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: compact ? 78 : 96,
-                              height: compact ? 78 : 96,
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.black,
-                                border: Border.all(color: Colors.white70, width: 2),
-                                boxShadow: const [
-                                  BoxShadow(color: Colors.black45, blurRadius: 10),
-                                ],
+                  // --- THANH TRẠNG THÁI TRÊN CÙNG (KHÔNG ĐÈ NỘI DUNG THẺ) ---
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 12 : 20,
+                      vertical: compact ? 4 : 8,
+                    ),
+                    child: Row(
+                      children: [
+                        if (isLandscape) ...[
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: Colors.black45,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: const Color(0xFFB77A35).withValues(alpha: 0.5),
+                                width: 1,
                               ),
-                              child: Image.asset('assets/images/ball_8.png'),
                             ),
-                            const SizedBox(height: 14),
-                            const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                '8 POOL BILLIARDS',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 2.5,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 18,
+                                  height: 18,
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.black,
+                                  ),
+                                  child: Image.asset('assets/images/ball_8.png'),
                                 ),
+                                const SizedBox(width: 6),
+                                const Text(
+                                  '8 POOL CASUAL',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(),
+                        ],
+                        // Thanh thông tin người chơi (Cấp, Vàng, Kim Cương, Nút Shop)
+                        Expanded(
+                          child: Align(
+                            alignment: isLandscape ? Alignment.centerRight : Alignment.center,
+                            child: const FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: PlayerProfileBar(compact: true),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // --- THẺ BIDA NỈ XANH VIỀN GỖ VÀNG CỔ ĐIỂN (CHUẨN MOBILE, KHÔNG TRÀN MÀN HÌNH) ---
+                  Expanded(
+                    child: Center(
+                      child: SingleChildScrollView(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: compact ? 10 : 20,
+                          vertical: compact ? 4 : 10,
+                        ),
+                        child: Container(
+                          constraints: BoxConstraints(
+                            maxWidth: isLandscape ? 720 : 440,
+                          ),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: compact ? 14 : 24,
+                            vertical: compact ? 12 : 22,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF11633F),
+                            borderRadius: BorderRadius.circular(18),
+                            border: Border.all(
+                              color: const Color(0xFFB77A35),
+                              width: compact ? 4.0 : 6.0,
+                            ),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black54,
+                                blurRadius: 20,
+                                offset: Offset(0, 8),
                               ),
-                            ),
-                            const SizedBox(height: 6),
-                            const Text(
-                              'CHOOSE YOUR MATCH',
-                              style: TextStyle(
-                                color: Color(0xFFFFD166),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                            const SizedBox(height: 22),
-                            _buildMenuButton(
-                              icon: Icons.people,
-                              label: 'P1 vs P2 (CÙNG MÁY)',
-                              detail: '2 người chơi trên 1 thiết bị',
-                              background: const Color(0xFF1D4ED8),
-                              onPressed: _startPlayerMatch,
-                            ),
-                            const SizedBox(height: 10),
-                            _buildMenuButton(
-                              icon: Icons.wifi_tethering,
-                              label: 'ĐẤU MẠNG LOCAL (WIFI)',
-                              detail: 'Chơi 2 máy chung WiFi / Hotspot',
-                              background: const Color(0xFF00897B),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => LocalMultiplayerDialog(
-                                    onConnected: _startLocalMultiplayerMatch,
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 10),
-                            _buildMenuButton(
-                              icon: Icons.military_tech,
-                              label: '7 ẢI THỬ THÁCH BOT',
-                              detail: 'Độ khó tăng dần theo cấp gậy Shop',
-                              background: const Color(0xFFE65100),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => BotStagesDialog(
-                                    onSelectStage: _startBotStage,
-                                  ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 10),
-                            _buildMenuButton(
-                              icon: Icons.event_note,
-                              label: 'THẾ BI HÀNG NGÀY',
-                              detail: 'Nhiệm vụ 1 thế bi ngẫu nhiên/ngày',
-                              background: const Color(0xFF7B1FA2),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => DailyPuzzleDialog(
-                                    onStartPuzzle: _startDailyPuzzle,
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
+                            ],
+                          ),
+                          child: isLandscape
+                              ? _buildLandscapeMenuContent(compact)
+                              : _buildPortraitMenuContent(compact),
                         ),
                       ),
                     ),
-                  ),
-                  // Thanh trạng thái người chơi ở góc trên màn hình chính
-                  Positioned(
-                    top: compact ? 8 : 14,
-                    right: compact ? 12 : 20,
-                    child: PlayerProfileBar(compact: compact),
                   ),
                 ],
               );
@@ -225,14 +211,256 @@ class _BilliardHomeState extends State<BilliardHome> {
       ),
     );
   }
+
+  /// NỘI DUNG GIAO DIỆN NGANG (LANDSCAPE - CHUẨN ĐIỆN THOẠI KHÔNG CUỘN)
+  Widget _buildLandscapeMenuContent(bool compact) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Cột Trái: Logo Bi 8 + Tên Game + Subtitle
+        SizedBox(
+          width: compact ? 190 : 225,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: compact ? 52 : 68,
+                height: compact ? 52 : 68,
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.black,
+                  border: Border.all(color: Colors.white70, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black45, blurRadius: 10),
+                  ],
+                ),
+                child: Image.asset('assets/images/ball_8.png'),
+              ),
+              SizedBox(height: compact ? 6 : 10),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  '8 POOL BILLIARDS',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: compact ? 18 : 22,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.8,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 3),
+              const Text(
+                'CHOOSE YOUR MATCH',
+                style: TextStyle(
+                  color: Color(0xFFFFD166),
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: compact ? 12 : 20),
+
+        // Cột Phải: 4 Nút chế độ xếp dạng 2x2 Grid vừa vặn tuyệt đối
+        Expanded(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.people,
+                      label: 'P1 vs P2 (CÙNG MÁY)',
+                      detail: '2 người trên 1 thiết bị',
+                      background: const Color(0xFF1D4ED8),
+                      onPressed: _startPlayerMatch,
+                      compact: compact,
+                    ),
+                  ),
+                  SizedBox(width: compact ? 8 : 12),
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.wifi_tethering,
+                      label: 'ĐẤU MẠNG LOCAL',
+                      detail: 'Chung mạng WiFi / Hotspot',
+                      background: const Color(0xFF00897B),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => LocalMultiplayerDialog(
+                            onConnected: _startLocalMultiplayerMatch,
+                          ),
+                        );
+                      },
+                      compact: compact,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? 8 : 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.military_tech,
+                      label: '7 ẢI THỬ THÁCH BOT',
+                      detail: 'Độ khó tăng theo cấp gậy Shop',
+                      background: const Color(0xFFE65100),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => BotStagesDialog(
+                            onSelectStage: _startBotStage,
+                          ),
+                        );
+                      },
+                      compact: compact,
+                    ),
+                  ),
+                  SizedBox(width: compact ? 8 : 12),
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.event_note,
+                      label: 'THẾ BI HÀNG NGÀY',
+                      detail: '1 thế bi / ngày • Quà lớn',
+                      background: const Color(0xFF7B1FA2),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => DailyPuzzleDialog(
+                            onStartPuzzle: _startDailyPuzzle,
+                          ),
+                        );
+                      },
+                      compact: compact,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// NỘI DUNG GIAO DIỆN DỌC (PORTRAIT)
+  Widget _buildPortraitMenuContent(bool compact) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 52,
+          height: 52,
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.black,
+            border: Border.all(color: Colors.white70, width: 2),
+            boxShadow: const [
+              BoxShadow(color: Colors.black45, blurRadius: 10),
+            ],
+          ),
+          child: Image.asset('assets/images/ball_8.png'),
+        ),
+        const SizedBox(height: 8),
+        const FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            '8 POOL BILLIARDS',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        const Text(
+          'CHOOSE YOUR MATCH',
+          style: TextStyle(
+            color: Color(0xFFFFD166),
+            fontSize: 11,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _buildMenuButton(
+          icon: Icons.people,
+          label: 'P1 vs P2 (CÙNG MÁY)',
+          detail: '2 người chơi trên 1 thiết bị',
+          background: const Color(0xFF1D4ED8),
+          onPressed: _startPlayerMatch,
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
+        _buildMenuButton(
+          icon: Icons.wifi_tethering,
+          label: 'ĐẤU MẠNG LOCAL (WIFI)',
+          detail: 'Chơi 2 máy chung WiFi / Hotspot',
+          background: const Color(0xFF00897B),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => LocalMultiplayerDialog(
+                onConnected: _startLocalMultiplayerMatch,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
+        _buildMenuButton(
+          icon: Icons.military_tech,
+          label: '7 ẢI THỬ THÁCH BOT',
+          detail: 'Độ khó tăng dần theo cấp gậy Shop',
+          background: const Color(0xFFE65100),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => BotStagesDialog(
+                onSelectStage: _startBotStage,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
+        _buildMenuButton(
+          icon: Icons.event_note,
+          label: 'THẾ BI HÀNG NGÀY',
+          detail: 'Nhiệm vụ 1 thế bi ngẫu nhiên/ngày',
+          background: const Color(0xFF7B1FA2),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => DailyPuzzleDialog(
+                onStartPuzzle: _startDailyPuzzle,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+      ],
+    );
+  }
 }
 
+/// Nút menu 4 màu phong cách cổ điển, co giãn tối ưu cho Mobile
 Widget _buildMenuButton({
   required IconData icon,
   required String label,
   required String detail,
   required Color background,
   required VoidCallback onPressed,
+  bool compact = false,
 }) {
   return SizedBox(
     width: double.infinity,
@@ -241,32 +469,48 @@ Widget _buildMenuButton({
       style: FilledButton.styleFrom(
         backgroundColor: background,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 10 : 14,
+          vertical: compact ? 8 : 12,
+        ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 3,
       ),
       child: Row(
         children: [
-          Icon(icon, size: 28),
-          const SizedBox(width: 14),
+          Icon(icon, size: compact ? 22 : 26),
+          SizedBox(width: compact ? 8 : 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: compact ? 13 : 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.3,
+                    ),
                   ),
                 ),
+                const SizedBox(height: 1),
                 Text(
                   detail,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: compact ? 9.5 : 11,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-          const Icon(Icons.chevron_right),
+          Icon(Icons.chevron_right, size: compact ? 18 : 22),
         ],
       ),
     ),
@@ -1602,45 +1846,16 @@ Widget _buildControlBar(
 void _showSettings(BuildContext context, {required VoidCallback onHome}) {
   showDialog<void>(
     context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setState) => AlertDialog(
-        title: const Text('Cài đặt'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SwitchListTile.adaptive(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Đấu với Bot'),
-              subtitle: const Text('Bot sẽ điều khiển Player 2'),
-              value: gameInstance.isBotMode.value,
-              onChanged: (enabled) {
-                gameInstance.setBotMode(enabled);
-                setState(() {});
-              },
-            ),
-            if (gameInstance.isBotMode.value)
-              DropdownButtonFormField<int>(
-                decoration: const InputDecoration(
-                  labelText: 'Độ khó Bot',
-                  border: OutlineInputBorder(),
-                ),
-                initialValue: gameInstance.botDifficulty.value,
-                items: const [
-                  DropdownMenuItem(value: 1, child: Text('Dễ')),
-                  DropdownMenuItem(value: 2, child: Text('Khó')),
-                ],
-                onChanged: (difficulty) {
-                  if (difficulty != null) {
-                    gameInstance.setBotDifficulty(difficulty);
-                    setState(() {});
-                  }
-                },
-              ),
-            const SizedBox(height: 12),
-            const Text('Chọn thao tác cho trận đấu hiện tại.'),
-          ],
-        ),
-        actions: [
+    builder: (context) => AlertDialog(
+      title: const Text('Cài đặt'),
+      content: const Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Chọn thao tác cho trận đấu hiện tại.'),
+        ],
+      ),
+      actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Hủy'),
@@ -1671,7 +1886,6 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
           ),
         ],
       ),
-    ),
   );
 }
 
@@ -1910,6 +2124,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   late CueBall cueBall;
   final List<PoolBall> poolBalls = [];
   List<Pocket> pockets = [];
+  List<Wall> walls = [];
+  SpriteComponent? tableSpriteComponent;
+  Vector2? _lastConfiguredSize;
   Vector2? dragStart;
   Vector2? dragCurrent;
   bool shotInProgress = false;
@@ -1962,41 +2179,85 @@ class BilliardGame extends Forge2DGame with PanDetector {
     BilliardContactListener.activeGame = this;
 
     final tableSprite = await Sprite.load('pool_table.png');
-    add(SpriteComponent(sprite: tableSprite, size: size));
+    tableSpriteComponent = SpriteComponent(sprite: tableSprite, size: size);
+    add(tableSpriteComponent!);
 
-    final double paddingX = size.x * 0.0574;
-    final double paddingY = size.y * 0.1034;
-    playAreaTopLeft = Vector2(paddingX, paddingY);
-    playAreaBottomRight = Vector2(size.x - paddingX, size.y - paddingY);
-
-    ballRadius = size.y * 0.0235;
-
-    addAll(createBoundaries());
-    pockets = createPockets();
-    addAll(pockets);
+    _reconfigureTableForSize(size, initialLoad: true);
 
     if (activeDailyPuzzle != null) {
       ruleMessage.value = 'Thế bi: ${activeDailyPuzzle!.title}';
       dailyPuzzleShotsTaken = 0;
       breakShot = false;
-      _spawnDailyPuzzleBalls(activeDailyPuzzle!);
-      cueBall = CueBall(
-        Vector2(
-          size.x * activeDailyPuzzle!.cueBallNormX,
-          size.y * activeDailyPuzzle!.cueBallNormY,
-        ),
-        ballRadius,
-      );
+      _setupDailyPuzzle(activeDailyPuzzle!);
     } else {
       spawnTriangleBalls();
-      cueBall = CueBall(Vector2(size.x * 0.25, size.y / 2), ballRadius);
+      _resetCueBall();
     }
 
-    add(cueBall);
-    cueBall.isAiming = true;
     _hasGameLoaded = true;
     _updateAimVector(ballRadius * 2);
     initMultiplayer();
+  }
+
+  @override
+  void onGameResize(Vector2 size) {
+    super.onGameResize(size);
+    if (size.x <= 0 || size.y <= 0) return;
+    if (_lastConfiguredSize == null ||
+        (_lastConfiguredSize!.x - size.x).abs() > 1.0 ||
+        (_lastConfiguredSize!.y - size.y).abs() > 1.0) {
+      _reconfigureTableForSize(size);
+    }
+  }
+
+  void _reconfigureTableForSize(Vector2 newSize, {bool initialLoad = false}) {
+    _lastConfiguredSize = newSize.clone();
+    tableSpriteComponent?.size = newSize;
+
+    final double paddingX = newSize.x * 0.0574;
+    final double paddingY = newSize.y * 0.1034;
+    playAreaTopLeft = Vector2(paddingX, paddingY);
+    playAreaBottomRight = Vector2(newSize.x - paddingX, newSize.y - paddingY);
+
+    ballRadius = newSize.y * 0.0235;
+
+    // Tái cấu hình băng và lỗ theo kích thước mới
+    for (final w in walls) {
+      if (w.isMounted && !w.isRemoved && !w.isRemoving) {
+        w.removeFromParent();
+      }
+    }
+    walls.clear();
+    walls = createBoundaries();
+    addAll(walls);
+
+    for (final p in pockets) {
+      if (p.isMounted && !p.isRemoved && !p.isRemoving) {
+        p.removeFromParent();
+      }
+    }
+    pockets.clear();
+    pockets = createPockets();
+    addAll(pockets);
+
+    // Cập nhật lại bán kính vật lý cho các bi
+    for (final ball in poolBalls) {
+      ball.updateRadius(ballRadius);
+    }
+    try {
+      if (cueBall.isMounted) {
+        cueBall.updateRadius(ballRadius);
+      }
+    } catch (_) {}
+
+    if (!initialLoad && !shotInProgress && _hasGameLoaded) {
+      if (activeDailyPuzzle != null) {
+        _setupDailyPuzzle(activeDailyPuzzle!);
+      } else if (breakShot) {
+        spawnTriangleBalls();
+        _resetCueBall();
+      }
+    }
   }
 
   List<Wall> createBoundaries() {
@@ -2155,25 +2416,129 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void spawnTriangleBalls() {
     final startX = size.x * 0.70;
     final centerY = size.y / 2;
-    final colWidth = ballRadius * 1.732;
-    final gap = 0.1;
+    final hitboxR = ballRadius * 0.88;
+    // Khoảng cách tâm giữa 2 bi chạm nhau: 2 * hitboxR + 0.12 (triệt tiêu va chạm trùng lặp Box2D)
+    final spacing = hitboxR * 2.0 + 0.12;
+    final dx = spacing * 0.8660254; // cos(30 deg) = sqrt(3)/2
 
-    int ballNumber = 1;
+    // Thứ tự xếp bi chuẩn quốc tế 8-ball: Bi 8 nằm chính giữa hàng thứ 3 (row 2, col 1)
+    const rackOrder = [1, 9, 2, 3, 8, 10, 4, 11, 5, 12, 13, 6, 14, 7, 15];
+
+    final Map<int, Vector2> rackPositions = {};
+    int idx = 0;
     for (int row = 0; row < 5; row++) {
       for (int col = 0; col <= row; col++) {
-        final x = startX + row * colWidth;
-        final y = centerY + (col - row / 2) * (ballRadius * 2 + gap);
+        final x = startX + row * dx;
+        final y = centerY + (col - row / 2.0) * spacing;
+        rackPositions[rackOrder[idx]] = Vector2(x, y);
+        idx++;
+      }
+    }
+
+    if (poolBalls.length == 15) {
+      // TÁI SỬ DỤNG 15 BI CÓ SẴN - KHÔNG XÓA ASYNC, KHÔNG TẠO CHỒNG CHÉO TRÁNH NỔ BI
+      for (final ball in poolBalls) {
+        final pos = rackPositions[ball.number] ?? Vector2(startX, centerY);
+        ball.updateRadius(ballRadius);
+        ball.isSunk = false;
+        ball.pocketedThisShot = false;
+        ball.body.setTransform(pos, 0);
+        ball.body.linearVelocity.setZero();
+        ball.body.angularVelocity = 0;
+        ball.body.clearForces();
+        ball.body.setAwake(true);
+      }
+    } else {
+      // Lần đầu tiên khi chưa có đủ 15 bi
+      for (final b in poolBalls) {
+        if (b.isMounted && !b.isRemoved && !b.isRemoving) {
+          b.removeFromParent();
+        }
+      }
+      poolBalls.clear();
+
+      for (int number = 1; number <= 15; number++) {
+        final pos = rackPositions[number] ?? Vector2(startX, centerY);
         final ball = PoolBall(
-          Vector2(x, y),
-          'ball_$ballNumber.png',
+          pos,
+          'ball_$number.png',
           ballRadius,
-          ballNumber,
+          number,
         );
         poolBalls.add(ball);
         add(ball);
-        ballNumber++;
       }
     }
+  }
+
+  void _resetCueBall({Vector2? customPos}) {
+    final pos = customPos ?? Vector2(size.x * 0.25, size.y / 2);
+    try {
+      if (cueBall.isMounted) {
+        cueBall.updateRadius(ballRadius);
+        cueBall.isSunk = false;
+        cueBall.pocketedThisShot = false;
+        cueBall.hitObjectThisShot = false;
+        cueBall.firstObjectBallHit = null;
+        cueBall.hasCollidedBall = false;
+        cueBall.drawFollowTimer = 0;
+        cueBall.drawFollowForce = Vector2.zero();
+        cueBall.activeSpin = Offset.zero;
+        cueBall.spinInfluence = Offset.zero;
+        cueBall.body.setTransform(pos, 0);
+        cueBall.body.linearVelocity.setZero();
+        cueBall.body.angularVelocity = 0;
+        cueBall.body.clearForces();
+        cueBall.body.setAwake(true);
+        cueBall.isAiming = true;
+        _updateAimVector(ballRadius * 2);
+        return;
+      }
+    } catch (_) {}
+
+    cueBall = CueBall(pos, ballRadius);
+    add(cueBall);
+    cueBall.isAiming = true;
+    _updateAimVector(ballRadius * 2);
+  }
+
+  void _setupDailyPuzzle(DailyPuzzleModel puzzle) {
+    if (poolBalls.length != 15) {
+      spawnTriangleBalls();
+    }
+    final puzzleBallNumbers = puzzle.balls.map((b) => b.ballNumber).toSet();
+    final Map<int, Vector2> puzzlePositions = {};
+    for (final cfg in puzzle.balls) {
+      puzzlePositions[cfg.ballNumber] = Vector2(size.x * cfg.normX, size.y * cfg.normY);
+    }
+
+    for (final ball in poolBalls) {
+      ball.updateRadius(ballRadius);
+      if (puzzleBallNumbers.contains(ball.number)) {
+        final pos = puzzlePositions[ball.number]!;
+        ball.isSunk = false;
+        ball.pocketedThisShot = false;
+        ball.body.setTransform(pos, 0);
+        ball.body.linearVelocity.setZero();
+        ball.body.angularVelocity = 0;
+        ball.body.clearForces();
+        ball.body.setAwake(true);
+      } else {
+        ball.isSunk = true;
+        ball.pocketedThisShot = false;
+        ball.body.setTransform(Vector2(-1000, -1000), 0);
+        ball.body.linearVelocity.setZero();
+        ball.body.angularVelocity = 0;
+        ball.body.clearForces();
+      }
+    }
+
+    _resetCueBall(
+      customPos: Vector2(
+        size.x * puzzle.cueBallNormX,
+        size.y * puzzle.cueBallNormY,
+      ),
+    );
   }
 
   @override
@@ -2460,65 +2825,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
       return;
     }
 
-    // Dọn dẹp an toàn các bi cũ khỏi cây Component của Flame
-    for (final child in children.whereType<PoolBall>().toList()) {
-      if (child.isMounted && !child.isRemoved && !child.isRemoving) {
-        child.removeFromParent();
-      }
-    }
-    for (final ball in poolBalls) {
-      if (ball.isMounted && !ball.isRemoved && !ball.isRemoving) {
-        ball.removeFromParent();
-      }
-    }
-    poolBalls.clear();
-
-    for (final child in children.whereType<CueBall>().toList()) {
-      if (child.isMounted && !child.isRemoved && !child.isRemoving) {
-        child.removeFromParent();
-      }
-    }
-    if (cueBall.isMounted && !cueBall.isRemoved && !cueBall.isRemoving) {
-      cueBall.removeFromParent();
-    }
-
     if (activeDailyPuzzle != null) {
-      _spawnDailyPuzzleBalls(activeDailyPuzzle!);
-      cueBall = CueBall(
-        Vector2(
-          size.x * activeDailyPuzzle!.cueBallNormX,
-          size.y * activeDailyPuzzle!.cueBallNormY,
-        ),
-        ballRadius,
-      );
-      add(cueBall);
-      cueBall.isAiming = true;
-      _updateAimVector(ballRadius * 2);
-      matchVersion.value++;
-      return;
+      _setupDailyPuzzle(activeDailyPuzzle!);
+    } else {
+      spawnTriangleBalls();
+      _resetCueBall();
     }
 
-    spawnTriangleBalls();
-    cueBall = CueBall(Vector2(size.x * 0.25, size.y / 2), ballRadius);
-    add(cueBall);
-    cueBall.isAiming = true;
-    _updateAimVector(ballRadius * 2);
     matchVersion.value++;
-  }
-
-  void _spawnDailyPuzzleBalls(DailyPuzzleModel puzzle) {
-    for (final cfg in puzzle.balls) {
-      final x = size.x * cfg.normX;
-      final y = size.y * cfg.normY;
-      final ball = PoolBall(
-        Vector2(x, y),
-        'ball_${cfg.ballNumber}.png',
-        ballRadius,
-        cfg.ballNumber,
-      );
-      poolBalls.add(ball);
-      add(ball);
-    }
   }
 
   void setShotPower(double value) {
@@ -3329,11 +3643,22 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void _prepareCueBallForPlacement() {
     resetCueSpin();
-    final position = initialCueBallPosition;
+    var position = initialCueBallPosition;
+    final r = ballRadius * 2.1;
+    var shift = 0.0;
+    while (poolBalls.any((b) => !b.isSunk && (b.body.position - position).length < r) && shift < size.x * 0.3) {
+      shift += ballRadius * 1.5;
+      position = Vector2(
+        (size.x * 0.25 - shift).clamp(playAreaTopLeft.x + ballRadius * 2, size.x * 0.5),
+        size.y / 2,
+      );
+    }
     cueBall.isSunk = false;
     cueBall.body.setTransform(position, 0);
     cueBall.body.linearVelocity.setZero();
     cueBall.body.angularVelocity = 0;
+    cueBall.body.clearForces();
+    cueBall.body.setAwake(true);
     cueBall.isAiming = false;
     cueBall.strokeDistance = 0;
   }
@@ -3353,7 +3678,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     );
     final overlapsBall = poolBalls.any(
       (ball) =>
-          !ball.isRemoved &&
+          !ball.isSunk &&
           (ball.body.position - position).length < ballRadius * 2.05,
     );
     if (!overlapsBall) {
@@ -3361,6 +3686,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.body.setTransform(position, 0);
       cueBall.body.linearVelocity.setZero();
       cueBall.body.angularVelocity = 0;
+      cueBall.body.clearForces();
+      cueBall.body.setAwake(true);
       if (isLocalMultiplayer.value && isMyTurn) {
         LocalMultiplayerService.instance.sendBallInHand(
           x: position.x,
@@ -3947,8 +4274,8 @@ class AimRayCastCallback extends RayCastCallback {
 
 class CueBall extends BodyComponent {
   final Vector2 initialPosition;
-  final double radius;
-  final double hitboxRadius;
+  double radius;
+  double hitboxRadius;
 
   Vector2? aimVector, rayHitPoint, reflectionVector;
   Sprite? cueSprite;
@@ -3971,6 +4298,18 @@ class CueBall extends BodyComponent {
     this.radius, {
     double? hitboxRadius,
   }) : hitboxRadius = hitboxRadius ?? (radius * 0.88);
+
+  void updateRadius(double newRadius) {
+    radius = newRadius;
+    hitboxRadius = newRadius * 0.88;
+    try {
+      for (final f in body.fixtures) {
+        if (f.shape is CircleShape) {
+          f.shape.radius = hitboxRadius;
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   Future<void> onLoad() async {
@@ -4385,8 +4724,8 @@ class CueBall extends BodyComponent {
 
 class PoolBall extends BodyComponent {
   final Vector2 initialPosition;
-  final double radius;
-  final double hitboxRadius;
+  double radius;
+  double hitboxRadius;
   final String imageName;
   final int number;
   Sprite? ballSprite;
@@ -4400,6 +4739,18 @@ class PoolBall extends BodyComponent {
     this.number, {
     double? hitboxRadius,
   }) : hitboxRadius = hitboxRadius ?? (radius * 0.88);
+
+  void updateRadius(double newRadius) {
+    radius = newRadius;
+    hitboxRadius = newRadius * 0.88;
+    try {
+      for (final f in body.fixtures) {
+        if (f.shape is CircleShape) {
+          f.shape.radius = hitboxRadius;
+        }
+      }
+    } catch (_) {}
+  }
 
   @override
   Future<void> onLoad() async {
@@ -4433,8 +4784,12 @@ class PoolBall extends BodyComponent {
   @override
   void update(double dt) {
     super.update(dt);
-    if (isSunk && !isRemoved && !isRemoving) {
-      removeFromParent(); // Xóa bi khỏi bàn khi lọt lỗ
+    if (isSunk) {
+      body.linearVelocity.setZero();
+      body.angularVelocity = 0;
+      if (body.position.x > -500) {
+        body.setTransform(Vector2(-1000, -1000), 0);
+      }
     }
   }
 
