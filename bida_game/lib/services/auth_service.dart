@@ -63,13 +63,18 @@ class AuthService extends ChangeNotifier {
   String? _displayName;
   String _role = 'player'; // 'player' | 'admin'
   bool _isLoading = false;
+  bool _isGuest = false;
 
   User? get currentUser => _currentUser ?? _auth?.currentUser;
-  bool get isLoggedIn => currentUser != null;
+  bool get isLoggedIn => currentUser != null || _isGuest;
+  bool get isGuest => _isGuest;
   bool get isAdmin =>
       _role == 'admin' ||
       adminEmails.contains(currentUser?.email?.toLowerCase().trim());
-  String get displayName => _displayName ?? currentUser?.displayName ?? (currentUser?.email?.split('@').first ?? 'Khách');
+  String get displayName =>
+      _displayName ??
+      currentUser?.displayName ??
+      (currentUser?.email?.split('@').first ?? (_isGuest ? 'Cơ Thủ Khách' : 'Khách'));
   String get role => _role;
   bool get isLoading => _isLoading;
 
@@ -84,16 +89,20 @@ class AuthService extends ChangeNotifier {
     if (!_isFirebaseReady || _auth == null) return;
     _currentUser = _auth!.currentUser;
     if (_currentUser != null) {
+      _isGuest = _currentUser!.isAnonymous;
       await _fetchUserData(_currentUser!.uid);
     }
     _auth!.authStateChanges().listen((user) async {
       _currentUser = user;
       if (user != null) {
+        _isGuest = user.isAnonymous;
         await _fetchUserData(user.uid);
       } else {
-        _role = 'player';
-        _displayName = null;
-        ProgressionService.instance.resetToDefault();
+        if (!_isGuest) {
+          _role = 'player';
+          _displayName = null;
+          ProgressionService.instance.resetToDefault();
+        }
       }
       notifyListeners();
     });
@@ -177,6 +186,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _isGuest = false;
       final cleanInput = emailOrUsername.trim();
       final email = cleanInput.contains('@') ? cleanInput : '$cleanInput@bida.com';
 
@@ -280,6 +290,7 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
 
     try {
+      _isGuest = false;
       if (!_isFirebaseReady || _auth == null) {
         _isLoading = false;
         notifyListeners();
@@ -344,6 +355,48 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Đăng nhập chế độ Chơi Ngay (Khách)
+  Future<String?> loginAsGuest() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      if (_isFirebaseReady && _auth != null) {
+        try {
+          final credential = await _auth!.signInAnonymously();
+          final user = credential.user;
+          if (user != null) {
+            _currentUser = user;
+            _isGuest = true;
+            _displayName = 'Cơ Thủ #${math.Random().nextInt(9000) + 1000}';
+            _role = 'player';
+            try {
+              await user.updateDisplayName(_displayName);
+            } catch (_) {}
+            _isLoading = false;
+            notifyListeners();
+            return null;
+          }
+        } catch (anonErr) {
+          debugPrint('Firebase anonymous login note: $anonErr (using local guest mode)');
+        }
+      }
+
+      // Guest mode offline / fallback
+      _isGuest = true;
+      _currentUser = null;
+      _displayName = 'Cơ Thủ #${math.Random().nextInt(9000) + 1000}';
+      _role = 'player';
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    } catch (e) {
+      _isLoading = false;
+      notifyListeners();
+      return 'Không thể vào chế độ khách: $e';
+    }
+  }
+
   /// Đăng xuất
   Future<void> logout() async {
     if (_auth != null) {
@@ -352,6 +405,7 @@ class AuthService extends ChangeNotifier {
     _currentUser = null;
     _displayName = null;
     _role = 'player';
+    _isGuest = false;
     ProgressionService.instance.resetToDefault();
     notifyListeners();
   }

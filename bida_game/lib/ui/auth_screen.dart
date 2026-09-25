@@ -8,8 +8,8 @@ class AuthScreen extends StatefulWidget {
   State<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _AuthScreenState extends State<AuthScreen> {
+  int _selectedTab = 0; // 0: Đăng nhập, 1: Đăng ký
 
   // Controllers cho Đăng nhập
   final _loginAccountController = TextEditingController();
@@ -26,14 +26,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   bool _obscureRegPass = true;
 
   @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
   void dispose() {
-    _tabController.dispose();
     _loginAccountController.dispose();
     _loginPasswordController.dispose();
     _regNameController.dispose();
@@ -92,434 +85,760 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _handleGuestLogin() async {
+    setState(() {
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
+    final error = await AuthService.instance.loginAsGuest();
+    if (mounted && error != null) {
+      setState(() => _errorMessage = error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    final mediaQuery = MediaQuery.of(context);
+    final size = mediaQuery.size;
     final isLandscape = size.width > size.height;
+    final keyboardOpen = mediaQuery.viewInsets.bottom > 0;
     final auth = AuthService.instance;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: const BoxDecoration(
           gradient: RadialGradient(
             center: Alignment(0, -0.2),
-            radius: 1.2,
+            radius: 1.3,
             colors: [
-              Color(0xFF0F2E23),
-              Color(0xFF091A14),
-              Color(0xFF040A08),
+              Color(0xFF0F3226),
+              Color(0xFF091F17),
+              Color(0xFF040D0A),
             ],
           ),
         ),
         child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: isLandscape ? 24 : 16,
-                vertical: 12,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: isLandscape ? 460 : 400,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // --- LOGO & TIÊU ĐỀ GAME ---
-                    _buildGameHeader(isLandscape),
-                    const SizedBox(height: 16),
+          child: isLandscape
+              ? _buildLandscapeLayout(context, auth, keyboardOpen)
+              : _buildPortraitLayout(context, auth),
+        ),
+      ),
+    );
+  }
 
-                    // --- KHUNG FORM ĐĂNG NHẬP / ĐĂNG KÝ ---
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0E221B).withValues(alpha: 0.95),
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(
-                          color: const Color(0xFF26A69A).withValues(alpha: 0.5),
-                          width: 2,
-                        ),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black87,
-                            blurRadius: 30,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // TAB SELECTOR
-                            Container(
-                              color: const Color(0xFF071410),
-                              child: TabBar(
-                                controller: _tabController,
-                                indicatorColor: const Color(0xFF00E676),
-                                indicatorWeight: 3,
-                                labelColor: const Color(0xFF00E676),
-                                unselectedLabelColor: Colors.white54,
-                                labelStyle: const TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 14,
-                                  letterSpacing: 1.0,
-                                ),
-                                tabs: const [
-                                  Tab(
-                                    icon: Icon(Icons.login, size: 18),
-                                    text: 'ĐĂNG NHẬP',
-                                  ),
-                                  Tab(
-                                    icon: Icon(Icons.person_add, size: 18),
-                                    text: 'ĐĂNG KÝ',
-                                  ),
-                                ],
-                              ),
-                            ),
+  // =========================================================================
+  // GIAO DIỆN MOBILE LANDSCAPE (MẶC ĐỊNH CHO GAME BIDA)
+  // =========================================================================
+  Widget _buildLandscapeLayout(BuildContext context, AuthService auth, bool keyboardOpen) {
+    // Khi bàn phím ảo mở trên mobile ngang, không gian chiều cao rất hạn chế (~150-180dp)
+    // Cần thu gọn banner thương hiệu để dành toàn bộ chiều cao cho form và bàn phím
+    if (keyboardOpen) {
+      return Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: _buildFormCard(auth, compact: true),
+          ),
+        ),
+      );
+    }
 
-                            // MESSAGE ALERTS
-                            if (_errorMessage != null)
-                              Container(
-                                width: double.infinity,
-                                color: const Color(0xFFD32F2F),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.error_outline, color: Colors.white, size: 18),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _errorMessage!,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            if (_successMessage != null)
-                              Container(
-                                width: double.infinity,
-                                color: const Color(0xFF2E7D32),
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _successMessage!,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                            // FORM TABS CONTENT
-                            SizedBox(
-                              height: 310,
-                              child: TabBarView(
-                                controller: _tabController,
-                                children: [
-                                  _buildLoginForm(auth),
-                                  _buildRegisterForm(auth),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 12),
-                    // BẢO VỆ DỮ LIỆU
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.lock_clock, size: 14, color: Colors.white38),
-                        SizedBox(width: 6),
-                        Text(
-                          'Dữ liệu đồng bộ Realtime Database & Firebase Auth an toàn',
-                          style: TextStyle(color: Colors.white38, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 880),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // --- CỘT TRÁI: LOGO, TÊN GAME & NÚT CHƠI NGAY (KHÁCH) ---
+              Expanded(
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 18),
+                  child: _buildBrandPanel(auth),
                 ),
               ),
-            ),
+
+              // --- CỘT PHẢI: KHUNG ĐĂNG NHẬP / ĐĂNG KÝ PHONG CÁCH GAMING ---
+              Expanded(
+                flex: 6,
+                child: _buildFormCard(auth, compact: false),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  Widget _buildGameHeader(bool isLandscape) {
+  // =========================================================================
+  // CỘT THƯƠNG HIỆU & NÚT CHƠI NGAY
+  // =========================================================================
+  Widget _buildBrandPanel(AuthService auth) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Biểu tượng Bi 8 vàng viền bóng
-        Container(
-          width: isLandscape ? 56 : 64,
-          height: isLandscape ? 56 : 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const RadialGradient(
-              center: Alignment(-0.3, -0.3),
-              radius: 0.8,
-              colors: [Color(0xFF333333), Color(0xFF000000)],
+        // Logo Bi 8 + Tiêu đề ngang
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _build8BallLogo(size: 48),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '8 POOL MASTER',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(
+                      color: const Color(0xFF00E676).withValues(alpha: 0.4),
+                    ),
+                  ),
+                  child: const Text(
+                    'BIDA 8 LỖ CASUAL • MULTIPLAYER',
+                    style: TextStyle(
+                      color: Color(0xFF69F0AE),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF00E676).withValues(alpha: 0.35),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-            border: Border.all(color: const Color(0xFF00E676), width: 2),
-          ),
-          alignment: Alignment.center,
+          ],
+        ),
+
+        const SizedBox(height: 14),
+
+        // Các đặc sắc của game (Features bullet list)
+        _buildFeatureItem(Icons.sports_esports, 'Vật lý bi chuẩn xác, trải nghiệm chân thực'),
+        const SizedBox(height: 6),
+        _buildFeatureItem(Icons.leaderboard, 'Bảng xếp hạng & thành tích đồng bộ Realtime'),
+        const SizedBox(height: 6),
+        _buildFeatureItem(Icons.people_alt, 'Đấu với Bạn bè, Bot AI và Luyện tập nâng cao'),
+
+        const SizedBox(height: 14),
+
+        // Nút CHƠI NGAY (KHÁCH) - Rất quan trọng trên mobile
+        InkWell(
+          onTap: auth.isLoading ? null : _handleGuestLogin,
+          borderRadius: BorderRadius.circular(12),
           child: Container(
-            width: isLandscape ? 26 : 30,
-            height: isLandscape ? 26 : 30,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '8',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.w900,
-                fontSize: isLandscape ? 17 : 20,
-                fontFamily: 'monospace',
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF1E3A2F), Color(0xFF132720)],
               ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFF00E676).withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          '8 POOL BILLIARDS',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.w900,
-            fontSize: 22,
-            letterSpacing: 2.2,
-          ),
-        ),
-        const SizedBox(height: 2),
-        const Text(
-          'Vui lòng đăng nhập để vào bàn đấu & đồng bộ xếp hạng',
-          style: TextStyle(
-            color: Color(0xFF80CBC4),
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.bolt,
+                    color: Color(0xFF00E676),
+                    size: 18,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'CHƠI NGAY (KHÁCH)',
+                        style: TextStyle(
+                          color: Color(0xFF00E676),
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                      Text(
+                        'Vào bàn ngay tức thì, không cần đăng ký',
+                        style: TextStyle(
+                          color: Colors.white60,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Color(0xFF00E676),
+                  size: 12,
+                ),
+              ],
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLoginForm(AuthService auth) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+  Widget _buildFeatureItem(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: const Color(0xFF00B0FF)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =========================================================================
+  // KHUNG BIỂU MẪU ĐĂNG NHẬP / ĐĂNG KÝ
+  // =========================================================================
+  Widget _buildFormCard(AuthService auth, {required bool compact}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0A1E17).withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF26A69A).withValues(alpha: 0.45),
+          width: 1.5,
+        ),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black54,
+            blurRadius: 18,
+            offset: Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(15),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Thanh chuyển đổi Tab (Đăng nhập / Đăng ký)
+            _buildTabSelector(),
+
+            // Thông báo lỗi / thành công (nếu có)
+            if (_errorMessage != null) _buildAlertBanner(_errorMessage!, isError: true),
+            if (_successMessage != null) _buildAlertBanner(_successMessage!, isError: false),
+
+            // Nội dung biểu mẫu theo Tab đang chọn
+            Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: compact ? 8 : 12,
+              ),
+              child: _selectedTab == 0
+                  ? _buildLoginForm(auth, compact)
+                  : _buildRegisterForm(auth, compact),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Bộ chọn Tab phong cách Game Capsule
+  Widget _buildTabSelector() {
+    return Container(
+      color: const Color(0xFF061410),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      child: Row(
         children: [
-          TextField(
-            controller: _loginAccountController,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Tài khoản hoặc Email',
-              hintText: 'admin hoặc player01',
-              labelStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.person, color: Color(0xFF00E676), size: 20),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          Expanded(
+            child: _buildTabButton(
+              title: 'ĐĂNG NHẬP',
+              icon: Icons.login,
+              isSelected: _selectedTab == 0,
+              onTap: () {
+                setState(() {
+                  _selectedTab = 0;
+                  _errorMessage = null;
+                });
+              },
             ),
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _loginPasswordController,
-            obscureText: _obscureLoginPass,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Mật khẩu',
-              labelStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.lock, color: Color(0xFF00E676), size: 20),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureLoginPass ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.white54,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _obscureLoginPass = !_obscureLoginPass),
-              ),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildTabButton(
+              title: 'ĐĂNG KÝ',
+              icon: Icons.person_add_alt_1,
+              isSelected: _selectedTab == 1,
+              onTap: () {
+                setState(() {
+                  _selectedTab = 1;
+                  _errorMessage = null;
+                });
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-
-          // Nút điền nhanh tài khoản Admin
-          InkWell(
-            onTap: () {
-              _loginAccountController.text = 'admin';
-              _loginPasswordController.text = 'admin';
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFB300).withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFFFB300).withValues(alpha: 0.3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.shield, color: Color(0xFFFFB300), size: 15),
-                  SizedBox(width: 6),
-                  Text(
-                    'Điền nhanh tài khoản Admin (admin / admin)',
-                    style: TextStyle(
-                      color: Color(0xFFFFD54F),
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          FilledButton.icon(
-            onPressed: auth.isLoading ? null : _handleLogin,
-            style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF00E676),
-              foregroundColor: Colors.black87,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
-            ),
-            icon: auth.isLoading
-                ? const SizedBox.shrink()
-                : const Icon(Icons.arrow_forward, size: 20),
-            label: auth.isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
-                  )
-                : const Text(
-                    'ĐĂNG NHẬP VÀO GAME',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
-                  ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildRegisterForm(AuthService auth) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _regNameController,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Tên hiển thị (Nickname)',
-              hintText: 'Cơ Thủ Sài Gòn',
-              labelStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.badge, color: Color(0xFF00B0FF), size: 20),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
+  Widget _buildTabButton({
+    required String title,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF0F3628) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF00E676) : Colors.white10,
           ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _regAccountController,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Tên tài khoản hoặc Email',
-              hintText: 'player01 hoặc email@gmail.com',
-              labelStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.person_add, color: Color(0xFF00B0FF), size: 20),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 14,
+              color: isSelected ? const Color(0xFF00E676) : Colors.white54,
             ),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _regPasswordController,
-            obscureText: _obscureRegPass,
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-            decoration: InputDecoration(
-              labelText: 'Mật khẩu (ít nhất 6 ký tự)',
-              labelStyle: const TextStyle(color: Colors.white70),
-              prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00B0FF), size: 20),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureRegPass ? Icons.visibility : Icons.visibility_off,
-                  color: Colors.white54,
-                  size: 20,
-                ),
-                onPressed: () => setState(() => _obscureRegPass = !_obscureRegPass),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? const Color(0xFF00E676) : Colors.white54,
+                fontWeight: FontWeight.w900,
+                fontSize: 11.5,
+                letterSpacing: 0.8,
               ),
-              filled: true,
-              fillColor: Colors.black26,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertBanner(String message, {required bool isError}) {
+    return Container(
+      color: isError
+          ? const Color(0xFFD32F2F).withValues(alpha: 0.9)
+          : const Color(0xFF2E7D32).withValues(alpha: 0.9),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      child: Row(
+        children: [
+          Icon(
+            isError ? Icons.error_outline : Icons.check_circle_outline,
+            color: Colors.white,
+            size: 15,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(height: 14),
-          FilledButton.icon(
+          InkWell(
+            onTap: () => setState(() {
+              _errorMessage = null;
+              _successMessage = null;
+            }),
+            child: const Icon(Icons.close, color: Colors.white70, size: 14),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // =========================================================================
+  // BIỂU MẪU ĐĂNG NHẬP
+  // =========================================================================
+  Widget _buildLoginForm(AuthService auth, bool compact) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Input Tài khoản
+        _buildTextField(
+          controller: _loginAccountController,
+          labelText: 'Tài khoản hoặc Email',
+          hintText: 'admin hoặc player01',
+          icon: Icons.person_outline,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 8),
+
+        // Input Mật khẩu
+        _buildTextField(
+          controller: _loginPasswordController,
+          labelText: 'Mật khẩu',
+          hintText: '••••••',
+          icon: Icons.lock_outline,
+          obscureText: _obscureLoginPass,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleLogin(),
+          suffixIcon: IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              _obscureLoginPass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: Colors.white54,
+              size: 16,
+            ),
+            onPressed: () => setState(() => _obscureLoginPass = !_obscureLoginPass),
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        // Nút điền nhanh tài khoản Admin gọn gàng
+        InkWell(
+          onTap: () {
+            _loginAccountController.text = 'admin';
+            _loginPasswordController.text = 'admin';
+          },
+          borderRadius: BorderRadius.circular(6),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFB300).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: const Color(0xFFFFB300).withValues(alpha: 0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Icon(Icons.shield_outlined, color: Color(0xFFFFB300), size: 13),
+                SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    '⚡ Điền nhanh tài khoản Admin: admin / admin',
+                    style: TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 10),
+
+        // Nút Đăng nhập chính
+        SizedBox(
+          height: 38,
+          child: FilledButton.icon(
+            onPressed: auth.isLoading ? null : _handleLogin,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF00E676),
+              foregroundColor: Colors.black87,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: EdgeInsets.zero,
+              elevation: 3,
+            ),
+            icon: auth.isLoading
+                ? const SizedBox.shrink()
+                : const Icon(Icons.play_arrow, size: 18),
+            label: auth.isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
+                  )
+                : const Text(
+                    'VÀO BÀN CHƠI',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // =========================================================================
+  // BIỂU MẪU ĐĂNG KÝ
+  // =========================================================================
+  Widget _buildRegisterForm(AuthService auth, bool compact) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildTextField(
+          controller: _regNameController,
+          labelText: 'Tên hiển thị (Nickname)',
+          hintText: 'Cơ Thủ Sài Gòn',
+          icon: Icons.badge_outlined,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 7),
+        _buildTextField(
+          controller: _regAccountController,
+          labelText: 'Tên tài khoản hoặc Email',
+          hintText: 'player01 hoặc email@gmail.com',
+          icon: Icons.person_add_outlined,
+          textInputAction: TextInputAction.next,
+        ),
+        const SizedBox(height: 7),
+        _buildTextField(
+          controller: _regPasswordController,
+          labelText: 'Mật khẩu (tối thiểu 6 ký tự)',
+          hintText: '••••••',
+          icon: Icons.lock_outline,
+          obscureText: _obscureRegPass,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleRegister(),
+          suffixIcon: IconButton(
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+            icon: Icon(
+              _obscureRegPass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+              color: Colors.white54,
+              size: 16,
+            ),
+            onPressed: () => setState(() => _obscureRegPass = !_obscureRegPass),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 38,
+          child: FilledButton.icon(
             onPressed: auth.isLoading ? null : _handleRegister,
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFF00B0FF),
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 13),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 4,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: EdgeInsets.zero,
+              elevation: 3,
             ),
             icon: auth.isLoading
                 ? const SizedBox.shrink()
-                : const Icon(Icons.how_to_reg, size: 20),
+                : const Icon(Icons.how_to_reg, size: 18),
             label: auth.isLoading
                 ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : const Text(
                     'TẠO TÀI KHOẢN MỚI',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, letterSpacing: 0.8),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      letterSpacing: 0.8,
+                    ),
                   ),
           ),
+        ),
+      ],
+    );
+  }
+
+  // Tiện ích tạo TextField nhỏ gọn, tối ưu cho mobile
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String labelText,
+    required String hintText,
+    required IconData icon,
+    bool obscureText = false,
+    TextInputAction? textInputAction,
+    ValueChanged<String>? onSubmitted,
+    Widget? suffixIcon,
+  }) {
+    return SizedBox(
+      height: 42,
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        textInputAction: textInputAction,
+        onSubmitted: onSubmitted,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        decoration: InputDecoration(
+          isDense: true,
+          labelText: labelText,
+          labelStyle: const TextStyle(color: Colors.white70, fontSize: 11.5),
+          hintText: hintText,
+          hintStyle: const TextStyle(color: Colors.white30, fontSize: 11),
+          prefixIcon: Icon(icon, color: const Color(0xFF00E676), size: 16),
+          prefixIconConstraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+          suffixIcon: suffixIcon != null
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: suffixIcon,
+                )
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 30, minHeight: 30),
+          filled: true,
+          fillColor: Colors.black38,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: Colors.white12),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: Colors.white12),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(9),
+            borderSide: const BorderSide(color: Color(0xFF00E676)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // =========================================================================
+  // GIAO DIỆN PORTRAIT FALLBACK (NẾU MỞ TRÊN MÀN HÌNH DỌC)
+  // =========================================================================
+  Widget _buildPortraitLayout(BuildContext context, AuthService auth) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _build8BallLogo(size: 54),
+              const SizedBox(height: 8),
+              const Text(
+                '8 POOL MASTER',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22,
+                  letterSpacing: 1.5,
+                ),
+              ),
+              const SizedBox(height: 3),
+              const Text(
+                'Vui lòng đăng nhập để đồng bộ thành tích',
+                style: TextStyle(color: Color(0xFF80CBC4), fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              _buildFormCard(auth, compact: false),
+              const SizedBox(height: 12),
+              // Nút chơi ngay ở màn hình dọc
+              TextButton.icon(
+                onPressed: auth.isLoading ? null : _handleGuestLogin,
+                icon: const Icon(Icons.bolt, color: Color(0xFF00E676), size: 18),
+                label: const Text(
+                  'HOẶC CHƠI NGAY DƯỚI DẠNG KHÁCH',
+                  style: TextStyle(
+                    color: Color(0xFF00E676),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Logo Bi 8 3D với viền sáng
+  Widget _build8BallLogo({required double size}) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const RadialGradient(
+          center: Alignment(-0.35, -0.35),
+          radius: 0.85,
+          colors: [Color(0xFF4A4A4A), Color(0xFF141414), Color(0xFF000000)],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF00E676).withValues(alpha: 0.35),
+            blurRadius: 14,
+            spreadRadius: 1,
+          ),
         ],
+        border: Border.all(color: const Color(0xFF00E676), width: 1.5),
+      ),
+      alignment: Alignment.center,
+      child: Container(
+        width: size * 0.46,
+        height: size * 0.46,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '8',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w900,
+            fontSize: size * 0.32,
+            fontFamily: 'monospace',
+          ),
+        ),
       ),
     );
   }
