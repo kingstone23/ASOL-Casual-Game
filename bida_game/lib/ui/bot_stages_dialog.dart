@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/bot_stage_model.dart';
 import '../models/cue_model.dart';
@@ -23,7 +24,7 @@ class BotStagesDialog extends StatelessWidget {
           return Container(
             constraints: BoxConstraints(
               maxWidth: 820,
-              maxHeight: (screenHeight * 0.94).clamp(320.0, 520.0),
+              maxHeight: math.min(screenHeight * 0.94, 480.0),
             ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(

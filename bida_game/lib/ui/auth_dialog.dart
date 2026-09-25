@@ -558,6 +558,11 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             height: 40,
             child: TextField(
               controller: _loginAccountController,
+              keyboardType: TextInputType.emailAddress,
+              textCapitalization: TextCapitalization.none,
+              autocorrect: false,
+              enableSuggestions: false,
+              scrollPadding: const EdgeInsets.only(bottom: 120),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -580,6 +585,10 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             child: TextField(
               controller: _loginPasswordController,
               obscureText: _obscureLoginPass,
+              keyboardType: TextInputType.visiblePassword,
+              autocorrect: false,
+              enableSuggestions: false,
+              scrollPadding: const EdgeInsets.only(bottom: 120),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleLogin(),
@@ -658,6 +667,11 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             height: 40,
             child: TextField(
               controller: _regNameController,
+              keyboardType: TextInputType.name,
+              textCapitalization: TextCapitalization.words,
+              autocorrect: false,
+              enableSuggestions: false,
+              scrollPadding: const EdgeInsets.only(bottom: 120),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -679,6 +693,11 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             height: 40,
             child: TextField(
               controller: _regAccountController,
+              keyboardType: TextInputType.emailAddress,
+              textCapitalization: TextCapitalization.none,
+              autocorrect: false,
+              enableSuggestions: false,
+              scrollPadding: const EdgeInsets.only(bottom: 120),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
               decoration: InputDecoration(
@@ -701,6 +720,10 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             child: TextField(
               controller: _regPasswordController,
               obscureText: _obscureRegPass,
+              keyboardType: TextInputType.visiblePassword,
+              autocorrect: false,
+              enableSuggestions: false,
+              scrollPadding: const EdgeInsets.only(bottom: 120),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleRegister(),

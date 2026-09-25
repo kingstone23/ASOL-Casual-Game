@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 
@@ -56,11 +57,11 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: 620,
-          maxHeight: (screenHeight * 0.92).clamp(380.0, 520.0),
+          maxHeight: math.min(screenHeight * 0.94, 460.0),
         ),
         decoration: BoxDecoration(
           gradient: const LinearGradient(

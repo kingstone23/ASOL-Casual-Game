@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/daily_puzzle_model.dart';
 import '../services/progression_service.dart';
@@ -27,7 +28,7 @@ class DailyPuzzleDialog extends StatelessWidget {
       child: Container(
         constraints: BoxConstraints(
           maxWidth: isLandscape ? 680 : 440,
-          maxHeight: (screenHeight * 0.94).clamp(300.0, 520.0),
+          maxHeight: math.min(screenHeight * 0.94, 480.0),
         ),
         decoration: BoxDecoration(
           gradient: const LinearGradient(

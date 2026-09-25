@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/cue_model.dart';
 import '../services/progression_service.dart';
@@ -47,7 +48,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           return Container(
             constraints: BoxConstraints(
               maxWidth: 880,
-              maxHeight: (screenHeight * 0.94).clamp(320.0, 520.0),
+              maxHeight: math.min(screenHeight * 0.94, 480.0),
             ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
