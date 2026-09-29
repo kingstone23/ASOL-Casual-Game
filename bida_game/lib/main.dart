@@ -22,6 +22,9 @@ import 'ui/daily_puzzle_dialog.dart';
 import 'ui/local_multiplayer_dialog.dart';
 import 'ui/auth_screen.dart';
 import 'ui/aim_ruler_slider.dart';
+import 'ui/ball_3d_renderer.dart';
+import 'services/audio_manager.dart';
+import 'ui/combo_banner_overlay.dart';
 
 enum BallGroup { solids, stripes }
 
@@ -43,6 +46,11 @@ Future<void> main() async {
   } catch (e) {
     debugPrint('AuthService initialization error: $e');
   }
+  try {
+    await AudioManager.instance.initialize();
+  } catch (e) {
+    debugPrint('AudioManager initialization error: $e');
+  }
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
@@ -50,13 +58,20 @@ Future<void> main() async {
   runApp(
     MaterialApp(
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return Listener(
+          behavior: HitTestBehavior.translucent,
+          onPointerDown: (_) => AudioManager.instance.onUserInteraction(),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF071B16),
+        scaffoldBackgroundColor: const Color(0xFF0E1217),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF00E676),
           secondary: Color(0xFF00B0FF),
-          surface: Color(0xFF142E25),
+          surface: Color(0xFF161B22),
           onSurface: Colors.white,
         ),
       ),
@@ -127,7 +142,7 @@ class _BilliardHomeState extends State<BilliardHome> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF071B16), Color(0xFF0E5B3A), Color(0xFF06251C)],
+            colors: [Color(0xFF0F1318), Color(0xFF161C24), Color(0xFF0A0D12)],
           ),
         ),
         child: SafeArea(
@@ -597,11 +612,29 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                   aspectRatio: 2 / 1,
                                   child: Stack(
                                     children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(
-                                          ultraCompact ? 12 : 20,
+                                      DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            ultraCompact ? 12 : 20,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: 0.65),
+                                              blurRadius: 18,
+                                              spreadRadius: 2,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
                                         ),
-                                        child: GameWidget(game: gameInstance),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            ultraCompact ? 12 : 20,
+                                          ),
+                                          child: GameWidget(game: gameInstance),
+                                        ),
+                                      ),
+                                      ComboBannerOverlay(
+                                        comboNotifier: gameInstance.comboNotifier,
                                       ),
                                       _buildRackOverlay(onHome: onHome),
                                       Positioned(
@@ -1808,66 +1841,116 @@ Widget _buildControlBar(
                 : 'Bạn (Client P2)';
           }
 
-          return Container(
-            height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
-            padding: EdgeInsets.symmetric(
-              horizontal: ultraCompact ? 4 : 8,
-              vertical: ultraCompact ? 3 : 5,
-            ),
-            decoration: BoxDecoration(
-              color: const Color(0xE620252A),
-              borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
-              border: Border.all(color: Colors.white24),
-              boxShadow: const [
-                BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildPlayerCard(
-                    p1Name,
-                    Colors.blue,
-                    turn == 1,
-                    gameInstance.playerScores[1] ?? 0,
-                    gameInstance.groupLabel(1),
-                    gameInstance.groupBalls(1),
-                    false,
-                    compact: compact,
-                    ultraCompact: ultraCompact,
-                  ),
+          return ListenableBuilder(
+            listenable: ProgressionService.instance,
+            builder: (context, _) {
+              final p1Level = ProgressionService.instance.playerLevel;
+              final p1Coins = ProgressionService.instance.coins;
+
+              int p2Level = 1;
+              int p2Coins = 1200;
+              if (gameInstance.activeBotStage != null) {
+                p2Level = gameInstance.activeBotStage!.stageNumber;
+                p2Coins = gameInstance.activeBotStage!.firstClearCoins * 2;
+              } else if (gameInstance.isBotMode.value) {
+                p2Level = gameInstance.botDifficulty.value == 1 ? 1 : 5;
+                p2Coins = gameInstance.botDifficulty.value == 1 ? 2500 : 15000;
+              }
+
+              return Container(
+                height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
+                padding: EdgeInsets.symmetric(
+                  horizontal: ultraCompact ? 4 : 8,
+                  vertical: ultraCompact ? 3 : 5,
                 ),
-                SizedBox(width: ultraCompact ? 2 : 6),
-                // Nút Cài đặt ở giữa (Shop đã đưa về góc phải màn hình chính theo yêu cầu)
-                IconButton(
-                  tooltip: 'Cài đặt',
-                  icon: const Icon(Icons.settings),
-                  color: Colors.white,
-                  iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
-                  padding: EdgeInsets.zero,
-                  constraints: BoxConstraints.tightFor(
-                    width: ultraCompact ? 28 : (compact ? 32 : 38),
-                    height: ultraCompact ? 28 : (compact ? 32 : 38),
-                  ),
-                  style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                  onPressed: () => _showSettings(context, onHome: onHome),
+                decoration: BoxDecoration(
+                  color: const Color(0xE620252A),
+                  borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
+                  border: Border.all(color: Colors.white24),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black38, blurRadius: 8, offset: Offset(0, 3)),
+                  ],
                 ),
-                SizedBox(width: ultraCompact ? 2 : 6),
-                Expanded(
-                  child: _buildPlayerCard(
-                    p2Name,
-                    Colors.red,
-                    turn == 2,
-                    gameInstance.playerScores[2] ?? 0,
-                    gameInstance.groupLabel(2),
-                    gameInstance.groupBalls(2),
-                    true,
-                    compact: compact,
-                    ultraCompact: ultraCompact,
-                  ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildPlayerCard(
+                        p1Name,
+                        Colors.blue,
+                        turn == 1,
+                        gameInstance.playerScores[1] ?? 0,
+                        gameInstance.groupLabel(1),
+                        gameInstance.groupBalls(1),
+                        false,
+                        level: p1Level,
+                        coins: p1Coins,
+                        compact: compact,
+                        ultraCompact: ultraCompact,
+                      ),
+                    ),
+                    SizedBox(width: ultraCompact ? 2 : 4),
+                    // Nút Âm thanh nhanh
+                    ValueListenableBuilder<bool>(
+                      valueListenable: AudioManager.instance.isMusicEnabled,
+                      builder: (context, musicOn, _) {
+                        return ValueListenableBuilder<bool>(
+                          valueListenable: AudioManager.instance.isSfxEnabled,
+                          builder: (context, sfxOn, _) {
+                            final anyOn = musicOn || sfxOn;
+                            return IconButton(
+                              tooltip: anyOn ? 'Âm thanh: Bật' : 'Âm thanh: Tắt',
+                              icon: Icon(
+                                anyOn ? Icons.volume_up : Icons.volume_off,
+                                color: anyOn ? const Color(0xFFFFD54F) : Colors.white38,
+                              ),
+                              iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
+                              padding: EdgeInsets.zero,
+                              constraints: BoxConstraints.tightFor(
+                                width: ultraCompact ? 28 : (compact ? 32 : 38),
+                                height: ultraCompact ? 28 : (compact ? 32 : 38),
+                              ),
+                              style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                              onPressed: () => _showSettings(context, onHome: onHome),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                    SizedBox(width: ultraCompact ? 2 : 4),
+                    // Nút Cài đặt ở giữa (Shop đã đưa về góc phải màn hình chính theo yêu cầu)
+                    IconButton(
+                      tooltip: 'Cài đặt',
+                      icon: const Icon(Icons.settings),
+                      color: Colors.white,
+                      iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints.tightFor(
+                        width: ultraCompact ? 28 : (compact ? 32 : 38),
+                        height: ultraCompact ? 28 : (compact ? 32 : 38),
+                      ),
+                      style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      onPressed: () => _showSettings(context, onHome: onHome),
+                    ),
+                    SizedBox(width: ultraCompact ? 2 : 6),
+                    Expanded(
+                      child: _buildPlayerCard(
+                        p2Name,
+                        Colors.red,
+                        turn == 2,
+                        gameInstance.playerScores[2] ?? 0,
+                        gameInstance.groupLabel(2),
+                        gameInstance.groupBalls(2),
+                        true,
+                        level: p2Level,
+                        coins: p2Coins,
+                        compact: compact,
+                        ultraCompact: ultraCompact,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              );
+            },
           );
         },
       );
@@ -1875,51 +1958,193 @@ Widget _buildControlBar(
   );
 }
 
-
-
 void _showSettings(BuildContext context, {required VoidCallback onHome}) {
   showDialog<void>(
     context: context,
     builder: (context) => AlertDialog(
-      title: const Text('Cài đặt'),
-      content: const Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFF1E2328),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
         children: [
-          Text('Chọn thao tác cho trận đấu hiện tại.'),
+          Icon(Icons.tune, color: Color(0xFFFFD54F)),
+          SizedBox(width: 8),
+          Text('Cài đặt & Âm thanh', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. Nhạc nền (BGM)
+            ValueListenableBuilder<bool>(
+              valueListenable: AudioManager.instance.isMusicEnabled,
+              builder: (context, musicOn, _) {
+                return ValueListenableBuilder<double>(
+                  valueListenable: AudioManager.instance.musicVolume,
+                  builder: (context, musicVol, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  musicOn ? Icons.music_note : Icons.music_off,
+                                  color: musicOn ? const Color(0xFFFFD54F) : Colors.white38,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Nhạc nền Bida (BGM)',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: musicOn,
+                              activeThumbColor: const Color(0xFFFFD54F),
+                              onChanged: (_) {
+                                AudioManager.instance.toggleMusic();
+                              },
+                            ),
+                          ],
+                        ),
+                        if (musicOn)
+                          Row(
+                            children: [
+                              const Icon(Icons.volume_down, color: Colors.white54, size: 16),
+                              Expanded(
+                                child: Slider(
+                                  value: musicVol,
+                                  min: 0.0,
+                                  max: 1.0,
+                                  activeColor: const Color(0xFFFFD54F),
+                                  inactiveColor: Colors.white24,
+                                  onChanged: (v) {
+                                    AudioManager.instance.setMusicVolume(v);
+                                  },
+                                ),
+                              ),
+                              const Icon(Icons.volume_up, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const Divider(color: Colors.white24, height: 16),
+            // 2. Hiệu ứng âm thanh (SFX)
+            ValueListenableBuilder<bool>(
+              valueListenable: AudioManager.instance.isSfxEnabled,
+              builder: (context, sfxOn, _) {
+                return ValueListenableBuilder<double>(
+                  valueListenable: AudioManager.instance.sfxVolume,
+                  builder: (context, sfxVol, _) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  sfxOn ? Icons.volume_up : Icons.volume_off,
+                                  color: sfxOn ? const Color(0xFF00E5FF) : Colors.white38,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Hiệu ứng âm thanh (SFX)',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                ),
+                              ],
+                            ),
+                            Switch(
+                              value: sfxOn,
+                              activeThumbColor: const Color(0xFF00E5FF),
+                              onChanged: (_) {
+                                AudioManager.instance.toggleSfx();
+                              },
+                            ),
+                          ],
+                        ),
+                        if (sfxOn)
+                          Row(
+                            children: [
+                              const Icon(Icons.volume_down, color: Colors.white54, size: 16),
+                              Expanded(
+                                child: Slider(
+                                  value: sfxVol,
+                                  min: 0.0,
+                                  max: 1.0,
+                                  activeColor: const Color(0xFF00E5FF),
+                                  inactiveColor: Colors.white24,
+                                  onChanged: (v) {
+                                    AudioManager.instance.setSfxVolume(v);
+                                  },
+                                ),
+                              ),
+                              const Icon(Icons.volume_up, color: Colors.white54, size: 16),
+                            ],
+                          ),
+                      ],
+                    );
+                  },
+                );
+              },
+            ),
+            const Divider(color: Colors.white24, height: 20),
+            const Text(
+              'Thao tác trận đấu:',
+              style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showDeclareLoss(context);
+                  },
+                  icon: const Icon(Icons.flag, size: 16),
+                  label: const Text('Xử thua'),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    onHome();
+                  },
+                  icon: const Icon(Icons.home, size: 16),
+                  label: const Text('Menu chính'),
+                ),
+                FilledButton.icon(
+                  onPressed: () {
+                    gameInstance.restartMatch();
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.restart_alt, size: 16),
+                  label: const Text('Bắt đầu lại'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
       actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Hủy'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _showDeclareLoss(context);
-            },
-            icon: const Icon(Icons.flag),
-            label: const Text('Xử thua'),
-          ),
-          OutlinedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              onHome();
-            },
-            icon: const Icon(Icons.home),
-            label: const Text('Menu chính'),
-          ),
-          FilledButton.icon(
-            onPressed: () {
-              gameInstance.restartMatch();
-              Navigator.pop(context);
-            },
-            icon: const Icon(Icons.restart_alt),
-            label: const Text('Bắt đầu lại'),
-          ),
-        ],
-      ),
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Đóng', style: TextStyle(color: Colors.white70)),
+        ),
+      ],
+    ),
   );
 }
 
@@ -1961,13 +2186,15 @@ Widget _buildPlayerCard(
   String groupLabel,
   List<int> groupBalls,
   bool alignRight, {
+  int level = 1,
+  int coins = 1200,
   bool compact = false,
   bool ultraCompact = false,
 }) {
-  final ballBoxSize = ultraCompact ? 16.0 : (compact ? 19.0 : 24.0);
-  final ballImgSize = ultraCompact ? 14.0 : (compact ? 17.0 : 22.0);
-  final nameFontSize = ultraCompact ? 10.0 : (compact ? 11.5 : 12.5);
-  final detailFontSize = ultraCompact ? 7.5 : (compact ? 8.5 : 9.5);
+  final ballBoxSize = ultraCompact ? 15.0 : (compact ? 18.0 : 22.0);
+  final ballImgSize = ultraCompact ? 13.0 : (compact ? 16.0 : 20.0);
+  final nameFontSize = ultraCompact ? 9.5 : (compact ? 11.0 : 12.0);
+  final detailFontSize = ultraCompact ? 7.0 : (compact ? 8.0 : 9.0);
 
   return Container(
     padding: EdgeInsets.symmetric(
@@ -1986,24 +2213,55 @@ Widget _buildPlayerCard(
       textDirection: alignRight ? TextDirection.rtl : TextDirection.ltr,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Cột thông tin người chơi: Level, Tên, Tiền ($), Tỷ số
         Expanded(
-          flex: 4,
+          flex: 5,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: alignRight
                 ? CrossAxisAlignment.end
                 : CrossAxisAlignment.start,
             children: [
+              // 1. Dòng Level + Tên người chơi
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (isTurn && !alignRight)
                     Icon(
                       Icons.arrow_forward_ios,
-                      color: Colors.white,
-                      size: ultraCompact ? 9 : 12,
+                      color: const Color(0xFF00E676),
+                      size: ultraCompact ? 8 : 10,
                     ),
-                  if (isTurn && !alignRight) SizedBox(width: ultraCompact ? 2 : 4),
+                  if (isTurn && !alignRight) SizedBox(width: ultraCompact ? 2 : 3),
+                  // Huy hiệu Level nhỏ gọn
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ultraCompact ? 3 : 5,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+                      ),
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black45,
+                          blurRadius: 2,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: Text(
+                      'Lv.$level',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: ultraCompact ? 6.8 : 8.2,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 3.5),
                   Flexible(
                     child: Text(
                       name,
@@ -2016,31 +2274,62 @@ Widget _buildPlayerCard(
                       ),
                     ),
                   ),
-                  if (isTurn && alignRight) SizedBox(width: ultraCompact ? 2 : 4),
+                  if (isTurn && alignRight) SizedBox(width: ultraCompact ? 2 : 3),
                   if (isTurn && alignRight)
                     Icon(
                       Icons.arrow_back_ios,
-                      color: Colors.white,
-                      size: ultraCompact ? 9 : 12,
+                      color: const Color(0xFF00E676),
+                      size: ultraCompact ? 8 : 10,
                     ),
                 ],
               ),
-              Text(
-                'Tỷ số: $score',
-                style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
+              // 2. Dòng Tiền Vàng ($) & Tỷ số (lấp đầy vị trí còn trống)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.monetization_on,
+                    color: const Color(0xFFFFD54F),
+                    size: ultraCompact ? 9 : 11,
+                  ),
+                  const SizedBox(width: 2),
+                  Text(
+                    _formatPlayerCardCoins(coins),
+                    style: TextStyle(
+                      color: const Color(0xFFFFE082),
+                      fontSize: detailFontSize,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  Text(
+                    ' • ',
+                    style: TextStyle(color: Colors.white38, fontSize: detailFontSize),
+                  ),
+                  Text(
+                    'Tỷ số: $score',
+                    style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
+                  ),
+                ],
               ),
+              // 3. Phân loại bi (nếu đã chọn)
               if (groupLabel.isNotEmpty)
                 Text(
                   groupLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
+                  style: TextStyle(
+                    color: const Color(0xFF80D8FF),
+                    fontSize: detailFontSize,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
             ],
           ),
         ),
+        const SizedBox(width: 2),
+        // Cột bi mục tiêu của người chơi
         Expanded(
-          flex: 6,
+          flex: 5,
           child: Align(
             alignment: alignRight
                 ? Alignment.centerLeft
@@ -2048,7 +2337,7 @@ Widget _buildPlayerCard(
             child: Wrap(
               alignment: WrapAlignment.spaceAround,
               runAlignment: WrapAlignment.center,
-              spacing: ultraCompact ? 1.5 : 3.0,
+              spacing: ultraCompact ? 1.5 : 2.5,
               runSpacing: 1.0,
               textDirection: alignRight
                   ? TextDirection.rtl
@@ -2080,6 +2369,19 @@ Widget _buildPlayerCard(
       ],
     ),
   );
+}
+
+String _formatPlayerCardCoins(int amount) {
+  if (amount >= 1000000) {
+    return '\$${(amount / 1000000).toStringAsFixed(1)}M';
+  } else if (amount >= 10000) {
+    return '\$${(amount / 1000).toStringAsFixed(1)}k';
+  } else {
+    return '\$${amount.toString().replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]},',
+    )}';
+  }
 }
 
 class BilliardGame extends Forge2DGame with PanDetector {
@@ -2173,21 +2475,50 @@ class BilliardGame extends Forge2DGame with PanDetector {
   bool objectBallHitRailThisShot = false;
   int objectBallsHitRails = 0;
 
+  // Quản lý Combo ăn nhiều bi trong 1 lượt đánh
+  int currentShotPocketedCount = 0;
+  final ValueNotifier<ComboEvent?> comboNotifier = ValueNotifier<ComboEvent?>(null);
+
+  void handleBallPocketed(PoolBall ball) {
+    AudioManager.instance.playPocket();
+    currentShotPocketedCount++;
+    if (currentShotPocketedCount >= 2) {
+      String title = 'DOUBLE POT!';
+      String subtitle = 'Ăn 2 bi trong 1 lượt đánh!';
+      if (currentShotPocketedCount == 3) {
+        title = 'TRIPLE POT!';
+        subtitle = 'Tuyệt kỹ ăn 3 bi 1 lượt!';
+      } else if (currentShotPocketedCount >= 4) {
+        title = 'MEGA COMBO!';
+        subtitle = 'Thần cơ bida đỉnh cao!';
+      }
+      comboNotifier.value = ComboEvent(
+        count: currentShotPocketedCount,
+        title: title,
+        subtitle: subtitle,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+      );
+      AudioManager.instance.playCombo(currentShotPocketedCount);
+    }
+  }
+
   double maxDragDistance = 180.0;
   final ValueNotifier<double> aimAngleNotifier = ValueNotifier<double>(0.0);
   double get aimAngle => aimAngleNotifier.value;
   set aimAngle(double val) => aimAngleNotifier.value = val;
 
-  // Tinh chỉnh lực, độ dốc mượt và tốc độ bóng theo yêu cầu
+  // Tinh chỉnh vật lý thực tế: Lực cơ, gia tốc và độ trớn lăn mượt mà tự nhiên
   static const double rollingVelocityMultiplier = 1.0;
-  static const double rollingDeceleration =
-      135.0; // Tăng ma sát để bóng dừng nhanh hơn (Cũ: 115.0)
-  static const double minimumShotSpeed = 60.0;
-  static const double maximumShotSpeed =
-      1600.0; // Giảm tốc độ bắn tối đa tránh loạn (Cũ: 2500.0)
+  // Độ hãm ma sát nỉ Simonis: Giảm từ 135.0 xuống 68.0 để bi lăn trớn dài và mượt như thực tế
+  static const double rollingDeceleration = 68.0;
+  // Tốc độ đánh tối thiểu nâng lên 120.0 để cú chạm nhẹ nhất vẫn lướt được 3-4 thân bi
+  static const double minimumShotSpeed = 120.0;
+  // Tốc độ bắn tối đa chuẩn lực giải đấu
+  static const double maximumShotSpeed = 1500.0;
   static const double stopAngularVelocity = 0.08;
-  static const double powerCurveExponent = 1.4; // Trợ lực cong nhẹ hơn
-  static const double maximumBallSpeed = maximumShotSpeed;
+  static const double powerCurveExponent = 1.35; // Lực lên cơ đều tay và dễ kiểm soát
+  // Vận tốc trần tối đa cho phép các cây cơ cấp cao đạt lực tối đa (x1.5) mà không bị phanh gắt
+  static const double maximumBallSpeed = 2400.0;
   double? powerDragStartY;
 
   // Quản lý trạng thái Bot
@@ -2203,17 +2534,18 @@ class BilliardGame extends Forge2DGame with PanDetector {
   bool get hasGameLoaded => _hasGameLoaded;
 
   @override
-  Color backgroundColor() => const Color(0xFF0F7A3E);
+  Color backgroundColor() => const Color(0xFF090D10);
 
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    forge2d.maxTranslation = 42.0;
-    forge2d.maxTranslationSquared = 1764.0;
+    // Tăng giới hạn dịch chuyển mỗi frame (tránh bị Forge2D kẹp cứng gây khựng giật khi bi bay nhanh)
+    forge2d.maxTranslation = 180.0;
+    forge2d.maxTranslationSquared = 32400.0;
     BilliardContactListener.activeGame = this;
 
     final tableSprite = await Sprite.load('pool_table.png');
-    tableSpriteComponent = SpriteComponent(sprite: tableSprite, size: size);
+    tableSpriteComponent = SpriteComponent(sprite: tableSprite, size: size, priority: -2);
     add(tableSpriteComponent!);
 
     _reconfigureTableForSize(size, initialLoad: true);
@@ -2399,10 +2731,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   List<Pocket> createPockets() {
-    final double cornerPocketRadius = ballRadius * 3.00;
-    final double middlePocketRadius = ballRadius * 2.00;
-    final double cornerDropDist = ballRadius * 3.00;
-    final double middleDropDist = ballRadius * 2.00;
+    final double cornerPocketRadius = ballRadius * 2.50;
+    final double middlePocketRadius = ballRadius * 1.80;
+    final double cornerDropDist = ballRadius * 2.30;
+    final double middleDropDist = ballRadius * 1.55;
 
     final p0 = Vector2(size.x * 0.0520, size.y * 0.0915);
     final p1 = Vector2(size.x * 0.4985, size.y * 0.0756);
@@ -2474,7 +2806,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
       for (final ball in poolBalls) {
         final pos = rackPositions[ball.number] ?? Vector2(startX, centerY);
         ball.updateRadius(ballRadius);
-        ball.isSunk = false;
+        ball.resetSunkState();
         ball.pocketedThisShot = false;
         ball.body.setTransform(pos, 0);
         ball.body.linearVelocity.setZero();
@@ -2510,7 +2842,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     try {
       if (cueBall.isMounted) {
         cueBall.updateRadius(ballRadius);
-        cueBall.isSunk = false;
+        cueBall.resetSunkState();
         cueBall.pocketedThisShot = false;
         cueBall.hitObjectThisShot = false;
         cueBall.firstObjectBallHit = null;
@@ -2550,7 +2882,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ball.updateRadius(ballRadius);
       if (puzzleBallNumbers.contains(ball.number)) {
         final pos = puzzlePositions[ball.number]!;
-        ball.isSunk = false;
+        ball.resetSunkState();
         ball.pocketedThisShot = false;
         ball.body.setTransform(pos, 0);
         ball.body.linearVelocity.setZero();
@@ -2558,7 +2890,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         ball.body.clearForces();
         ball.body.setAwake(true);
       } else {
-        ball.isSunk = true;
+        ball.instantSunk();
         ball.pocketedThisShot = false;
         ball.body.setTransform(Vector2(-1000, -1000), 0);
         ball.body.linearVelocity.setZero();
@@ -2597,9 +2929,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
       return;
     }
 
-    final cueStopped = _bodyStopped(cueBall.body);
+    final cueStopped = _bodyStopped(cueBall.body) && cueBall.isSunkAnimComplete;
     final ballsStopped = poolBalls.every(
-      (ball) => ball.isRemoved || _bodyStopped(ball.body),
+      (ball) => ball.isRemoved || (_bodyStopped(ball.body) && ball.isSunkAnimComplete),
     );
     if (cueStopped && ballsStopped) {
       settledTime += dt;
@@ -2643,16 +2975,16 @@ class BilliardGame extends Forge2DGame with PanDetector {
       }
 
       // 2. Độ xoáy hao mòn dần do ma sát với mặt vải nỉ
-      final decayY = math.exp(-2.2 * dt);
-      final decayX = math.exp(-0.7 * dt);
+      final decayY = math.exp(-2.0 * dt);
+      final decayX = math.exp(-0.6 * dt);
       cueBall.activeSpin = Offset(
         cueBall.activeSpin.dx * decayX,
         cueBall.activeSpin.dy * decayY,
       );
 
-      // 3. Trước va chạm: nếu có xoáy giật lùi (trô) thì ma sát trượt làm bóng hãm tốc nhanh hơn
+      // 3. Trước va chạm: nếu có xoáy giật lùi (trô) thì hãm nhẹ tự nhiên (giảm từ 45 xuống 20 để tránh khựng trước khi chạm bi)
       if (!cueBall.hasCollidedBall && cueBall.activeSpin.dy > 0.1) {
-        final brake = cueBall.activeSpin.dy * 45.0 * dt;
+        final brake = cueBall.activeSpin.dy * 20.0 * dt;
         final reducedSpeed = math.max(0.0, speed - brake);
         if (speed > 0) {
           velocity.scale(reducedSpeed / speed);
@@ -2660,20 +2992,25 @@ class BilliardGame extends Forge2DGame with PanDetector {
       }
     }
 
-    final nextSpeed = math.max(
-      0.0,
-      velocity.length - rollingDeceleration * dt,
-    );
-    if (nextSpeed == 0) {
+    // 4. Kháng lăn khí động học và vi cản mặt vải nỉ (vi sai hàm số mũ)
+    final dragFactor = math.exp(-0.035 * dt);
+
+    // 5. Ma sát lăn tự nhiên không giật khựng (Zero Sudden Braking):
+    // Khi bi chậm dần (speed < 36), lực hãm tự động giảm mượt dần theo đường cong tỉ lệ
+    // giúp bi lướt êm và dừng nhẹ nhàng như bi thật, loại bỏ hoàn toàn hiện tượng phanh gấp.
+    final lowSpeedEase = speed < 36.0 ? (speed / 36.0) : 1.0;
+    final decelStep = (rollingDeceleration * lowSpeedEase) * dt;
+
+    var nextSpeed = (speed * dragFactor) - decelStep;
+
+    // Khi vận tốc cực nhỏ (< 0.35 px/s), dừng bi dứt khoát mượt mà
+    if (nextSpeed < 0.35) {
       velocity.setZero();
     } else {
-      velocity.scale(nextSpeed / velocity.length);
-    }
-    if (velocity.length > maximumBallSpeed) {
-      velocity.scale(maximumBallSpeed / velocity.length);
-    }
-    if (velocity.length < 1.0) {
-      velocity.setZero();
+      if (nextSpeed > maximumBallSpeed) {
+        nextSpeed = maximumBallSpeed;
+      }
+      velocity.scale(nextSpeed / speed);
     }
   }
 
@@ -2723,15 +3060,17 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void _checkContinuousPocketDrops() {
     for (final pocket in pockets) {
       if (!cueBall.isSunk && canBallEnterPocket(cueBall.body, pocket)) {
-        cueBall.isSunk = true;
+        cueBall.sinkIntoPocket(pocket.position);
         cueBall.pocketedThisShot = true;
+        AudioManager.instance.playPocket();
       }
       for (final ball in poolBalls) {
         if (!ball.isRemoved &&
             !ball.isSunk &&
             canBallEnterPocket(ball.body, pocket)) {
-          ball.isSunk = true;
+          ball.sinkIntoPocket(pocket.position);
           ball.pocketedThisShot = true;
+          handleBallPocketed(ball);
         }
       }
     }
@@ -3010,6 +3349,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
     cueBall.hasCollidedBall = false;
     cueBall.drawFollowTimer = 0.0;
     cueBall.drawFollowForce.setZero();
+
+    // Reset số bi ăn trong lượt này
+    currentShotPocketedCount = 0;
+    comboNotifier.value = null;
 
     shotInProgress = true;
     objectBallHitRailThisShot = false;
@@ -4196,6 +4539,13 @@ class BilliardContactListener extends ContactListener {
   }
 
   void _checkBallCollision(Body first, Body second) {
+    final isFirstBall = first.userData is CueBall || first.userData is PoolBall;
+    final isSecondBall = second.userData is CueBall || second.userData is PoolBall;
+    if (isFirstBall && isSecondBall) {
+      final relVel = (first.linearVelocity - second.linearVelocity).length;
+      AudioManager.instance.playBallHit(relativeSpeed: relVel);
+    }
+
     final cue = first.userData is CueBall
         ? first.userData as CueBall
         : second.userData is CueBall
@@ -4237,12 +4587,18 @@ class BilliardContactListener extends ContactListener {
       }
       if (ballBody.userData is PoolBall) {
         final ball = ballBody.userData as PoolBall;
-        ball.isSunk = true;
-        ball.pocketedThisShot = true;
+        if (!ball.isSunk) {
+          ball.sinkIntoPocket(pocket.position);
+          ball.pocketedThisShot = true;
+          game?.handleBallPocketed(ball);
+        }
       } else if (ballBody.userData is CueBall) {
         final cueBall = ballBody.userData as CueBall;
-        cueBall.isSunk = true;
-        cueBall.pocketedThisShot = true;
+        if (!cueBall.isSunk) {
+          cueBall.sinkIntoPocket(pocket.position);
+          cueBall.pocketedThisShot = true;
+          AudioManager.instance.playPocket();
+        }
       }
     }
   }
@@ -4271,7 +4627,9 @@ class Pocket extends BodyComponent {
     this.isMiddle = false,
     double? dropDistance,
   })  : dropDistance = dropDistance ?? radius,
-        super(renderBody: false);
+        super(renderBody: false) {
+    priority = 0;
+  }
 
   @override
   Body createBody() {
@@ -4332,11 +4690,50 @@ class CueBall extends BodyComponent {
   int? firstObjectBallHit;
   bool pocketedThisShot = false;
 
+  Vector2? _sunkStartPos;
+  Vector2? _sunkCurrentPos;
+  Vector2? _sunkTargetPocket;
+  Vector2? _sunkVelocity;
+  double _sunkProgress = 0.0;
+  bool _sunkAnimComplete = false;
+  bool get isSunkAnimComplete => !isSunk || _sunkAnimComplete;
+
+  void sinkIntoPocket(Vector2 pocketPos) {
+    if (isSunk) return;
+    isSunk = true;
+    _sunkStartPos = body.position.clone();
+    _sunkCurrentPos = body.position.clone();
+    _sunkTargetPocket = pocketPos.clone();
+    _sunkVelocity = body.linearVelocity.clone();
+    _sunkProgress = 0.0;
+    _sunkAnimComplete = false;
+    isAiming = false;
+
+    body.linearVelocity.setZero();
+    body.angularVelocity = 0;
+    body.setTransform(Vector2(-1000, -1000), 0);
+  }
+
+  void resetSunkState() {
+    isSunk = false;
+    _sunkStartPos = null;
+    _sunkCurrentPos = null;
+    _sunkTargetPocket = null;
+    _sunkVelocity = null;
+    _sunkProgress = 0.0;
+    _sunkAnimComplete = false;
+  }
+
+  // Quản lý trạng thái lăn và xoay 3D thực tế của bi cái
+  final Ball3DOrientation orientation = Ball3DOrientation();
+
   CueBall(
     this.initialPosition,
     this.radius, {
     double? hitboxRadius,
-  }) : hitboxRadius = hitboxRadius ?? (radius * 0.88);
+  }) : hitboxRadius = hitboxRadius ?? (radius * 0.88) {
+    priority = 2;
+  }
 
   void updateRadius(double newRadius) {
     radius = newRadius;
@@ -4362,9 +4759,9 @@ class CueBall extends BodyComponent {
     final shape = CircleShape()..radius = hitboxRadius;
     final fixtureDef = FixtureDef(
       shape,
-      restitution: 0.86,
+      restitution: 0.90,
       density: 0.8,
-      friction: 0.22,
+      friction: 0.16,
     );
     final createdBody = world.createBody(
       BodyDef(
@@ -4388,7 +4785,96 @@ class CueBall extends BodyComponent {
       body.linearVelocity.setZero();
       body.angularVelocity = 0;
       isAiming = false;
+      if (body.position.x > -500) {
+        body.setTransform(Vector2(-1000, -1000), 0);
+      }
+      if (_sunkStartPos == null) {
+        _sunkStartPos = body.position.clone();
+        _sunkCurrentPos = body.position.clone();
+        _sunkVelocity = body.linearVelocity.clone();
+        Pocket? nearest;
+        double minD = double.infinity;
+        for (final p in gameInstance.pockets) {
+          final d = (p.position - _sunkStartPos!).length;
+          if (d < minD) {
+            minD = d;
+            nearest = p;
+          }
+        }
+        _sunkTargetPocket = nearest?.position.clone() ?? _sunkStartPos!.clone();
+      }
+
+      if (!_sunkAnimComplete) {
+        // Tốc độ lăn chìm vào lỗ tự nhiên (~0.74 giây)
+        _sunkProgress += dt * 1.35;
+        if (_sunkProgress >= 1.0) {
+          _sunkProgress = 1.0;
+          _sunkAnimComplete = true;
+        }
+
+        final t = _sunkProgress.clamp(0.0, 1.0);
+        final start = _sunkStartPos!;
+        final target = _sunkTargetPocket!;
+        final toTarget = target - start;
+        final dist = toTarget.length;
+
+        final inVel = _sunkVelocity ?? Vector2.zero();
+        final inSpeed = inVel.length;
+        final inDir = inSpeed > 0.5
+            ? inVel.normalized()
+            : (dist > 0.001 ? toTarget.normalized() : Vector2(0, 1));
+
+        final p0 = start;
+        final p3 = target;
+        final p1 = p0 + inDir * (dist * 0.45);
+        final toPocketNorm = dist > 0.001 ? toTarget.normalized() : inDir;
+        final p2 = p3 - toPocketNorm * (dist * 0.25);
+
+        final u = math.pow(t, 1.25).toDouble();
+        final oneMinusU = 1.0 - u;
+        final nextX = oneMinusU * oneMinusU * oneMinusU * p0.x +
+            3.0 * oneMinusU * oneMinusU * u * p1.x +
+            3.0 * oneMinusU * u * u * p2.x +
+            u * u * u * p3.x;
+        final nextY = oneMinusU * oneMinusU * oneMinusU * p0.y +
+            3.0 * oneMinusU * oneMinusU * u * p1.y +
+            3.0 * oneMinusU * u * u * p2.y +
+            u * u * u * p3.y;
+
+        if (_sunkCurrentPos != null) {
+          final dx = nextX - _sunkCurrentPos!.x;
+          final dy = nextY - _sunkCurrentPos!.y;
+          final stepDist = math.sqrt(dx * dx + dy * dy);
+          if (stepDist > 0.0001) {
+            final rollMultiplier = 1.8 + 1.2 * t;
+            orientation.roll(dx * rollMultiplier, dy * rollMultiplier, radius);
+
+            final crossZ = inDir.x * toTarget.y - inDir.y * toTarget.x;
+            final swirlDir = crossZ >= 0 ? 1.0 : -1.0;
+            final spinZRate = swirlDir * math.sin(t * math.pi) * 4.5 * dt;
+            orientation.spinZ(spinZRate);
+          }
+        }
+        _sunkCurrentPos = Vector2(nextX, nextY);
+      }
       return;
+    } else {
+      _sunkStartPos = null;
+      _sunkCurrentPos = null;
+      _sunkTargetPocket = null;
+      _sunkVelocity = null;
+      _sunkProgress = 0.0;
+      _sunkAnimComplete = false;
+    }
+
+    // Cập nhật góc lăn 3D theo vận tốc di chuyển thực tế trên mặt bàn
+    final vel = body.linearVelocity;
+    final speed = vel.length;
+    if (speed > 0.5) {
+      orientation.roll(vel.x * dt, vel.y * dt, radius);
+    }
+    if (body.angularVelocity.abs() > 0.01) {
+      orientation.spinZ(body.angularVelocity * dt);
     }
 
     if (aimVector != null && aimVector!.length > 0.0) {
@@ -4427,6 +4913,32 @@ class CueBall extends BodyComponent {
   @override
   void render(Canvas canvas) {
     if (isSunk) {
+      if (_sunkAnimComplete || _sunkCurrentPos == null) {
+        return;
+      }
+      canvas.save();
+      // Bù lại tọa độ thế giới khi bi đang rơi
+      canvas.translate(-body.position.x + _sunkCurrentPos!.x, -body.position.y + _sunkCurrentPos!.y);
+      canvas.rotate(-body.angle);
+
+      final t = _sunkProgress.clamp(0.0, 1.0);
+      final dropT = t <= 0.30 ? 0.0 : ((t - 0.30) / 0.70).clamp(0.0, 1.0);
+      final scale = (1.0 - math.pow(dropT, 1.25) * 0.74).clamp(0.26, 1.0);
+
+      final cupDepthY = math.pow(dropT, 1.3) * (radius * 0.28);
+      canvas.translate(0, cupDepthY);
+
+      // Bi cái cũng là bi đặc nguyên khối, không tan biến dần
+      Ball3DRenderer.renderBall(
+        canvas: canvas,
+        radius: radius,
+        orientation: orientation,
+        ballNumber: null,
+        scale: scale,
+        opacity: 1.0,
+        pocketDropProgress: t,
+      );
+      canvas.restore();
       return;
     }
     // The physics body can spin, but aiming is defined in world space.
@@ -4456,15 +4968,16 @@ class CueBall extends BodyComponent {
       );
     }
 
-    if (cueSprite != null) {
-      canvas.save();
-      cueSprite!.render(
-        canvas,
-        position: Vector2(-radius, -radius),
-        size: Vector2(radius * 2, radius * 2),
-      );
-      canvas.restore();
-    }
+    // Dựng hình Bi cái 2.5D lăn 3D với 6 chấm đỏ giải đấu Aramith TV
+    Ball3DRenderer.renderBall(
+      canvas: canvas,
+      radius: radius,
+      orientation: orientation,
+      ballNumber: null,
+      scale: 1.0,
+      opacity: 1.0,
+      cueSpinOffset: spinInfluence,
+    );
 
     if (isAiming && aimVector != null) {
       canvas.save();
@@ -4626,6 +5139,23 @@ class CueBall extends BodyComponent {
     final jointR = radius * 0.33;
     final buttR = radius * 0.44;
 
+    // 0a. Bóng đổ của gậy cơ xuống mặt bàn nỉ (2.5D Cue Shadow)
+    canvas.save();
+    canvas.translate(-radius * 0.15, radius * 0.38);
+    final cueShadowPath = Path()
+      ..moveTo(0, -tipR * 1.2)
+      ..lineTo(-stickLength, -buttR * 1.35)
+      ..lineTo(-stickLength, buttR * 1.35)
+      ..lineTo(0, tipR * 1.2)
+      ..close();
+    canvas.drawPath(
+      cueShadowPath,
+      Paint()
+        ..color = const Color(0x35000000)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
+    );
+    canvas.restore();
+
     // 0. Hào quang tỏa sáng (Aura Glow) cho gậy cấp cao (Lv >= 3 hoặc Epic/Legendary)
     if (level >= 3 || cue.rarity == CueRarity.epic || cue.rarity == CueRarity.legendary) {
       final auraColor = cue.auraColor;
@@ -4771,13 +5301,62 @@ class PoolBall extends BodyComponent {
   bool isSunk = false;
   bool pocketedThisShot = false;
 
+  Vector2? _sunkStartPos;
+  Vector2? _sunkCurrentPos;
+  Vector2? _sunkTargetPocket;
+  Vector2? _sunkVelocity;
+  double _sunkProgress = 0.0;
+  bool _sunkAnimComplete = false;
+  bool get isSunkAnimComplete => !isSunk || _sunkAnimComplete;
+
+  void sinkIntoPocket(Vector2 pocketPos) {
+    if (isSunk) return;
+    isSunk = true;
+    _sunkStartPos = body.position.clone();
+    _sunkCurrentPos = body.position.clone();
+    _sunkTargetPocket = pocketPos.clone();
+    _sunkVelocity = body.linearVelocity.clone();
+    _sunkProgress = 0.0;
+    _sunkAnimComplete = false;
+
+    body.linearVelocity.setZero();
+    body.angularVelocity = 0;
+    body.setTransform(Vector2(-1000, -1000), 0);
+  }
+
+  void resetSunkState() {
+    isSunk = false;
+    _sunkStartPos = null;
+    _sunkCurrentPos = null;
+    _sunkTargetPocket = null;
+    _sunkVelocity = null;
+    _sunkProgress = 0.0;
+    _sunkAnimComplete = false;
+  }
+
+  void instantSunk() {
+    isSunk = true;
+    _sunkAnimComplete = true;
+    _sunkProgress = 1.0;
+    _sunkStartPos = null;
+    _sunkCurrentPos = null;
+    _sunkTargetPocket = null;
+    _sunkVelocity = null;
+  }
+
+  // Quản lý góc lăn và xoay 3D thực tế của quả bi
+  late final Ball3DOrientation orientation;
+
   PoolBall(
     this.initialPosition,
     this.imageName,
     this.radius,
     this.number, {
     double? hitboxRadius,
-  }) : hitboxRadius = hitboxRadius ?? (radius * 0.88);
+  }) : hitboxRadius = hitboxRadius ?? (radius * 0.88) {
+    priority = 2;
+    orientation = Ball3DOrientation(initialAngle: number * 1.35);
+  }
 
   void updateRadius(double newRadius) {
     radius = newRadius;
@@ -4802,9 +5381,9 @@ class PoolBall extends BodyComponent {
     final shape = CircleShape()..radius = hitboxRadius;
     final fixtureDef = FixtureDef(
       shape,
-      restitution: 0.86,
+      restitution: 0.90,
       density: 0.8,
-      friction: 0.22,
+      friction: 0.16,
     );
     final createdBody = world.createBody(
       BodyDef(
@@ -4824,28 +5403,148 @@ class PoolBall extends BodyComponent {
   void update(double dt) {
     super.update(dt);
     if (isSunk) {
-      body.linearVelocity.setZero();
-      body.angularVelocity = 0;
-      if (body.position.x > -500) {
-        body.setTransform(Vector2(-1000, -1000), 0);
+      if (_sunkStartPos == null) {
+        _sunkStartPos = body.position.clone();
+        _sunkCurrentPos = body.position.clone();
+        _sunkVelocity = body.linearVelocity.clone();
+        body.linearVelocity.setZero();
+        body.angularVelocity = 0;
+        if (body.position.x > -500) {
+          body.setTransform(Vector2(-1000, -1000), 0);
+        }
+        Pocket? nearest;
+        double minD = double.infinity;
+        for (final p in gameInstance.pockets) {
+          final d = (p.position - _sunkStartPos!).length;
+          if (d < minD) {
+            minD = d;
+            nearest = p;
+          }
+        }
+        _sunkTargetPocket = nearest?.position.clone() ?? _sunkStartPos!.clone();
       }
+
+      if (!_sunkAnimComplete) {
+        // Tốc độ lăn chìm vào lỗ tự nhiên (~0.74 giây)
+        _sunkProgress += dt * 1.35;
+        if (_sunkProgress >= 1.0) {
+          _sunkProgress = 1.0;
+          _sunkAnimComplete = true;
+        }
+
+        final t = _sunkProgress.clamp(0.0, 1.0);
+        final start = _sunkStartPos!;
+        final target = _sunkTargetPocket!;
+        final toTarget = target - start;
+        final dist = toTarget.length;
+
+        final inVel = _sunkVelocity ?? Vector2.zero();
+        final inSpeed = inVel.length;
+        final inDir = inSpeed > 0.5
+            ? inVel.normalized()
+            : (dist > 0.001 ? toTarget.normalized() : Vector2(0, 1));
+
+        final p0 = start;
+        final p3 = target;
+        final p1 = p0 + inDir * (dist * 0.45);
+        final toPocketNorm = dist > 0.001 ? toTarget.normalized() : inDir;
+        final p2 = p3 - toPocketNorm * (dist * 0.25);
+
+        final u = math.pow(t, 1.25).toDouble();
+        final oneMinusU = 1.0 - u;
+        final nextX = oneMinusU * oneMinusU * oneMinusU * p0.x +
+            3.0 * oneMinusU * oneMinusU * u * p1.x +
+            3.0 * oneMinusU * u * u * p2.x +
+            u * u * u * p3.x;
+        final nextY = oneMinusU * oneMinusU * oneMinusU * p0.y +
+            3.0 * oneMinusU * oneMinusU * u * p1.y +
+            3.0 * oneMinusU * u * u * p2.y +
+            u * u * u * p3.y;
+
+        if (_sunkCurrentPos != null) {
+          final dx = nextX - _sunkCurrentPos!.x;
+          final dy = nextY - _sunkCurrentPos!.y;
+          final stepDist = math.sqrt(dx * dx + dy * dy);
+          if (stepDist > 0.0001) {
+            final rollMultiplier = 1.8 + 1.2 * t;
+            orientation.roll(dx * rollMultiplier, dy * rollMultiplier, radius);
+
+            final crossZ = inDir.x * toTarget.y - inDir.y * toTarget.x;
+            final swirlDir = crossZ >= 0 ? 1.0 : -1.0;
+            final spinZRate = swirlDir * math.sin(t * math.pi) * 4.5 * dt;
+            orientation.spinZ(spinZRate);
+          }
+        }
+        _sunkCurrentPos = Vector2(nextX, nextY);
+      }
+      return;
+    } else {
+      _sunkStartPos = null;
+      _sunkCurrentPos = null;
+      _sunkTargetPocket = null;
+      _sunkVelocity = null;
+      _sunkProgress = 0.0;
+      _sunkAnimComplete = false;
+    }
+
+    // Cập nhật góc lăn 3D theo vận tốc di chuyển thực tế trên mặt bàn
+    final vel = body.linearVelocity;
+    final speed = vel.length;
+    if (speed > 0.5) {
+      orientation.roll(vel.x * dt, vel.y * dt, radius);
+    }
+    if (body.angularVelocity.abs() > 0.01) {
+      orientation.spinZ(body.angularVelocity * dt);
     }
   }
 
   @override
   void render(Canvas canvas) {
-    if (isSunk || isRemoved || isRemoving) {
+    if (isRemoved || isRemoving) {
       return;
     }
-    if (ballSprite != null) {
+    if (isSunk) {
+      if (_sunkAnimComplete || _sunkCurrentPos == null) {
+        return;
+      }
       canvas.save();
-      // ĐÃ BỎ KHÓA GÓC XOAY
-      ballSprite!.render(
-        canvas,
-        position: Vector2(-radius, -radius),
-        size: Vector2(radius * 2, radius * 2),
+      // Bù lại tọa độ thế giới khi body đã chuyển sang (-1000, -1000)
+      canvas.translate(-body.position.x + _sunkCurrentPos!.x, -body.position.y + _sunkCurrentPos!.y);
+
+      final t = _sunkProgress.clamp(0.0, 1.0);
+      final dropT = t <= 0.30 ? 0.0 : ((t - 0.30) / 0.70).clamp(0.0, 1.0);
+      final scale = (1.0 - math.pow(dropT, 1.25) * 0.74).clamp(0.26, 1.0);
+
+      final cupDepthY = math.pow(dropT, 1.3) * (radius * 0.28);
+      canvas.translate(0, cupDepthY);
+
+      // TUYỆT ĐỐI KHÔNG BIẾN MẤT DẦN (Opacity luôn 1.0). Quả bi đặc hoàn toàn, chìm sâu vào lòng tối của lỗ
+      Ball3DRenderer.renderBall(
+        canvas: canvas,
+        radius: radius,
+        orientation: orientation,
+        ballNumber: number,
+        scale: scale,
+        opacity: 1.0,
+        pocketDropProgress: t,
       );
       canvas.restore();
+      return;
     }
+
+    // Dựng hình Quả bi 2.5D lăn 3D chân thực
+    canvas.save();
+    canvas.rotate(-body.angle);
+
+    Ball3DRenderer.renderBall(
+      canvas: canvas,
+      radius: radius,
+      orientation: orientation,
+      ballNumber: number,
+      scale: 1.0,
+      opacity: 1.0,
+    );
+
+    canvas.restore();
   }
 }

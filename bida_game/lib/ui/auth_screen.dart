@@ -145,23 +145,32 @@ class _AuthScreenState extends State<AuthScreen> {
   // GIAO DIỆN MOBILE LANDSCAPE (CÂY WIDGET CỐ ĐỊNH, KHÔNG BỊ UNMOUNT KHI MỞ BÀN PHÍM)
   // =========================================================================
   Widget _buildLandscapeLayout(BuildContext context, AuthService auth) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 50;
+
     return Center(
       child: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        padding: EdgeInsets.symmetric(
+          horizontal: isKeyboardOpen ? 16 : 24,
+          vertical: isKeyboardOpen ? 4 : 10,
+        ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 880),
+          constraints: BoxConstraints(maxWidth: isKeyboardOpen ? 480 : 880),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // --- CỘT TRÁI: LOGO, TÊN GAME & NÚT CHƠI NGAY (KHÁCH) ---
-              Expanded(
-                flex: 5,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 18),
-                  child: _buildBrandPanel(auth),
+              // Tự động thu gọn khi bàn phím mở để nhường chỗ cho ô nhập liệu không bị tràn/đẩy ra ngoài
+              if (!isKeyboardOpen)
+                Expanded(
+                  flex: 5,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 18),
+                    child: _buildBrandPanel(auth),
+                  ),
                 ),
-              ),
 
               // --- CỘT PHẢI: KHUNG ĐĂNG NHẬP / ĐĂNG KÝ PHONG CÁCH GAMING ---
               Expanded(
@@ -513,7 +522,7 @@ class _AuthScreenState extends State<AuthScreen> {
           controller: _loginAccountController,
           focusNode: _loginAccountFocus,
           labelText: 'Tài khoản hoặc Email',
-          hintText: 'admin hoặc player01',
+          hintText: 'player01 hoặc email@gmail.com',
           icon: Icons.person_outline,
           keyboardType: TextInputType.emailAddress,
           textCapitalization: TextCapitalization.none,
@@ -545,45 +554,7 @@ class _AuthScreenState extends State<AuthScreen> {
           ),
         ),
 
-        const SizedBox(height: 6),
-
-        // Nút điền nhanh tài khoản Admin gọn gàng
-        InkWell(
-          onTap: () {
-            _loginAccountController.text = 'admin';
-            _loginPasswordController.text = 'admin';
-          },
-          borderRadius: BorderRadius.circular(6),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFB300).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: const Color(0xFFFFB300).withValues(alpha: 0.3),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.shield_outlined, color: Color(0xFFFFB300), size: 13),
-                SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    '⚡ Điền nhanh tài khoản Admin: admin / admin',
-                    style: TextStyle(
-                      color: Color(0xFFFFD54F),
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
 
         // Nút Đăng nhập chính
         SizedBox(
@@ -722,8 +693,8 @@ class _AuthScreenState extends State<AuthScreen> {
     ValueChanged<String>? onSubmitted,
     Widget? suffixIcon,
   }) {
-    return SizedBox(
-      height: 42,
+    return Container(
+      constraints: const BoxConstraints(minHeight: 40),
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -732,7 +703,7 @@ class _AuthScreenState extends State<AuthScreen> {
         textCapitalization: textCapitalization,
         autocorrect: false,
         enableSuggestions: false,
-        scrollPadding: const EdgeInsets.only(bottom: 120),
+        scrollPadding: const EdgeInsets.only(bottom: 16),
         textInputAction: textInputAction,
         onSubmitted: onSubmitted,
         style: const TextStyle(color: Colors.white, fontSize: 13),

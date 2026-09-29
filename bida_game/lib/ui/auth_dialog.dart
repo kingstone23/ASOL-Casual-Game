@@ -23,6 +23,13 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
   final _regAccountController = TextEditingController();
   final _regPasswordController = TextEditingController();
 
+  // FocusNodes để tránh bị mất focus và giật bàn phím trên mobile
+  final _loginAccountFocus = FocusNode();
+  final _loginPasswordFocus = FocusNode();
+  final _regNameFocus = FocusNode();
+  final _regAccountFocus = FocusNode();
+  final _regPasswordFocus = FocusNode();
+
   String? _errorMessage;
   String? _successMessage;
   bool _obscureLoginPass = true;
@@ -42,6 +49,12 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
     _regNameController.dispose();
     _regAccountController.dispose();
     _regPasswordController.dispose();
+
+    _loginAccountFocus.dispose();
+    _loginPasswordFocus.dispose();
+    _regNameFocus.dispose();
+    _regAccountFocus.dispose();
+    _regPasswordFocus.dispose();
     super.dispose();
   }
 
@@ -112,16 +125,27 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     final auth = AuthService.instance;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final screenHeight = mediaQuery.size.height;
+    final bottomInset = mediaQuery.viewInsets.bottom;
+    final isKeyboardOpen = bottomInset > 50;
     final isCompact = screenHeight <= 420;
+
+    // Chiều cao tự thích ứng khi bàn phím mở tránh bị tràn/ép 0px
+    final dialogMaxHeight = isKeyboardOpen
+        ? (screenHeight - bottomInset - 16).clamp(180.0, 360.0)
+        : math.min(screenHeight * 0.94, isCompact ? 340.0 : 460.0);
 
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isKeyboardOpen ? 4 : 8,
+      ),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: 480,
-          maxHeight: math.min(screenHeight * 0.94, isCompact ? 340.0 : 460.0),
+          maxHeight: dialogMaxHeight,
         ),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -534,14 +558,15 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             ),
           ),
 
-        // Body TabBarView
+        // Body Tab - dùng AnimatedBuilder thay cho TabBarView để tránh lỗi layout collapse khi bàn phím xuất hiện
         Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _buildLoginForm(auth),
-              _buildRegisterForm(auth),
-            ],
+          child: AnimatedBuilder(
+            animation: _tabController,
+            builder: (context, _) {
+              return _tabController.index == 0
+                  ? _buildLoginForm(auth)
+                  : _buildRegisterForm(auth);
+            },
           ),
         ),
       ],
@@ -550,25 +575,29 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
 
   Widget _buildLoginForm(AuthService auth) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      physics: const ClampingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 40,
+          Container(
+            constraints: const BoxConstraints(minHeight: 38),
             child: TextField(
               controller: _loginAccountController,
+              focusNode: _loginAccountFocus,
               keyboardType: TextInputType.emailAddress,
               textCapitalization: TextCapitalization.none,
               autocorrect: false,
               enableSuggestions: false,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
+              scrollPadding: const EdgeInsets.only(bottom: 16),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _loginPasswordFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
                 labelText: 'Tài khoản hoặc Email',
-                hintText: 'admin hoặc player01',
+                hintText: 'player01 hoặc email@gmail.com',
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.person, color: Color(0xFF00E676), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -580,15 +609,16 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 40,
+          Container(
+            constraints: const BoxConstraints(minHeight: 38),
             child: TextField(
               controller: _loginPasswordController,
+              focusNode: _loginPasswordFocus,
               obscureText: _obscureLoginPass,
               keyboardType: TextInputType.visiblePassword,
               autocorrect: false,
               enableSuggestions: false,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
+              scrollPadding: const EdgeInsets.only(bottom: 16),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleLogin(),
@@ -616,27 +646,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               ),
             ),
           ),
-          const SizedBox(height: 6),
-
-          // Gợi ý tài khoản admin
-          InkWell(
-            onTap: () {
-              _loginAccountController.text = 'admin';
-              _loginPasswordController.text = 'admin';
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                '⚡ Điền nhanh tài khoản Admin: admin / admin',
-                style: TextStyle(
-                  color: Colors.amber.shade300,
-                  fontSize: 10.5,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           SizedBox(
             height: 38,
@@ -659,21 +669,25 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
 
   Widget _buildRegisterForm(AuthService auth) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      physics: const ClampingScrollPhysics(),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SizedBox(
-            height: 40,
+          Container(
+            constraints: const BoxConstraints(minHeight: 38),
             child: TextField(
               controller: _regNameController,
+              focusNode: _regNameFocus,
               keyboardType: TextInputType.name,
               textCapitalization: TextCapitalization.words,
               autocorrect: false,
               enableSuggestions: false,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
+              scrollPadding: const EdgeInsets.only(bottom: 16),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _regAccountFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
                 labelText: 'Tên hiển thị (Nickname)',
@@ -689,17 +703,19 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 40,
+          Container(
+            constraints: const BoxConstraints(minHeight: 38),
             child: TextField(
               controller: _regAccountController,
+              focusNode: _regAccountFocus,
               keyboardType: TextInputType.emailAddress,
               textCapitalization: TextCapitalization.none,
               autocorrect: false,
               enableSuggestions: false,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
+              scrollPadding: const EdgeInsets.only(bottom: 16),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.next,
+              onSubmitted: (_) => _regPasswordFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
                 labelText: 'Tên tài khoản hoặc Email',
@@ -715,15 +731,16 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             ),
           ),
           const SizedBox(height: 8),
-          SizedBox(
-            height: 40,
+          Container(
+            constraints: const BoxConstraints(minHeight: 38),
             child: TextField(
               controller: _regPasswordController,
+              focusNode: _regPasswordFocus,
               obscureText: _obscureRegPass,
               keyboardType: TextInputType.visiblePassword,
               autocorrect: false,
               enableSuggestions: false,
-              scrollPadding: const EdgeInsets.only(bottom: 120),
+              scrollPadding: const EdgeInsets.only(bottom: 16),
               style: const TextStyle(color: Colors.white, fontSize: 13),
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleRegister(),
