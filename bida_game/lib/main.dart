@@ -641,36 +641,45 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                         bottom: ultraCompact ? 5 : 10,
                                         left: 0,
                                         right: 0,
-                                        child: ValueListenableBuilder<String>(
+                                        child: ValueListenableBuilder<int>(
                                           valueListenable:
-                                              gameInstance.ruleMessage,
-                                          builder: (context, message, child) =>
-                                              Center(
-                                                child: DecoratedBox(
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.black
-                                                        .withValues(alpha: 0.72),
-                                                    borderRadius:
-                                                        BorderRadius.circular(6),
-                                                  ),
-                                                  child: Padding(
-                                                    padding:
-                                                        EdgeInsets.symmetric(
-                                                          horizontal: ultraCompact ? 8 : 12,
-                                                          vertical: ultraCompact ? 3 : 6,
+                                              gameInstance.matchVersion,
+                                          builder: (context, _, child) {
+                                            if (gameInstance.rackOver) {
+                                              return const SizedBox.shrink();
+                                            }
+                                            return ValueListenableBuilder<String>(
+                                              valueListenable:
+                                                  gameInstance.ruleMessage,
+                                              builder: (context, message, child) =>
+                                                  Center(
+                                                    child: DecoratedBox(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.black
+                                                            .withValues(alpha: 0.72),
+                                                        borderRadius:
+                                                            BorderRadius.circular(6),
+                                                      ),
+                                                      child: Padding(
+                                                        padding:
+                                                            EdgeInsets.symmetric(
+                                                              horizontal: ultraCompact ? 8 : 12,
+                                                              vertical: ultraCompact ? 3 : 6,
+                                                            ),
+                                                        child: Text(
+                                                          message,
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: ultraCompact ? 10.5 : 12.5,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
                                                         ),
-                                                    child: Text(
-                                                      message,
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: ultraCompact ? 10.5 : 12.5,
-                                                        fontWeight:
-                                                            FontWeight.w600,
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
+                                            );
+                                          },
                                         ),
                                       ),
                                     ],
@@ -1448,225 +1457,293 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
           ? 'Đã dùng: ${gameInstance.dailyPuzzleShotsTaken} / ${gameInstance.activeDailyPuzzle!.maxShotsAllowed} cơ'
           : 'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}';
 
+      final screenHeight = MediaQuery.of(context).size.height;
+      final isShort = screenHeight < 520;
+      final isVeryShort = screenHeight < 360;
+
       return Positioned.fill(
         child: Container(
           color: Colors.black.withValues(alpha: 0.75),
+          padding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: isVeryShort ? 4 : (isShort ? 8 : 16),
+          ),
           child: Center(
-            child: Container(
-              constraints: const BoxConstraints(maxWidth: 420),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF133E32), Color(0xFF0D251E)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.amber, width: 2),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black87, blurRadius: 20),
-                ],
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isVeryShort ? 360 : (isShort ? 390 : 430),
+                maxHeight: screenHeight * 0.94,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    gameInstance.winningPlayer == 1
-                        ? Icons.emoji_events
-                        : Icons.sentiment_dissatisfied,
-                    color: Colors.amber,
-                    size: 52,
+              child: Container(
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF133E32), Color(0xFF0D251E)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    titleText,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                    ),
-                    textAlign: TextAlign.center,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.amber, width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black87, blurRadius: 20),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isShort ? 14 : 20,
+                    vertical: isVeryShort ? 6 : (isShort ? 10 : 16),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    subtitleText,
-                    style: const TextStyle(color: Colors.white70, fontSize: 15),
-                  ),
-
-                  // Phần thưởng
-                  if (reward != null) ...[
-                    const SizedBox(height: 14),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black38,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white12),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        gameInstance.winningPlayer == 1
+                            ? Icons.emoji_events
+                            : Icons.sentiment_dissatisfied,
+                        color: Colors.amber,
+                        size: isVeryShort ? 28 : (isShort ? 32 : 46),
                       ),
-                      child: Column(
-                        children: [
-                          if (reward.customMessage != null) ...[
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              margin: const EdgeInsets.only(bottom: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                reward.customMessage!,
-                                style: const TextStyle(
-                                  color: Color(0xFFFFD54F),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                          ] else ...[
-                            const Text(
-                              'PHẦN THƯỞNG',
-                              style: TextStyle(
-                                color: Color(0xFFFFD54F),
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                          ],
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                      SizedBox(height: isVeryShort ? 1 : (isShort ? 2 : 5)),
+                      Text(
+                        titleText,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isVeryShort ? 14.5 : (isShort ? 16 : 19),
+                          fontWeight: FontWeight.w900,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      SizedBox(height: isVeryShort ? 1 : 2),
+                      Text(
+                        subtitleText,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: isVeryShort ? 11 : (isShort ? 12 : 14),
+                        ),
+                      ),
+
+                      // Phần thưởng
+                      if (reward != null) ...[
+                        SizedBox(height: isVeryShort ? 4 : (isShort ? 6 : 10)),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isShort ? 10 : 14,
+                            vertical: isVeryShort ? 4 : (isShort ? 5 : 8),
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black38,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white12),
+                          ),
+                          child: Column(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.teal.withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  '+${reward.earnedXP} XP',
-                                  style: const TextStyle(
-                                    color: Color(0xFF69F0AE),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                              if (reward.customMessage != null) ...[
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  margin: EdgeInsets.only(bottom: isVeryShort ? 2 : (isShort ? 4 : 6)),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFFD54F).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    reward.customMessage!,
+                                    style: TextStyle(
+                                      color: const Color(0xFFFFD54F),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: isVeryShort ? 9 : (isShort ? 9.5 : 10.5),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(8),
+                              ] else ...[
+                                Text(
+                                  'PHẦN THƯỞNG',
+                                  style: TextStyle(
+                                    color: const Color(0xFFFFD54F),
+                                    fontSize: isVeryShort ? 8.5 : (isShort ? 9 : 10),
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.0,
+                                  ),
                                 ),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.monetization_on, color: Color(0xFFFFD54F), size: 14),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      '+${reward.earnedCoins}',
-                                      style: const TextStyle(
-                                        color: Color(0xFFFFD54F),
+                                SizedBox(height: isVeryShort ? 2 : (isShort ? 3 : 5)),
+                              ],
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isShort ? 6 : 8,
+                                      vertical: isVeryShort ? 1.5 : (isShort ? 2 : 3),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.teal.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '+${reward.earnedXP} XP',
+                                      style: TextStyle(
+                                        color: const Color(0xFF69F0AE),
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 13,
+                                        fontSize: isVeryShort ? 10 : (isShort ? 11 : 12.5),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(width: isShort ? 6 : 8),
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: isShort ? 6 : 8,
+                                      vertical: isVeryShort ? 1.5 : (isShort ? 2 : 3),
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withValues(alpha: 0.3),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.monetization_on,
+                                          color: const Color(0xFFFFD54F),
+                                          size: isVeryShort ? 11 : (isShort ? 12 : 14),
+                                        ),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          '+${reward.earnedCoins}',
+                                          style: TextStyle(
+                                            color: const Color(0xFFFFD54F),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: isVeryShort ? 10 : (isShort ? 11 : 12.5),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (reward.bonusDiamonds > 0) ...[
+                                    SizedBox(width: isShort ? 6 : 8),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isShort ? 6 : 8,
+                                        vertical: isVeryShort ? 1.5 : (isShort ? 2 : 3),
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.lightBlue.withValues(alpha: 0.3),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.diamond,
+                                            color: const Color(0xFF29B6F6),
+                                            size: isVeryShort ? 11 : (isShort ? 12 : 14),
+                                          ),
+                                          const SizedBox(width: 3),
+                                          Text(
+                                            '+${reward.bonusDiamonds}',
+                                            style: TextStyle(
+                                              color: const Color(0xFF81D4FA),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: isVeryShort ? 10 : (isShort ? 11 : 12.5),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
-                                ),
+                                ],
                               ),
-                              if (reward.bonusDiamonds > 0) ...[
-                                const SizedBox(width: 10),
+                              if (reward.didLevelUp) ...[
+                                SizedBox(height: isVeryShort ? 3 : (isShort ? 4 : 6)),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.lightBlue.withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(8),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: isVeryShort ? 1.5 : (isShort ? 2 : 3),
                                   ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(Icons.diamond, color: Color(0xFF29B6F6), size: 14),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        '+${reward.bonusDiamonds}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF81D4FA),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    '🎉 LÊN CẤP ${reward.newLevel}! (+${reward.bonusDiamonds} Kim Cương)',
+                                    style: TextStyle(
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: isVeryShort ? 9 : (isShort ? 9.5 : 10.5),
+                                    ),
                                   ),
                                 ),
                               ],
                             ],
                           ),
-                          if (reward.didLevelUp) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+                        ),
+                      ],
+
+                      SizedBox(height: isVeryShort ? 6 : (isShort ? 8 : 12)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (onHome != null) ...[
+                            OutlinedButton.icon(
+                              onPressed: () {
+                                if (gameInstance.isLocalMultiplayer.value) {
+                                  LocalMultiplayerService.instance.disconnect();
+                                }
+                                onHome();
+                              },
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                                side: const BorderSide(color: Colors.white30),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: isShort ? 12 : 16,
+                                  vertical: isVeryShort ? 4 : (isShort ? 6 : 9),
                                 ),
-                                borderRadius: BorderRadius.circular(8),
+                                minimumSize: Size(0, isVeryShort ? 28 : (isShort ? 32 : 40)),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
-                              child: Text(
-                                '🎉 LÊN CẤP ${reward.newLevel}! (+${reward.bonusDiamonds} Kim Cương)',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 11,
+                              icon: Icon(Icons.home, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
+                              label: Text(
+                                'Menu Chính',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
                                 ),
                               ),
                             ),
+                            SizedBox(width: isShort ? 8 : 12),
                           ],
-                        ],
-                      ),
-                    ),
-                  ],
-
-                  const SizedBox(height: 18),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      if (onHome != null) ...[
-                        OutlinedButton.icon(
-                          onPressed: () {
-                            if (gameInstance.isLocalMultiplayer.value) {
-                              LocalMultiplayerService.instance.disconnect();
-                            }
-                            onHome();
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.white70,
-                            side: const BorderSide(color: Colors.white30),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          FilledButton.icon(
+                            onPressed: () {
+                              if (gameInstance.isLocalMultiplayer.value) {
+                                LocalMultiplayerService.instance.sendRestart();
+                              }
+                              gameInstance.restartMatch();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF00E676),
+                              foregroundColor: Colors.black87,
+                              padding: EdgeInsets.symmetric(
+                                horizontal: isShort ? 14 : 18,
+                                vertical: isVeryShort ? 4 : (isShort ? 6 : 9),
+                              ),
+                              minimumSize: Size(0, isVeryShort ? 28 : (isShort ? 32 : 40)),
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            ),
+                            icon: Icon(Icons.replay, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
+                            label: Text(
+                              'Chơi lại',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
+                              ),
+                            ),
                           ),
-                          icon: const Icon(Icons.home, size: 18),
-                          label: const Text('Menu Chính', style: TextStyle(fontWeight: FontWeight.bold)),
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      FilledButton.icon(
-                        onPressed: () {
-                          if (gameInstance.isLocalMultiplayer.value) {
-                            LocalMultiplayerService.instance.sendRestart();
-                          }
-                          gameInstance.restartMatch();
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF00E676),
-                          foregroundColor: Colors.black87,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        icon: const Icon(Icons.replay, size: 18),
-                        label: const Text('Chơi lại', style: TextStyle(fontWeight: FontWeight.w900)),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -2475,31 +2552,88 @@ class BilliardGame extends Forge2DGame with PanDetector {
   bool objectBallHitRailThisShot = false;
   int objectBallsHitRails = 0;
 
-  // Quản lý Combo ăn nhiều bi trong 1 lượt đánh
-  int currentShotPocketedCount = 0;
+  // Quản lý Combo ăn nhiều bi trong 1 lượt đánh (CHỈ TÍNH KHI ĂN CÁC BI CÙNG LOẠI)
+  final List<PoolBall> currentShotPocketedBalls = [];
+  int get currentShotPocketedCount => currentShotPocketedBalls.length;
   final ValueNotifier<ComboEvent?> comboNotifier = ValueNotifier<ComboEvent?>(null);
 
   void handleBallPocketed(PoolBall ball) {
     AudioManager.instance.playPocket();
-    currentShotPocketedCount++;
-    if (currentShotPocketedCount >= 2) {
-      String title = 'DOUBLE POT!';
-      String subtitle = 'Ăn 2 bi trong 1 lượt đánh!';
-      if (currentShotPocketedCount == 3) {
-        title = 'TRIPLE POT!';
-        subtitle = 'Tuyệt kỹ ăn 3 bi 1 lượt!';
-      } else if (currentShotPocketedCount >= 4) {
-        title = 'MEGA COMBO!';
-        subtitle = 'Thần cơ bida đỉnh cao!';
-      }
-      comboNotifier.value = ComboEvent(
-        count: currentShotPocketedCount,
-        title: title,
-        subtitle: subtitle,
-        timestamp: DateTime.now().millisecondsSinceEpoch,
-      );
-      AudioManager.instance.playCombo(currentShotPocketedCount);
+    currentShotPocketedBalls.add(ball);
+    _evaluateCombo();
+  }
+
+  void _evaluateCombo() {
+    // 1. Bi cái rơi lỗ (foul scratch) -> Tuyệt đối không tính combo
+    if (cueBall.pocketedThisShot || cueBall.isSunk) {
+      comboNotifier.value = null;
+      return;
     }
+
+    // 2. Có bi đen 8 rơi lỗ -> Không tính combo
+    if (currentShotPocketedBalls.any((b) => b.number == 8)) {
+      comboNotifier.value = null;
+      return;
+    }
+
+    // Phải ăn từ 2 bi trở lên mới xét combo
+    if (currentShotPocketedBalls.length < 2) {
+      return;
+    }
+
+    final currentPlayer = currentTurn.value;
+    final playerGroup = getPlayerGroup(currentPlayer);
+
+    if (playerGroup != null) {
+      // Trường hợp ĐÃ chia nhóm bi:
+      // BẮT BUỘC toàn bộ các bi vào lỗ trong lượt này phải CÙNG LOẠI và thuộc nhóm bi của người chơi
+      final allSamePlayerGroup = currentShotPocketedBalls.every(
+        (b) => ballGroup(b.number) == playerGroup,
+      );
+
+      if (!allSamePlayerGroup) {
+        // Ăn bi khác loại (bi đối thủ hoặc lẫn lộn trơn/sọc) -> HỦY combo
+        comboNotifier.value = null;
+        return;
+      }
+    } else {
+      // Trường hợp CHƯA chia nhóm bi (Bàn mở / Phá bi):
+      // BẮT BUỘC toàn bộ các bi vào lỗ trong lượt này phải CÙNG MỘT LOẠI (hoặc toàn bi trơn 1-7, hoặc toàn bi sọc 9-15)
+      final firstGrp = ballGroup(currentShotPocketedBalls.first.number);
+      if (firstGrp == null) {
+        comboNotifier.value = null;
+        return;
+      }
+
+      final allSameGroup = currentShotPocketedBalls.every(
+        (b) => ballGroup(b.number) == firstGrp,
+      );
+
+      if (!allSameGroup) {
+        // Ăn 2 bi khác loại (1 bi trơn + 1 bi sọc) -> HỦY combo
+        comboNotifier.value = null;
+        return;
+      }
+    }
+
+    final count = currentShotPocketedBalls.length;
+    String title = 'DOUBLE POT!';
+    String subtitle = 'Ăn 2 bi cùng loại!';
+    if (count == 3) {
+      title = 'TRIPLE POT!';
+      subtitle = 'Ăn 3 bi cùng loại!';
+    } else if (count >= 4) {
+      title = 'MEGA COMBO!';
+      subtitle = 'Thần cơ bida đỉnh cao!';
+    }
+
+    comboNotifier.value = ComboEvent(
+      count: count,
+      title: title,
+      subtitle: subtitle,
+      timestamp: DateTime.now().millisecondsSinceEpoch,
+    );
+    AudioManager.instance.playCombo(count);
   }
 
   double maxDragDistance = 180.0;
@@ -3063,6 +3197,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         cueBall.sinkIntoPocket(pocket.position);
         cueBall.pocketedThisShot = true;
         AudioManager.instance.playPocket();
+        comboNotifier.value = null;
       }
       for (final ball in poolBalls) {
         if (!ball.isRemoved &&
@@ -3351,7 +3486,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     cueBall.drawFollowForce.setZero();
 
     // Reset số bi ăn trong lượt này
-    currentShotPocketedCount = 0;
+    currentShotPocketedBalls.clear();
     comboNotifier.value = null;
 
     shotInProgress = true;
@@ -4598,6 +4733,7 @@ class BilliardContactListener extends ContactListener {
           cueBall.sinkIntoPocket(pocket.position);
           cueBall.pocketedThisShot = true;
           AudioManager.instance.playPocket();
+          game?.comboNotifier.value = null;
         }
       }
     }

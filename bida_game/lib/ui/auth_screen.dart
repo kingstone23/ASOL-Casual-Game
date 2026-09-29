@@ -145,35 +145,29 @@ class _AuthScreenState extends State<AuthScreen> {
   // GIAO DIỆN MOBILE LANDSCAPE (CÂY WIDGET CỐ ĐỊNH, KHÔNG BỊ UNMOUNT KHI MỞ BÀN PHÍM)
   // =========================================================================
   Widget _buildLandscapeLayout(BuildContext context, AuthService auth) {
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final isKeyboardOpen = bottomInset > 50;
-
     return Center(
       child: SingleChildScrollView(
         physics: const ClampingScrollPhysics(),
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.symmetric(
-          horizontal: isKeyboardOpen ? 16 : 24,
-          vertical: isKeyboardOpen ? 4 : 10,
-        ),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
         child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: isKeyboardOpen ? 480 : 880),
+          constraints: const BoxConstraints(maxWidth: 880),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               // --- CỘT TRÁI: LOGO, TÊN GAME & NÚT CHƠI NGAY (KHÁCH) ---
-              // Tự động thu gọn khi bàn phím mở để nhường chỗ cho ô nhập liệu không bị tràn/đẩy ra ngoài
-              if (!isKeyboardOpen)
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 18),
-                    child: _buildBrandPanel(auth),
-                  ),
+              Expanded(
+                key: const ValueKey('brand_panel_col'),
+                flex: 5,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 18),
+                  child: _buildBrandPanel(auth),
                 ),
+              ),
 
               // --- CỘT PHẢI: KHUNG ĐĂNG NHẬP / ĐĂNG KÝ PHONG CÁCH GAMING ---
               Expanded(
+                key: const ValueKey('form_card_col'),
                 flex: 6,
                 child: _buildFormCard(auth),
               ),
@@ -346,6 +340,7 @@ class _AuthScreenState extends State<AuthScreen> {
   // =========================================================================
   Widget _buildFormCard(AuthService auth) {
     return Container(
+      key: const ValueKey('auth_form_card_container'),
       decoration: BoxDecoration(
         color: const Color(0xFF0A1E17).withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(16),
@@ -514,11 +509,13 @@ class _AuthScreenState extends State<AuthScreen> {
   // =========================================================================
   Widget _buildLoginForm(AuthService auth) {
     return Column(
+      key: const ValueKey('login_form_column'),
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Input Tài khoản
         _buildTextField(
+          key: const ValueKey('login_account_field'),
           controller: _loginAccountController,
           focusNode: _loginAccountFocus,
           labelText: 'Tài khoản hoặc Email',
@@ -533,6 +530,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
         // Input Mật khẩu
         _buildTextField(
+          key: const ValueKey('login_password_field'),
           controller: _loginPasswordController,
           focusNode: _loginPasswordFocus,
           labelText: 'Mật khẩu',
@@ -596,10 +594,12 @@ class _AuthScreenState extends State<AuthScreen> {
   // =========================================================================
   Widget _buildRegisterForm(AuthService auth) {
     return Column(
+      key: const ValueKey('register_form_column'),
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildTextField(
+          key: const ValueKey('reg_name_field'),
           controller: _regNameController,
           focusNode: _regNameFocus,
           labelText: 'Tên hiển thị (Nickname)',
@@ -612,6 +612,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 7),
         _buildTextField(
+          key: const ValueKey('reg_account_field'),
           controller: _regAccountController,
           focusNode: _regAccountFocus,
           labelText: 'Tên tài khoản hoặc Email',
@@ -624,6 +625,7 @@ class _AuthScreenState extends State<AuthScreen> {
         ),
         const SizedBox(height: 7),
         _buildTextField(
+          key: const ValueKey('reg_password_field'),
           controller: _regPasswordController,
           focusNode: _regPasswordFocus,
           labelText: 'Mật khẩu (tối thiểu 6 ký tự)',
@@ -681,6 +683,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   // Tiện ích tạo TextField nhỏ gọn, tối ưu cho mobile
   Widget _buildTextField({
+    Key? key,
     required TextEditingController controller,
     FocusNode? focusNode,
     required String labelText,
@@ -694,6 +697,7 @@ class _AuthScreenState extends State<AuthScreen> {
     Widget? suffixIcon,
   }) {
     return Container(
+      key: key,
       constraints: const BoxConstraints(minHeight: 40),
       child: TextField(
         controller: controller,
@@ -703,7 +707,7 @@ class _AuthScreenState extends State<AuthScreen> {
         textCapitalization: textCapitalization,
         autocorrect: false,
         enableSuggestions: false,
-        scrollPadding: const EdgeInsets.only(bottom: 16),
+        scrollPadding: const EdgeInsets.only(bottom: 60),
         textInputAction: textInputAction,
         onSubmitted: onSubmitted,
         style: const TextStyle(color: Colors.white, fontSize: 13),
