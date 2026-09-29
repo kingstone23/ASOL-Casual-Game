@@ -23,14 +23,24 @@ class Ball3DOrientation {
     }
   }
 
+  bool get isValid =>
+      !uxx.isNaN && !uxy.isNaN && !uxz.isNaN &&
+      !uyx.isNaN && !uyy.isNaN && !uyz.isNaN &&
+      !uzx.isNaN && !uzy.isNaN && !uzz.isNaN;
+
   /// Lăn bi 3D theo vector dịch chuyển (dx, dy) trên mặt bàn nỉ
   void roll(double dx, double dy, double radius) {
-    if (radius <= 0) return;
+    if (radius <= 0 || dx.isNaN || dy.isNaN || dx.isInfinite || dy.isInfinite) return;
+    if (!isValid) reset();
+
     final dist = math.sqrt(dx * dx + dy * dy);
-    if (dist < 0.0001) return;
+    if (dist < 0.0001 || dist.isNaN || dist.isInfinite) return;
+
+    // Giới hạn an toàn khoảng cách lăn trong 1 frame tránh tràn góc xoay khi chuyển app
+    final safeDist = math.min(dist, radius * 8.0);
 
     // Góc quay: quãng đường lăn / bán kính
-    final theta = dist / radius;
+    final theta = safeDist / radius;
 
     // Trục quay 3D vuông góc với hướng di chuyển trong mặt phẳng XY:
     // Hướng di chuyển u = (dx/dist, dy/dist, 0)
@@ -43,7 +53,8 @@ class Ball3DOrientation {
 
   /// Xoay quanh trục thẳng đứng Z (áp-phê)
   void spinZ(double angle) {
-    if (angle.abs() < 0.0001) return;
+    if (angle.isNaN || angle.isInfinite || angle.abs() < 0.0001) return;
+    if (!isValid) reset();
     _rotateAroundUnitAxis(0.0, 0.0, 1.0, angle);
   }
 

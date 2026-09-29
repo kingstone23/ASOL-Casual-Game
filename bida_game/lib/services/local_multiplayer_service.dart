@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'auth_service.dart';
+import 'progression_service.dart';
 
 enum MultiplayerRole { none, host, client }
 
@@ -42,6 +44,11 @@ class LocalMultiplayerService extends ChangeNotifier {
   ServerSocket? _serverSocket;
   Socket? _activeSocket;
   StreamSubscription? _socketSubscription;
+
+  // Thông tin đối thủ nhận qua mạng WiFi
+  String opponentName = '';
+  int opponentLevel = 1;
+  int opponentCoins = 1000;
 
   // UDP Broadcast & Discovery
   RawDatagramSocket? _broadcastSocket;
@@ -143,6 +150,7 @@ class LocalMultiplayerService extends ChangeNotifier {
         _stopBroadcasting();
         notifyListeners();
         _listenToSocket(_activeSocket!);
+        sendPlayerInfo();
       });
 
       return true;
@@ -277,6 +285,7 @@ class LocalMultiplayerService extends ChangeNotifier {
       stopDiscovery();
       notifyListeners();
       _listenToSocket(_activeSocket!);
+      sendPlayerInfo();
       return true;
     } catch (e) {
       debugPrint('Error connectToHost: $e');
@@ -297,6 +306,12 @@ class LocalMultiplayerService extends ChangeNotifier {
         if (line.trim().isEmpty) return;
         try {
           final data = jsonDecode(line) as Map<String, dynamic>;
+          if (data['type'] == 'player_info') {
+            opponentName = (data['name'] as String?)?.trim() ?? 'Đối thủ';
+            opponentLevel = (data['level'] as num?)?.toInt() ?? 1;
+            opponentCoins = (data['coins'] as num?)?.toInt() ?? 1000;
+            notifyListeners();
+          }
           onMessageReceived?.call(data);
         } catch (e) {
           debugPrint('Error parsing message from opponent: $e');
@@ -325,6 +340,15 @@ class LocalMultiplayerService extends ChangeNotifier {
     }
   }
 
+  void sendPlayerInfo({String? name, int? level, int? coins}) {
+    sendData({
+      'type': 'player_info',
+      'name': name ?? AuthService.instance.displayName,
+      'level': level ?? ProgressionService.instance.playerLevel,
+      'coins': coins ?? ProgressionService.instance.coins,
+    });
+  }
+
   void sendAim({required double angle, required double power}) {
     sendData({'type': 'aim', 'angle': angle, 'power': power});
   }
@@ -337,8 +361,8 @@ class LocalMultiplayerService extends ChangeNotifier {
     sendData({'type': 'shoot', 'power': power});
   }
 
-  void sendBallInHand({required double x, required double y}) {
-    sendData({'type': 'ball_in_hand', 'x': x, 'y': y});
+  void sendBallInHand({required double x, required double y, bool placed = false}) {
+    sendData({'type': 'ball_in_hand', 'x': x, 'y': y, 'placed': placed});
   }
 
   void sendRestart() {
@@ -361,6 +385,9 @@ class LocalMultiplayerService extends ChangeNotifier {
     }
     role = MultiplayerRole.none;
     connectionState = MultiplayerConnectionState.disconnected;
+    opponentName = '';
+    opponentLevel = 1;
+    opponentCoins = 1000;
     notifyListeners();
   }
 }

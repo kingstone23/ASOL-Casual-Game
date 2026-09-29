@@ -373,6 +373,65 @@ class ProgressionService extends ChangeNotifier {
     );
   }
 
+  /// Khấu trừ số tiền bị mất khi thua trận (không để âm dưới 0)
+  int deductMatchLostCoins(int amount) {
+    if (amount <= 0) return 0;
+    final lost = _coins >= amount ? amount : _coins;
+    _coins -= lost;
+    _save();
+    notifyListeners();
+    return lost;
+  }
+
+  void recordLoss() {
+    notifyListeners();
+  }
+
+  /// Xử lý tiền cược và phần thưởng riêng cho chế độ Đấu Mạng Local WiFi:
+  /// - Người thắng: Nhận tiền cược (+ Vàng) và XP
+  /// - Người thua: Bị trừ tiền cược (- Vàng) từ tài khoản
+  MatchRewardResult handleMultiplayerMatchRewards({
+    required bool isWinner,
+    int betAmount = 500,
+  }) {
+    if (isWinner) {
+      int gainedCoins = betAmount;
+      if (_equippedCueId == 'golden_bull') {
+        gainedCoins = (gainedCoins * 1.10).round();
+      }
+      final xpResult = addXPAndCoins(
+        xpGained: 150,
+        coinsGained: gainedCoins,
+      );
+      recordWin();
+      return MatchRewardResult(
+        earnedXP: 150,
+        earnedCoins: gainedCoins,
+        didLevelUp: xpResult.didLevelUp,
+        oldLevel: xpResult.oldLevel,
+        newLevel: xpResult.newLevel,
+        bonusDiamonds: xpResult.bonusDiamonds,
+        customMessage: 'THẮNG ĐẤU MẠNG LOCAL (+$gainedCoins VÀNG)',
+      );
+    } else {
+      int lostCoins = betAmount;
+      if (_equippedCueId == 'dragon_god') {
+        lostCoins = (lostCoins * 0.5).round();
+      }
+      final actualLost = deductMatchLostCoins(lostCoins);
+      recordLoss();
+      return MatchRewardResult(
+        earnedXP: 30,
+        earnedCoins: -actualLost,
+        didLevelUp: false,
+        oldLevel: playerLevel,
+        newLevel: playerLevel,
+        bonusDiamonds: 0,
+        customMessage: 'THUA ĐẤU MẠNG LOCAL (-$actualLost VÀNG)',
+      );
+    }
+  }
+
   /// Trao thưởng khi người chơi vượt qua 1 Ải Bot Campaign
   MatchRewardResult completeBotStage(BotStageModel stage) {
     final isFirstClear = !_completedBotStages.contains(stage.stageNumber);
