@@ -4,6 +4,9 @@ import '../services/auth_service.dart';
 import 'cue_shop_dialog.dart';
 import 'auth_dialog.dart';
 import 'leaderboard_dialog.dart';
+import 'player_profile_dialog.dart';
+import 'achievements_dialog.dart';
+import '../models/medal_model.dart';
 
 class PlayerProfileBar extends StatelessWidget {
   final bool compact;
@@ -58,69 +61,82 @@ class PlayerProfileBar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
             children: [
-              // 1. Level Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.5),
-                      blurRadius: 6,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  'Lv.$level',
-                  style: TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.w900,
-                    fontSize: compact ? 11 : 13,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-
-              // 2. XP Progress Bar
-              ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: compact ? 70 : 100),
-                child: Column(
+              // 1 & 2. Level Badge & XP Progress Bar (Chạm vào mở Hồ Sơ Profile)
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const PlayerProfileDialog(),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'XP',
-                          style: TextStyle(
-                            color: Colors.tealAccent,
-                            fontSize: compact ? 9 : 10,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
                         ),
-                        Text(
-                          '$xp/$nextXp',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: compact ? 8 : 9,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.amber.withValues(alpha: 0.5),
+                            blurRadius: 6,
                           ),
+                        ],
+                      ),
+                      child: Text(
+                        'Lv.$level',
+                        style: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w900,
+                          fontSize: compact ? 11 : 13,
                         ),
-                      ],
+                      ),
                     ),
-                    const SizedBox(height: 2),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: progress,
-                        minHeight: compact ? 4 : 6,
-                        backgroundColor: Colors.white12,
-                        valueColor: const AlwaysStoppedAnimation<Color>(
-                          Color(0xFF00E676),
-                        ),
+                    const SizedBox(width: 8),
+
+                    ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: compact ? 70 : 100),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'XP',
+                                style: TextStyle(
+                                  color: Colors.tealAccent,
+                                  fontSize: compact ? 9 : 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '$xp/$nextXp',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: compact ? 8 : 9,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: progress,
+                              minHeight: compact ? 4 : 6,
+                              backgroundColor: Colors.white12,
+                              valueColor: const AlwaysStoppedAnimation<Color>(
+                                Color(0xFF00E676),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -182,6 +198,46 @@ class PlayerProfileBar extends StatelessWidget {
                   ],
                 ),
               ),
+
+              // 4.1. Mini Showcased Medals (Tối đa 5 Huy chương hiển thị trên Profile)
+              if (service.showcasedMedals.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                InkWell(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const PlayerProfileDialog(),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: const Color(0xFFFFD54F).withValues(alpha: 0.5),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: service.showcasedMedals.take(5).map((mId) {
+                        final medal = MedalCatalog.getById(mId);
+                        if (medal == null) return const SizedBox.shrink();
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 1.5),
+                          child: Icon(
+                            medal.icon,
+                            color: medal.rarity.glowColor,
+                            size: compact ? 13 : 15,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+              ],
 
               // 5. Nút mở Cửa hàng (Shop)
               if (showShopButton) ...[
@@ -275,6 +331,56 @@ class PlayerProfileBar extends StatelessWidget {
                         'BXH',
                         style: TextStyle(
                           color: Colors.black87,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.8,
+                          fontSize: compact ? 10 : 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // 6.5. Nút mở Thành Tựu & Huy Chương
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AchievementsDialog(),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 8 : 11,
+                    vertical: compact ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF7C4DFF), Color(0xFF536DFE)],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.deepPurpleAccent.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.military_tech,
+                        color: Colors.white,
+                        size: compact ? 13 : 15,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'HUY CHƯƠNG',
+                        style: TextStyle(
+                          color: Colors.white,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 0.8,
                           fontSize: compact ? 10 : 12,

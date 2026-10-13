@@ -25,6 +25,10 @@ import 'ui/aim_ruler_slider.dart';
 import 'ui/ball_3d_renderer.dart';
 import 'services/audio_manager.dart';
 import 'ui/combo_banner_overlay.dart';
+import 'models/tournament_model.dart';
+import 'services/online_multiplayer_service.dart';
+import 'ui/tournament_dialog.dart';
+import 'ui/online_multiplayer_dialog.dart';
 
 enum BallGroup { solids, stripes }
 
@@ -112,6 +116,22 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    OnlineMultiplayerService.instance.onReconnected = (roomId, isHost, state) {
+      if (mounted) {
+        gameInstance.startOnlineMultiplayer(roomId: roomId, isHost: isHost);
+        setState(() => showGame = true);
+      }
+    };
+
+    _checkActiveOnlineMatch();
+  }
+
+  void _checkActiveOnlineMatch() async {
+    final activeRoom = await OnlineMultiplayerService.instance.getSavedActiveRoomId();
+    if (activeRoom != null && activeRoom.isNotEmpty) {
+      await OnlineMultiplayerService.instance.connect();
+    }
   }
 
   @override
@@ -131,6 +151,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
     } else if (state == AppLifecycleState.resumed) {
       gameInstance.onAppResumed();
       AudioManager.instance.resumeBgm();
+      if (gameInstance.isOnlineMultiplayer.value && !OnlineMultiplayerService.instance.isConnected) {
+        OnlineMultiplayerService.instance.connect();
+      }
     }
   }
 
@@ -151,6 +174,16 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
 
   void _startLocalMultiplayerMatch() {
     gameInstance.startLocalMultiplayer();
+    setState(() => showGame = true);
+  }
+
+  void _startTournamentStage(TournamentBracketStage stage) {
+    gameInstance.startTournamentStage(stage);
+    setState(() => showGame = true);
+  }
+
+  void _startOnlineMultiplayerMatch(String roomId, bool isHost) {
+    gameInstance.startOnlineMultiplayer(roomId: roomId, isHost: isHost);
     setState(() => showGame = true);
   }
 
@@ -340,11 +373,12 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         ),
         SizedBox(width: compact ? 12 : 20),
 
-        // Cột Phải: 4 Nút chế độ xếp dạng 2x2 Grid vừa vặn tuyệt đối
+        // Cột Phải: Các Nút chế độ xếp dạng Grid vừa vặn tuyệt đối
         Expanded(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Hàng 1: P1 vs P2 & Đấu Online WebSocket
               Row(
                 children: [
                   Expanded(
@@ -354,6 +388,47 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                       detail: '2 người trên 1 thiết bị',
                       background: const Color(0xFF1D4ED8),
                       onPressed: _startPlayerMatch,
+                      compact: compact,
+                    ),
+                  ),
+                  SizedBox(width: compact ? 8 : 12),
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.public,
+                      label: 'ĐẤU ONLINE (SOCKET)',
+                      detail: 'Matchmaking 1v1 • Mã PIN',
+                      background: const Color(0xFF0091EA),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => OnlineMultiplayerDialog(
+                            onConnected: _startOnlineMultiplayerMatch,
+                          ),
+                        );
+                      },
+                      compact: compact,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: compact ? 6 : 8),
+              // Hàng 2: Giải Đấu Tournament 6 Brackets & Đấu Mạng Local
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMenuButton(
+                      icon: Icons.emoji_events,
+                      label: 'TOURNAMENT 6 BRACKETS',
+                      detail: 'Tranh cúp Quán Quân • Siêu quà',
+                      background: const Color(0xFFC77700),
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => TournamentDialog(
+                            onStartBracketMatch: _startTournamentStage,
+                          ),
+                        );
+                      },
                       compact: compact,
                     ),
                   ),
@@ -377,7 +452,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   ),
                 ],
               ),
-              SizedBox(height: compact ? 8 : 10),
+              SizedBox(height: compact ? 6 : 8),
+              // Hàng 3: 7 Ải Thử Thách Bot & Thế Bi Hàng Ngày
               Row(
                 children: [
                   Expanded(
@@ -466,7 +542,39 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             letterSpacing: 1.5,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        _buildMenuButton(
+          icon: Icons.emoji_events,
+          label: 'TOURNAMENT 6 BRACKETS',
+          detail: 'Vượt 6 vòng tranh Cúp Quán Quân, EXP & Huy Chương',
+          background: const Color(0xFFC77700),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => TournamentDialog(
+                onStartBracketMatch: _startTournamentStage,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
+        _buildMenuButton(
+          icon: Icons.public,
+          label: 'ĐẤU ONLINE TOÀN CẦU',
+          detail: 'Ghép cặp 1v1 hoặc tạo phòng mã PIN qua WebSocket',
+          background: const Color(0xFF0091EA),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => OnlineMultiplayerDialog(
+                onConnected: _startOnlineMultiplayerMatch,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.people,
           label: 'P1 vs P2 (CÙNG MÁY)',
@@ -1585,9 +1693,14 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
       final reward = _lastMatchReward;
 
       String titleText;
-      final bool isMultiplayer = gameInstance.isLocalMultiplayer.value;
+      final bool isLocalMulti = gameInstance.isLocalMultiplayer.value;
+      final bool isOnlineMulti = gameInstance.isOnlineMultiplayer.value;
+      final bool isMultiplayer = isLocalMulti || isOnlineMulti;
+      final bool isHost = isOnlineMulti
+          ? OnlineMultiplayerService.instance.isHost
+          : LocalMultiplayerService.instance.isHost;
       final bool isLocalWinner = isMultiplayer
-          ? (LocalMultiplayerService.instance.isHost
+          ? (isHost
               ? gameInstance.winningPlayer == 1
               : gameInstance.winningPlayer == 2)
           : (gameInstance.winningPlayer == 1);
@@ -1596,14 +1709,23 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
         titleText = gameInstance.winningPlayer == 1
             ? '🎉 PHÁ GIẢI THẾ BI THÀNH CÔNG!'
             : '😢 THẾ BI CHƯA HOÀN THÀNH';
+      } else if (gameInstance.activeTournamentStage != null) {
+        final stage = gameInstance.activeTournamentStage!;
+        titleText = gameInstance.winningPlayer == 1
+            ? (stage.bracketNumber == 6
+                ? '🏆 BẠN ĐÃ VÔ ĐỊCH TOURNAMENT GRAND CHAMPION!'
+                : '🎉 VƯỢT QUA ${stage.title} (BRACKET ${stage.bracketNumber})!')
+            : '😢 BẠN ĐÃ BỊ LOẠI TẠI BRACKET ${stage.bracketNumber}!';
       } else if (gameInstance.activeBotStage != null) {
         titleText = gameInstance.winningPlayer == 1
             ? '🎉 VƯỢT ẢI ${gameInstance.activeBotStage!.stageNumber} THÀNH CÔNG!'
             : '😢 ${gameInstance.activeBotStage!.botName.toUpperCase()} ĐÃ CHIẾN THẮNG!';
       } else if (isMultiplayer) {
-        final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
-            ? LocalMultiplayerService.instance.opponentName
-            : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+        final oppName = isOnlineMulti
+            ? OnlineMultiplayerService.instance.opponentName
+            : (LocalMultiplayerService.instance.opponentName.isNotEmpty
+                ? LocalMultiplayerService.instance.opponentName
+                : (isHost ? 'Khách (P2)' : 'Chủ phòng (P1)'));
         titleText = gameInstance.winningPlayer == null
             ? 'Ván đấu kết thúc'
             : (isLocalWinner
@@ -1889,7 +2011,9 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                           ],
                           FilledButton.icon(
                             onPressed: () {
-                              if (gameInstance.isLocalMultiplayer.value) {
+                              if (gameInstance.isOnlineMultiplayer.value) {
+                                OnlineMultiplayerService.instance.sendRestart();
+                              } else if (gameInstance.isLocalMultiplayer.value) {
                                 LocalMultiplayerService.instance.sendRestart();
                               }
                               gameInstance.restartMatch();
@@ -2078,7 +2202,9 @@ Widget _buildControlBar(
             listenable: Listenable.merge([
               ProgressionService.instance,
               LocalMultiplayerService.instance,
+              OnlineMultiplayerService.instance,
               gameInstance.isLocalMultiplayer,
+              gameInstance.isOnlineMultiplayer,
             ]),
             builder: (context, _) {
               // Tên hiển thị người chơi P1 và P2 theo chế độ
@@ -2089,7 +2215,12 @@ Widget _buildControlBar(
               int p2Level = 1;
               int p2Coins = 1200;
 
-              if (gameInstance.activeBotStage != null) {
+              if (gameInstance.activeTournamentStage != null) {
+                final tour = gameInstance.activeTournamentStage!;
+                p2Name = '${tour.opponentName} (Bracket ${tour.bracketNumber})';
+                p2Level = tour.opponentLevel;
+                p2Coins = tour.coinReward * 2;
+              } else if (gameInstance.activeBotStage != null) {
                 p2Name = '${gameInstance.activeBotStage!.botName} (Ải ${gameInstance.activeBotStage!.stageNumber})';
                 p2Level = gameInstance.activeBotStage!.stageNumber;
                 p2Coins = gameInstance.activeBotStage!.firstClearCoins * 2;
@@ -2097,6 +2228,29 @@ Widget _buildControlBar(
                 p2Name = 'CPU (${gameInstance.botDifficulty.value == 1 ? 'Dễ' : 'Khó'})';
                 p2Level = gameInstance.botDifficulty.value == 1 ? 1 : 5;
                 p2Coins = gameInstance.botDifficulty.value == 1 ? 2500 : 15000;
+              } else if (gameInstance.isOnlineMultiplayer.value) {
+                final myName = AuthService.instance.displayName;
+                final oppName = OnlineMultiplayerService.instance.opponentName;
+                final myLevel = ProgressionService.instance.playerLevel;
+                final myCoins = ProgressionService.instance.coins;
+                final oppLevel = OnlineMultiplayerService.instance.opponentLevel;
+                final oppCoins = OnlineMultiplayerService.instance.opponentCoins;
+
+                if (OnlineMultiplayerService.instance.isHost) {
+                  p1Name = '$myName (Bạn)';
+                  p1Level = myLevel;
+                  p1Coins = myCoins;
+                  p2Name = oppName;
+                  p2Level = oppLevel;
+                  p2Coins = oppCoins;
+                } else {
+                  p1Name = oppName;
+                  p1Level = oppLevel;
+                  p1Coins = oppCoins;
+                  p2Name = '$myName (Bạn)';
+                  p2Level = myLevel;
+                  p2Coins = myCoins;
+                }
               } else if (gameInstance.isLocalMultiplayer.value) {
                 final myName = AuthService.instance.displayName;
                 final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
@@ -2376,30 +2530,54 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
               spacing: 8,
               runSpacing: 8,
               children: [
+                // 1. Nút "Xử thua": CHỈ CÓ KHẢ NĂNG XỬ THUA KHI ĐẤU HOTSPOT LOCAL LAN (trọng tài / 2 người tự thỏa thuận)
+                // Tuyệt đối KHÔNG hiển thị trong trận Online để đảm bảo tính công bằng nhất!
+                if (gameInstance.isLocalMultiplayer.value && !gameInstance.isOnlineMultiplayer.value)
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showDeclareLoss(context);
+                    },
+                    icon: const Icon(Icons.flag, size: 16, color: Colors.orangeAccent),
+                    label: const Text('Xử thua (LAN)'),
+                  ),
+
+                // 2. Nút "Menu chính": Có xác nhận cảnh báo xử thua khi trong trận Đấu Online
                 OutlinedButton.icon(
                   onPressed: () {
-                    Navigator.pop(context);
-                    _showDeclareLoss(context);
-                  },
-                  icon: const Icon(Icons.flag, size: 16),
-                  label: const Text('Xử thua'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    onHome();
+                    if (gameInstance.isOnlineMultiplayer.value && !gameInstance.rackOver) {
+                      _showConfirmOnlineForfeit(context, onHome: () {
+                        Navigator.pop(context);
+                        onHome();
+                      });
+                    } else if (gameInstance.isLocalMultiplayer.value && !gameInstance.rackOver) {
+                      _showConfirmExitMatch(context, onHome: () {
+                        Navigator.pop(context);
+                        onHome();
+                      });
+                    } else {
+                      Navigator.pop(context);
+                      onHome();
+                    }
                   },
                   icon: const Icon(Icons.home, size: 16),
-                  label: const Text('Menu chính'),
+                  label: Text(
+                    gameInstance.isOnlineMultiplayer.value && !gameInstance.rackOver
+                        ? 'Rời trận (Xử thua)'
+                        : 'Menu chính',
+                  ),
                 ),
-                FilledButton.icon(
-                  onPressed: () {
-                    gameInstance.restartMatch();
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.restart_alt, size: 16),
-                  label: const Text('Bắt đầu lại'),
-                ),
+
+                // 3. Nút "Bắt đầu lại": Không hiển thị khi đang đấu Online
+                if (!gameInstance.isOnlineMultiplayer.value)
+                  FilledButton.icon(
+                    onPressed: () {
+                      gameInstance.restartMatch();
+                      Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.restart_alt, size: 16),
+                    label: const Text('Bắt đầu lại'),
+                  ),
               ],
             ),
           ],
@@ -2409,6 +2587,75 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Đóng', style: TextStyle(color: Colors.white70)),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showConfirmOnlineForfeit(BuildContext context, {required VoidCallback onHome}) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      backgroundColor: const Color(0xFF1E2328),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 24),
+          SizedBox(width: 8),
+          Text('Xác nhận rời trận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+        ],
+      ),
+      content: const Text(
+        'Bạn có chắc chắn muốn rời trận đấu Online không?\n\n'
+        '⚠️ NẾU XÁC NHẬN, BẠN SẼ BỊ XỬ THUA NGAY LẬP TỨC và đối thủ còn lại sẽ giành chiến thắng!',
+        style: TextStyle(color: Colors.white70, fontSize: 13.5, height: 1.4),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogCtx),
+          child: const Text('Tiếp tục chơi', style: TextStyle(color: Colors.white70)),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(
+            backgroundColor: const Color(0xFFC62828),
+            foregroundColor: Colors.white,
+          ),
+          onPressed: () {
+            Navigator.pop(dialogCtx);
+            // Gửi gói tin forfeit lên WebSocket server
+            OnlineMultiplayerService.instance.forfeitMatch();
+            // Ghi nhận thua cho bản thân
+            final myIdx = OnlineMultiplayerService.instance.isHost ? 1 : 2;
+            gameInstance.declareLoss(myIdx);
+            onHome();
+          },
+          child: const Text('Rời trận (Xử thua)', style: TextStyle(fontWeight: FontWeight.bold)),
+        ),
+      ],
+    ),
+  );
+}
+
+void _showConfirmExitMatch(BuildContext context, {required VoidCallback onHome}) {
+  showDialog<void>(
+    context: context,
+    builder: (dialogCtx) => AlertDialog(
+      backgroundColor: const Color(0xFF1E2328),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('Thoát ván đấu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      content: const Text('Bạn có muốn kết thúc trận đấu và quay về Menu chính không?', style: TextStyle(color: Colors.white70)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(dialogCtx),
+          child: const Text('Hủy', style: TextStyle(color: Colors.white70)),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.pop(dialogCtx);
+            onHome();
+          },
+          child: const Text('Đồng ý'),
         ),
       ],
     ),
@@ -2672,11 +2919,13 @@ class BilliardGame extends Forge2DGame with PanDetector {
   final Map<int, int> playerScores = {1: 0, 2: 0};
   int? winningPlayer;
 
-  // Chế độ Ải Bot Campaign, Thế Bi Hàng Ngày, Mạng Local WiFi
+  // Chế độ Ải Bot Campaign, Thế Bi Hàng Ngày, Mạng Local WiFi, Tournament, Online WebSocket
   BotStageModel? activeBotStage;
   DailyPuzzleModel? activeDailyPuzzle;
+  TournamentBracketStage? activeTournamentStage;
   int dailyPuzzleShotsTaken = 0;
   final ValueNotifier<bool> isLocalMultiplayer = ValueNotifier<bool>(false);
+  final ValueNotifier<bool> isOnlineMultiplayer = ValueNotifier<bool>(false);
 
   // Quản lý vòng đời ứng dụng (tránh văng / crash khi người chơi chuyển app)
   bool isAppPaused = false;
@@ -2741,6 +2990,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   bool get isMyTurn {
+    if (isOnlineMultiplayer.value) {
+      final isHost = OnlineMultiplayerService.instance.isHost;
+      return (isHost && currentTurn.value == 1) || (!isHost && currentTurn.value == 2);
+    }
     if (isLocalMultiplayer.value) {
       final isHost = LocalMultiplayerService.instance.isHost;
       return (isHost && currentTurn.value == 1) || (!isHost && currentTurn.value == 2);
@@ -2754,42 +3007,127 @@ class BilliardGame extends Forge2DGame with PanDetector {
       !(isBotMode.value && currentTurn.value == 2) &&
       isMyTurn;
 
-  void initMultiplayer() {
-    LocalMultiplayerService.instance.onMessageReceived = (data) {
-      if (!_hasGameLoaded) return;
-      final type = data['type'] as String?;
-      if (type == 'aim') {
-        aimAngle = (data['angle'] as num).toDouble();
-        shotPower.value = (data['power'] as num).toDouble();
+  void _handleIncomingNetworkPacket(Map<String, dynamic> data) {
+    if (!_hasGameLoaded) return;
+    final type = data['type'] as String?;
+    if (type == 'aim') {
+      aimAngle = (data['angle'] as num).toDouble();
+      shotPower.value = (data['power'] as num).toDouble();
+      cueBall.isAiming = true;
+      cueBall.strokeDistance = maxDragDistance * shotPower.value;
+      _updateAimVector(ballRadius * 2);
+    } else if (type == 'spin') {
+      final spin = Offset(
+        (data['dx'] as num).toDouble(),
+        (data['dy'] as num).toDouble(),
+      );
+      cueSpin.value = spin;
+      cueBall.spinInfluence = spin;
+    } else if (type == 'ball_in_hand') {
+      final x = (data['x'] as num).toDouble();
+      final y = (data['y'] as num).toDouble();
+      final placed = (data['placed'] as bool?) ?? false;
+      cueBall.body.setTransform(Vector2(x, y), 0);
+      cueBall.body.linearVelocity.setZero();
+      if (placed) {
+        ballInHand = false;
+        movingCueBall = false;
         cueBall.isAiming = true;
-        cueBall.strokeDistance = maxDragDistance * shotPower.value;
-        _updateAimVector(ballRadius * 2);
-      } else if (type == 'spin') {
-        final spin = Offset(
-          (data['dx'] as num).toDouble(),
-          (data['dy'] as num).toDouble(),
-        );
-        cueSpin.value = spin;
-        cueBall.spinInfluence = spin;
-      } else if (type == 'ball_in_hand') {
-        final x = (data['x'] as num).toDouble();
-        final y = (data['y'] as num).toDouble();
-        final placed = (data['placed'] as bool?) ?? false;
+      }
+      _updateAimVector(ballRadius * 2);
+    } else if (type == 'shoot') {
+      shotPower.value = (data['power'] as num).toDouble();
+      shootWithPower(fromNetwork: true);
+    } else if (type == 'sync_balls') {
+      final balls = (data['balls'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      _applyBallsSync(balls);
+    } else if (type == 'reconnected_success') {
+      ruleMessage.value = '✅ Đã kết nối lại vào trận đấu thành công!';
+      final balls = (data['lastBalls'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      if (balls.isNotEmpty) {
+        _applyBallsSync(balls);
+      }
+      if (data['currentTurn'] != null) {
+        currentTurn.value = (data['currentTurn'] as num).toInt();
+      }
+      groupVersion.value++;
+      matchVersion.value++;
+    } else if (type == 'opponent_disconnected') {
+      ruleMessage.value = '⚠️ Đối thủ bị ngắt kết nối! Trận đấu vẫn tiếp tục theo thời gian thực...';
+    } else if (type == 'opponent_reconnected') {
+      ruleMessage.value = '✅ Đối thủ đã kết nối lại! Tiếp tục thi đấu.';
+    } else if (type == 'opponent_forfeited') {
+      // Đối thủ đã rời trận từ Menu Setting hoặc timeout: Mình giành chiến thắng!
+      final oppIdx = OnlineMultiplayerService.instance.isHost ? 2 : 1;
+      declareLoss(oppIdx);
+      ruleMessage.value = '🏆 Đối thủ đã rời trận! Bạn giành chiến thắng!';
+      _processMatchRewards();
+      OnlineMultiplayerService.instance.clearActiveMatch();
+    } else if (type == 'restart') {
+      restartMatch();
+    }
+  }
+
+  void _applyBallsSync(List<Map<String, dynamic>> balls) {
+    for (final item in balls) {
+      final bNum = item['num'] as int?;
+      final x = (item['x'] as num?)?.toDouble() ?? 0.0;
+      final y = (item['y'] as num?)?.toDouble() ?? 0.0;
+      final sunk = (item['sunk'] as bool?) ?? false;
+      if (bNum == 0) {
         cueBall.body.setTransform(Vector2(x, y), 0);
         cueBall.body.linearVelocity.setZero();
-        if (placed) {
-          ballInHand = false;
-          movingCueBall = false;
-          cueBall.isAiming = true;
+      } else if (bNum != null) {
+        for (final b in poolBalls) {
+          if (b.number == bNum) {
+            if (sunk && !b.isSunk) {
+              b.instantSunk();
+            } else if (!sunk) {
+              b.body.setTransform(Vector2(x, y), 0);
+              b.body.linearVelocity.setZero();
+            }
+            break;
+          }
         }
-        _updateAimVector(ballRadius * 2);
-      } else if (type == 'shoot') {
-        shotPower.value = (data['power'] as num).toDouble();
-        shootWithPower(fromNetwork: true);
-      } else if (type == 'restart') {
-        restartMatch();
       }
-    };
+    }
+  }
+
+  void initMultiplayer() {
+    LocalMultiplayerService.instance.onMessageReceived = _handleIncomingNetworkPacket;
+    OnlineMultiplayerService.instance.onMessageReceived = _handleIncomingNetworkPacket;
+  }
+
+  void syncAim({required double angle, required double power}) {
+    if (isOnlineMultiplayer.value) {
+      OnlineMultiplayerService.instance.sendAim(angle: angle, power: power);
+    } else if (isLocalMultiplayer.value) {
+      LocalMultiplayerService.instance.sendAim(angle: angle, power: power);
+    }
+  }
+
+  void syncSpin({required double dx, required double dy}) {
+    if (isOnlineMultiplayer.value) {
+      OnlineMultiplayerService.instance.sendSpin(dx: dx, dy: dy);
+    } else if (isLocalMultiplayer.value) {
+      LocalMultiplayerService.instance.sendSpin(dx: dx, dy: dy);
+    }
+  }
+
+  void syncShoot({required double power}) {
+    if (isOnlineMultiplayer.value) {
+      OnlineMultiplayerService.instance.sendShoot(power: power);
+    } else if (isLocalMultiplayer.value) {
+      LocalMultiplayerService.instance.sendShoot(power: power);
+    }
+  }
+
+  void syncBallInHand({required double x, required double y, bool placed = false}) {
+    if (isOnlineMultiplayer.value) {
+      OnlineMultiplayerService.instance.sendBallInHand(x: x, y: y, placed: placed);
+    } else if (isLocalMultiplayer.value) {
+      LocalMultiplayerService.instance.sendBallInHand(x: x, y: y, placed: placed);
+    }
   }
 
   late CueBall cueBall;
@@ -3561,7 +3899,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void startPlayerMatch() {
     activeBotStage = null;
     activeDailyPuzzle = null;
+    activeTournamentStage = null;
     isLocalMultiplayer.value = false;
+    isOnlineMultiplayer.value = false;
     isBotMode.value = false;
     restartMatch();
   }
@@ -3569,7 +3909,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void startBotStage(BotStageModel stage) {
     activeBotStage = stage;
     activeDailyPuzzle = null;
+    activeTournamentStage = null;
     isLocalMultiplayer.value = false;
+    isOnlineMultiplayer.value = false;
     isBotMode.value = true;
     botDifficulty.value = stage.stageNumber <= 3 ? 1 : 2;
     restartMatch();
@@ -3579,7 +3921,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
     activeDailyPuzzle = puzzle;
     dailyPuzzleShotsTaken = 0;
     activeBotStage = null;
+    activeTournamentStage = null;
     isLocalMultiplayer.value = false;
+    isOnlineMultiplayer.value = false;
     isBotMode.value = false;
     restartMatch();
   }
@@ -3587,7 +3931,30 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void startLocalMultiplayer() {
     activeBotStage = null;
     activeDailyPuzzle = null;
+    activeTournamentStage = null;
     isLocalMultiplayer.value = true;
+    isOnlineMultiplayer.value = false;
+    isBotMode.value = false;
+    restartMatch();
+  }
+
+  void startTournamentStage(TournamentBracketStage stage) {
+    activeTournamentStage = stage;
+    activeBotStage = null;
+    activeDailyPuzzle = null;
+    isLocalMultiplayer.value = false;
+    isOnlineMultiplayer.value = false;
+    isBotMode.value = true;
+    botDifficulty.value = stage.bracketNumber <= 3 ? 1 : 2;
+    restartMatch();
+  }
+
+  void startOnlineMultiplayer({required String roomId, required bool isHost}) {
+    activeTournamentStage = null;
+    activeBotStage = null;
+    activeDailyPuzzle = null;
+    isLocalMultiplayer.value = false;
+    isOnlineMultiplayer.value = true;
     isBotMode.value = false;
     restartMatch();
   }
@@ -3643,8 +4010,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
     if (activeDailyPuzzle != null) {
       ruleMessage.value = 'Thế bi: ${activeDailyPuzzle!.title}';
       dailyPuzzleShotsTaken = 0;
+    } else if (activeTournamentStage != null) {
+      ruleMessage.value = 'Bracket ${activeTournamentStage!.bracketNumber}: ${activeTournamentStage!.title} vs ${activeTournamentStage!.opponentName}';
     } else if (activeBotStage != null) {
       ruleMessage.value = '${activeBotStage!.title} - Bắt đầu!';
+    } else if (isOnlineMultiplayer.value) {
+      final oppName = OnlineMultiplayerService.instance.opponentName;
+      ruleMessage.value = OnlineMultiplayerService.instance.isHost
+          ? 'Đấu Online: Lượt của bạn (P1 break shot)'
+          : 'Đấu Online: Lượt của $oppName (P1 break shot)';
     } else if (isLocalMultiplayer.value) {
       final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
           ? LocalMultiplayerService.instance.opponentName
@@ -3679,8 +4053,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.isAiming = true;
       cueBall.strokeDistance = maxDragDistance * shotPower.value;
     }
-    if (isLocalMultiplayer.value && isMyTurn) {
-      LocalMultiplayerService.instance.sendAim(
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+      syncAim(
         angle: aimAngle,
         power: shotPower.value,
       );
@@ -3700,8 +4074,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
         _updateAimVector(cueBall.aimVector!.length);
       }
     }
-    if (isLocalMultiplayer.value && isMyTurn) {
-      LocalMultiplayerService.instance.sendSpin(dx: clamped.dx, dy: clamped.dy);
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+      syncSpin(dx: clamped.dx, dy: clamped.dy);
     }
   }
 
@@ -3722,8 +4096,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.isAiming = true;
       cueBall.strokeDistance = maxDragDistance * shotPower.value;
     }
-    if (isLocalMultiplayer.value && isMyTurn) {
-      LocalMultiplayerService.instance.sendAim(
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+      syncAim(
         angle: aimAngle,
         power: shotPower.value,
       );
@@ -3753,8 +4127,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.isAiming = true;
       cueBall.strokeDistance = maxDragDistance * power;
     }
-    if (isLocalMultiplayer.value && isMyTurn) {
-      LocalMultiplayerService.instance.sendAim(angle: aimAngle, power: power);
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+      syncAim(angle: aimAngle, power: power);
     }
   }
 
@@ -3773,8 +4147,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       return;
     }
 
-    if (isLocalMultiplayer.value && !fromBot && !fromNetwork) {
-      LocalMultiplayerService.instance.sendShoot(power: shotPower.value);
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && !fromBot && !fromNetwork) {
+      syncShoot(power: shotPower.value);
     }
 
     final direction = Vector2(math.cos(aimAngle), math.sin(aimAngle));
@@ -3789,7 +4163,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
     
     double forceMult = 1.0;
     double spinMult = 1.0;
-    if (fromBot && activeBotStage != null) {
+    if (fromBot && activeTournamentStage != null) {
+      forceMult = activeTournamentStage!.opponentCue.getForceMultiplier(activeTournamentStage!.opponentLevel.clamp(1, 10));
+      spinMult = activeTournamentStage!.opponentCue.getSpinMultiplier(activeTournamentStage!.opponentLevel.clamp(1, 10));
+    } else if (fromBot && activeBotStage != null) {
       forceMult = activeBotStage!.cue.getForceMultiplier(activeBotStage!.stageNumber);
       spinMult = activeBotStage!.cue.getSpinMultiplier(activeBotStage!.stageNumber);
     } else if (!fromBot && currentTurn.value == 1) {
@@ -4408,8 +4785,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       aimAngle = math.atan2(offset.y, offset.x);
       cueBall.isAiming = true;
       _updateAimVector(ballRadius * 2);
-      if (isLocalMultiplayer.value && isMyTurn) {
-        LocalMultiplayerService.instance.sendAim(
+      if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+        syncAim(
           angle: aimAngle,
           power: shotPower.value,
         );
@@ -4426,8 +4803,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.isAiming = true;
       _updateAimVector(ballRadius * 2);
     }
-    if (isLocalMultiplayer.value && isMyTurn) {
-      LocalMultiplayerService.instance.sendAim(
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+      syncAim(
         angle: aimAngle,
         power: shotPower.value,
       );
@@ -4479,8 +4856,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ballInHand = false;
       cueBall.isAiming = true;
       _updateAimVector(ballRadius * 2);
-      if (isLocalMultiplayer.value && isMyTurn) {
-        LocalMultiplayerService.instance.sendBallInHand(
+      if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+        syncBallInHand(
           x: cueBall.body.position.x,
           y: cueBall.body.position.y,
           placed: true,
@@ -4538,8 +4915,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       cueBall.body.angularVelocity = 0;
       cueBall.body.clearForces();
       cueBall.body.setAwake(true);
-      if (isLocalMultiplayer.value && isMyTurn) {
-        LocalMultiplayerService.instance.sendBallInHand(
+      if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && isMyTurn) {
+        syncBallInHand(
           x: position.x,
           y: position.y,
         );
@@ -4659,13 +5036,29 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ruleMessage.value = 'Player ${currentPlayer == 1 ? 2 : 1} turn';
       switchTurn();
     }
-    if (isLocalMultiplayer.value && !rackOver) {
-      final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
-          ? LocalMultiplayerService.instance.opponentName
-          : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+    if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && !rackOver) {
+      final oppName = isOnlineMultiplayer.value
+          ? OnlineMultiplayerService.instance.opponentName
+          : (LocalMultiplayerService.instance.opponentName.isNotEmpty
+              ? LocalMultiplayerService.instance.opponentName
+              : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)'));
       ruleMessage.value = isMyTurn
           ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn!')
           : 'Đấu mạng: Lượt của $oppName...';
+    }
+    if (isOnlineMultiplayer.value && !rackOver) {
+      final ballStates = <Map<String, dynamic>>[
+        {'num': 0, 'x': cueBall.body.position.x, 'y': cueBall.body.position.y, 'sunk': cueBall.isSunk},
+      ];
+      for (final b in poolBalls) {
+        ballStates.add({
+          'num': b.number,
+          'x': b.body.position.x,
+          'y': b.body.position.y,
+          'sunk': b.isSunk,
+        });
+      }
+      OnlineMultiplayerService.instance.sendSyncBalls(ballStates);
     }
     if (rackOver) {
       _processMatchRewards();
@@ -4725,7 +5118,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void _processMatchRewards() {
     final bool isWinner;
-    if (isLocalMultiplayer.value) {
+    if (isOnlineMultiplayer.value) {
+      final isHost = OnlineMultiplayerService.instance.isHost;
+      isWinner = isHost ? (winningPlayer == 1) : (winningPlayer == 2);
+    } else if (isLocalMultiplayer.value) {
       final isHost = LocalMultiplayerService.instance.isHost;
       isWinner = isHost ? (winningPlayer == 1) : (winningPlayer == 2);
     } else {
@@ -4737,13 +5133,29 @@ class BilliardGame extends Forge2DGame with PanDetector {
         ? 0
         : p1Balls.where((bNum) => isBallPocketed(bNum)).length;
 
-    if (isLocalMultiplayer.value) {
+    if (isOnlineMultiplayer.value) {
       _lastMatchReward = ProgressionService.instance.handleMultiplayerMatchRewards(
         isWinner: isWinner,
         betAmount: 500,
       );
-      // Gửi cập nhật thông số tài khoản mới (coins, level) cho đối thủ qua socket
+      OnlineMultiplayerService.instance.sendProfile();
+    } else if (isLocalMultiplayer.value) {
+      _lastMatchReward = ProgressionService.instance.handleMultiplayerMatchRewards(
+        isWinner: isWinner,
+        betAmount: 500,
+      );
       LocalMultiplayerService.instance.sendPlayerInfo();
+    } else if (activeTournamentStage != null) {
+      if (isWinner) {
+        _lastMatchReward = ProgressionService.instance.completeTournamentBracket(
+          activeTournamentStage!,
+        );
+      } else {
+        _lastMatchReward = ProgressionService.instance.handleMatchRewards(
+          isWinner: false,
+          pottedBallsCount: pocketed,
+        );
+      }
     } else if (activeDailyPuzzle != null) {
       if (isWinner) {
         _lastMatchReward = ProgressionService.instance.claimDailyPuzzleReward(
@@ -4775,6 +5187,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
       }
     }
 
+    ProgressionService.instance.checkAchievementsAndMedals();
     AuthService.instance.syncCurrentPlayerStats();
   }
 
