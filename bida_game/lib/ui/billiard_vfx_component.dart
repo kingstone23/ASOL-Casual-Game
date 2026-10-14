@@ -171,20 +171,60 @@ class _RailImpactRipple {
   }
 }
 
+/// Điểm vệt chuyển động có thời gian sống tự tiêu hủy
+class _TrailPoint {
+  final Vector2 position;
+  double age = 0.0;
+  static const double maxAge = 0.11; // 110ms: vệt mờ sắc nét, biến mất tức thì không để lại cặn/đọng
+
+  _TrailPoint(this.position);
+
+  bool update(double dt) {
+    age += dt;
+    return age < maxAge;
+  }
+
+  double get alphaMultiplier => (1.0 - (age / maxAge)).clamp(0.0, 1.0);
+}
+
 /// Lịch sử vệt chuyển động của quả bi ở tốc độ cao
 class _BallMotionTrailHistory {
-  final List<Vector2> positions = [];
-  double lastRecordTime = 0.0;
+  final List<_TrailPoint> points = [];
+  double idleTime = 0.0;
 
   void addPosition(Vector2 pos) {
-    positions.insert(0, pos.clone());
-    if (positions.length > 4) {
-      positions.removeLast();
+    idleTime = 0.0;
+    if (points.isNotEmpty) {
+      final diff = points.first.position - pos;
+      if (diff.length2 < 4.0) {
+        return; // Không thêm điểm trùng khi bi di chuyển cực nhỏ
+      }
+    }
+    points.insert(0, _TrailPoint(pos.clone()));
+    if (points.length > 5) {
+      points.removeLast();
     }
   }
 
+  bool update(double dt) {
+    idleTime += dt;
+    // Nếu bi không cập nhật điểm mới (chậm lại, rơi vào lỗ hoặc đứng yên) -> làm mờ cực nhanh
+    if (idleTime > 0.03) {
+      for (final p in points) {
+        p.age += dt * 3.5;
+      }
+    } else {
+      for (final p in points) {
+        p.age += dt;
+      }
+    }
+    points.removeWhere((p) => p.age >= _TrailPoint.maxAge);
+    return points.isNotEmpty;
+  }
+
   void clear() {
-    positions.clear();
+    points.clear();
+    idleTime = 0.0;
   }
 }
 
@@ -413,6 +453,12 @@ class BilliardVfxComponent extends Component {
 
   /// Kích hoạt hiệu ứng hút rơi vào miệng lỗ
   void addPocketDrop(Vector2 pocketPos, [double pocketRadius = 24.0]) {
+    // Chống kích hoạt đè liên tiếp nhiều xoáy trên cùng 1 lỗ trong thời gian ngắn (< 0.25s)
+    for (final pv in _pocketVortices) {
+      if ((pv.position - pocketPos).length < pocketRadius * 0.6 && pv.age < 0.25) {
+        return;
+      }
+    }
     _pocketVortices.add(
       _PocketDropVortex(
         position: pocketPos.clone(),
@@ -421,10 +467,16 @@ class BilliardVfxComponent extends Component {
     );
   }
 
+  /// Xóa ngay lập tức vệt chuyển động của 1 quả bi khi bi lọt lỗ hoặc dừng hẳn
+  void clearBallTrail(int ballId) {
+    _motionTrails[ballId]?.clear();
+    _motionTrails.remove(ballId);
+  }
+
   /// Cập nhật vệt chuyển động của quả bi
   void recordBallPosition(int ballId, Vector2 pos, double speed) {
     if (speed < 320.0) {
-      _motionTrails[ballId]?.clear();
+      clearBallTrail(ballId);
       return;
     }
     final history = _motionTrails.putIfAbsent(ballId, () => _BallMotionTrailHistory());
@@ -450,6 +502,9 @@ class BilliardVfxComponent extends Component {
     _railRipples.removeWhere((rr) => !rr.update(dt));
     _pocketVortices.removeWhere((pv) => !pv.update(dt));
     _cueHitPulses.removeWhere((chp) => !chp.update(dt));
+
+    // Cập nhật và tiêu tán vệt mờ tốc độ cao của các bi, tự hủy khi hết điểm
+    _motionTrails.removeWhere((_, history) => !history.update(dt));
   }
 
   @override
@@ -489,25 +544,29 @@ class BilliardVfxComponent extends Component {
     for (final entry in _motionTrails.entries) {
       final ballId = entry.key;
       final history = entry.value;
-      if (history.positions.length < 2) continue;
+      if (history.points.length < 2) continue;
 
       final isCueBall = ballId == 0;
       final trailBaseColor = isCueBall
           ? const Color(0xFF00E5FF)
           : const Color(0xFFFFD54F);
 
-      for (int i = 0; i < history.positions.length - 1; i++) {
-        final pos = history.positions[i];
-        final nextPos = history.positions[i + 1];
-        final alpha = (0.28 - i * 0.08).clamp(0.04, 0.35);
+      for (int i = 0; i < history.points.length - 1; i++) {
+        final p0 = history.points[i];
+        final p1 = history.points[i + 1];
+        final segmentFade = (p0.alphaMultiplier + p1.alphaMultiplier) * 0.5;
+        final baseAlpha = (0.28 - i * 0.08).clamp(0.04, 0.35);
+        final finalAlpha = (baseAlpha * segmentFade).clamp(0.0, 1.0);
+
+        if (finalAlpha <= 0.01) continue;
 
         final trailPaint = Paint()
-          ..color = trailBaseColor.withValues(alpha: alpha)
+          ..color = trailBaseColor.withValues(alpha: finalAlpha)
           ..strokeWidth = (14.0 - i * 3.0).clamp(4.0, 16.0)
           ..strokeCap = StrokeCap.round
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
 
-        canvas.drawLine(pos.toOffset(), nextPos.toOffset(), trailPaint);
+        canvas.drawLine(p0.position.toOffset(), p1.position.toOffset(), trailPaint);
       }
     }
   }

@@ -1067,6 +1067,7 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                         comboNotifier: gameInstance.comboNotifier,
                                       ),
                                       _buildRackOverlay(onHome: onHome),
+                                      _buildTurnCueTableBanner(ultraCompact: ultraCompact),
                                       // Banner khoá lượt và hiển thị trạng thái chờ đối thủ (Online & WiFi)
                                       ListenableBuilder(
                                         listenable: Listenable.merge([
@@ -1450,6 +1451,8 @@ Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
                                     listenable: Listenable.merge([
                                       ProgressionService.instance,
                                       gameInstance.currentTurn,
+                                      gameInstance.player2CueId,
+                                      gameInstance.player2CueLevel,
                                       OnlineMultiplayerService.instance,
                                       LocalMultiplayerService.instance,
                                     ]),
@@ -1959,6 +1962,159 @@ void _updateSpinFromTouch(Offset localPosition, double controlSize) {
 }
 
 MatchRewardResult? _lastMatchReward;
+
+Widget _buildTurnCueTableBanner({bool ultraCompact = false}) {
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.currentTurn,
+      gameInstance.player2CueId,
+      gameInstance.player2CueLevel,
+      ProgressionService.instance,
+      gameInstance.isBotMode,
+      gameInstance.isLocalMultiplayer,
+      gameInstance.isOnlineMultiplayer,
+      gameInstance.matchVersion,
+    ]),
+    builder: (context, _) {
+      if (gameInstance.rackOver) return const SizedBox.shrink();
+
+      // Không hiển thị đè lên màn hình Daily Puzzle hay Trickshot vốn đã có thanh thông tin riêng
+      if (gameInstance.activeDailyPuzzle != null || gameInstance.activeLegendaryTrickshot != null) {
+        return const SizedBox.shrink();
+      }
+
+      // Khi chơi mạng và chưa tới lượt mình: đã có banner khoá lượt riêng
+      final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
+      if (isMultiplayer && !gameInstance.isMyTurn) {
+        return const SizedBox.shrink();
+      }
+
+      final (cue, level) = gameInstance.getActivePlayerCue();
+      final turn = gameInstance.currentTurn.value;
+      final isP1 = turn == 1;
+
+      String playerLabel;
+      Color turnColor;
+      if (isMultiplayer) {
+        playerLabel = 'LƯỢT CỦA BẠN';
+        turnColor = const Color(0xFF00E676);
+      } else if (gameInstance.isBotMode.value) {
+        if (isP1) {
+          playerLabel = 'LƯỢT CỦA BẠN';
+          turnColor = const Color(0xFF29B6F6);
+        } else {
+          final botName = gameInstance.activeTournamentStage?.opponentName ??
+              gameInstance.activeBotStage?.botName ??
+              (gameInstance.botDifficulty.value == 2 ? 'MÁY (KHÓ)' : 'MÁY (DỄ)');
+          playerLabel = 'LƯỢT $botName'.toUpperCase();
+          turnColor = const Color(0xFFFF5252);
+        }
+      } else {
+        playerLabel = isP1 ? 'LƯỢT PLAYER 1' : 'LƯỢT PLAYER 2';
+        turnColor = isP1 ? const Color(0xFF29B6F6) : const Color(0xFFFF5252);
+      }
+
+      return Positioned(
+        top: ultraCompact ? 6 : 9,
+        left: 0,
+        right: 0,
+        child: IgnorePointer(
+          child: Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.symmetric(
+                horizontal: ultraCompact ? 8 : 12,
+                vertical: ultraCompact ? 2.5 : 4,
+              ),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xF210161C),
+                    turnColor.withValues(alpha: 0.22),
+                    const Color(0xF210161C),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: cue.rarity.color.withValues(alpha: 0.8),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: cue.auraColor.withValues(alpha: 0.35),
+                    blurRadius: 8,
+                    spreadRadius: 1,
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: ultraCompact ? 6 : 8,
+                    height: ultraCompact ? 6 : 8,
+                    decoration: BoxDecoration(
+                      color: turnColor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(color: turnColor, blurRadius: 4, spreadRadius: 1),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: ultraCompact ? 4 : 6),
+                  Text(
+                    playerLabel,
+                    style: TextStyle(
+                      color: turnColor,
+                      fontSize: ultraCompact ? 8.5 : 10.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  Container(
+                    margin: EdgeInsets.symmetric(horizontal: ultraCompact ? 4 : 6),
+                    width: 1,
+                    height: ultraCompact ? 9 : 12,
+                    color: Colors.white24,
+                  ),
+                  Text(
+                    '🏒 ${cue.name}',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: ultraCompact ? 8.5 : 10.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 3),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
+                    decoration: BoxDecoration(
+                      color: cue.rarity.color.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(
+                        color: cue.rarity.color.withValues(alpha: 0.7),
+                        width: 0.6,
+                      ),
+                    ),
+                    child: Text(
+                      'Lv.$level',
+                      style: TextStyle(
+                        color: cue.rarity.color,
+                        fontSize: ultraCompact ? 7.5 : 9.0,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
 
 Widget _buildRackOverlay({VoidCallback? onHome}) {
   return ValueListenableBuilder<int>(
@@ -2636,6 +2792,9 @@ Widget _buildControlBar(
               OnlineMultiplayerService.instance,
               gameInstance.isLocalMultiplayer,
               gameInstance.isOnlineMultiplayer,
+              gameInstance.player2CueId,
+              gameInstance.player2CueLevel,
+              gameInstance.matchVersion,
             ]),
             builder: (context, _) {
               // Tên hiển thị người chơi P1 và P2 theo chế độ
@@ -2649,20 +2808,31 @@ Widget _buildControlBar(
               // Thông tin gậy cơ P1 và P2
               CueModel p1Cue = ProgressionService.instance.equippedCue;
               int p1CueLevel = ProgressionService.instance.equippedCueLevel;
-              CueModel p2Cue = CueCatalog.standardCue;
-              int p2CueLevel = 1;
+              CueModel p2Cue = CueCatalog.getById(gameInstance.player2CueId.value);
+              int p2CueLevel = gameInstance.player2CueLevel.value;
 
               if (gameInstance.activeTournamentStage != null) {
                 final tour = gameInstance.activeTournamentStage!;
+                p2Name = tour.opponentName;
                 p2Cue = tour.opponentCue;
                 p2CueLevel = tour.opponentLevel;
+                p2Level = tour.opponentLevel;
               } else if (gameInstance.activeBotStage != null) {
+                p2Name = gameInstance.activeBotStage!.botName;
                 p2Cue = gameInstance.activeBotStage!.cue;
                 p2CueLevel = gameInstance.activeBotStage!.stageNumber;
+                p2Level = gameInstance.activeBotStage!.stageNumber;
+              } else if (gameInstance.isBotMode.value) {
+                final isHard = gameInstance.botDifficulty.value == 2;
+                p2Name = isHard ? 'Máy (Khó)' : 'Máy (Dễ)';
+                p2Cue = CueCatalog.getById(isHard ? 'dragon_god' : 'frostbite');
+                p2CueLevel = isHard ? 4 : 2;
+                p2Level = isHard ? 6 : 2;
               } else if (gameInstance.isOnlineMultiplayer.value) {
                 final oppCueId = OnlineMultiplayerService.instance.opponentCueId;
                 final oppCueLvl = OnlineMultiplayerService.instance.opponentCueLevel;
                 final oppCue = CueCatalog.getById(oppCueId);
+                p2Name = OnlineMultiplayerService.instance.opponentName;
                 if (OnlineMultiplayerService.instance.isHost) {
                   p1Cue = ProgressionService.instance.equippedCue;
                   p1CueLevel = ProgressionService.instance.equippedCueLevel;
@@ -2673,21 +2843,29 @@ Widget _buildControlBar(
                   p1CueLevel = oppCueLvl;
                   p2Cue = ProgressionService.instance.equippedCue;
                   p2CueLevel = ProgressionService.instance.equippedCueLevel;
+                  p1Name = OnlineMultiplayerService.instance.opponentName;
+                  p2Name = 'Bạn';
                 }
               } else if (gameInstance.isLocalMultiplayer.value) {
                 final oppCueId = LocalMultiplayerService.instance.opponentCueId;
                 final oppCueLvl = LocalMultiplayerService.instance.opponentCueLevel;
                 final oppCue = CueCatalog.getById(oppCueId);
+                final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
+                    ? LocalMultiplayerService.instance.opponentName
+                    : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
                 if (LocalMultiplayerService.instance.isHost) {
                   p1Cue = ProgressionService.instance.equippedCue;
                   p1CueLevel = ProgressionService.instance.equippedCueLevel;
                   p2Cue = oppCue;
                   p2CueLevel = oppCueLvl;
+                  p2Name = oppName;
                 } else {
                   p1Cue = oppCue;
                   p1CueLevel = oppCueLvl;
                   p2Cue = ProgressionService.instance.equippedCue;
                   p2CueLevel = ProgressionService.instance.equippedCueLevel;
+                  p1Name = oppName;
+                  p2Name = 'Bạn';
                 }
               }
 
@@ -2722,6 +2900,7 @@ Widget _buildControlBar(
                         cueLevel: p1CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
+                        onTapCue: () => _showCueSelectorDialog(context, forPlayer2: false),
                       ),
                     ),
                     SizedBox(width: ultraCompact ? 2 : 4),
@@ -2783,6 +2962,13 @@ Widget _buildControlBar(
                         cueLevel: p2CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
+                        onTapCue: (!gameInstance.isBotMode.value &&
+                                   !gameInstance.isLocalMultiplayer.value &&
+                                   !gameInstance.isOnlineMultiplayer.value &&
+                                   gameInstance.activeTournamentStage == null &&
+                                   gameInstance.activeBotStage == null)
+                            ? () => _showCueSelectorDialog(context, forPlayer2: true)
+                            : null,
                       ),
                     ),
                   ],
@@ -3107,6 +3293,240 @@ void _showDeclareLoss(BuildContext context) {
   );
 }
 
+void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
+  showDialog<void>(
+    context: context,
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isP2 = forPlayer2;
+          final currentCueId = isP2
+              ? gameInstance.player2CueId.value
+              : ProgressionService.instance.equippedCue.id;
+          final currentLevel = isP2
+              ? gameInstance.player2CueLevel.value
+              : ProgressionService.instance.equippedCueLevel;
+
+          final screenWidth = MediaQuery.of(context).size.width;
+          final screenHeight = MediaQuery.of(context).size.height;
+
+          return AlertDialog(
+            backgroundColor: const Color(0xFF181C22),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            titlePadding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 4, 16, 10),
+            title: Row(
+              children: [
+                Icon(
+                  Icons.sports_baseball,
+                  color: isP2 ? const Color(0xFFFF5252) : const Color(0xFF29B6F6),
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    isP2 ? 'CHỌN GẬY CƠ • PLAYER 2' : 'CHỌN GẬY CƠ • PLAYER 1',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white60, size: 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: math.min(screenWidth * 0.92, 440),
+              height: math.min(screenHeight * 0.70, 420),
+              child: ListView.separated(
+                itemCount: CueCatalog.allCues.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 8),
+                itemBuilder: (context, index) {
+                  final cue = CueCatalog.allCues[index];
+                  final isSelected = cue.id == currentCueId;
+
+                  return Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? cue.rarity.color.withValues(alpha: 0.16)
+                          : const Color(0xFF222933),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: isSelected ? cue.rarity.color : Colors.white12,
+                        width: isSelected ? 1.5 : 0.8,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: cue.rarity.color.withValues(alpha: 0.25),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: cue.rarity.color, width: 0.6),
+                              ),
+                              child: Text(
+                                cue.rarity.name.toUpperCase(),
+                                style: TextStyle(
+                                  color: cue.rarity.color,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                cue.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (isSelected)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF00E676).withValues(alpha: 0.2),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFF00E676), width: 0.7),
+                                ),
+                                child: const Text(
+                                  'ĐANG DÙNG',
+                                  style: TextStyle(
+                                    color: Color(0xFF00E676),
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        // Dải màu thân cơ (Shaft visual preview)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: Container(
+                            height: 5,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  cue.tipColor,
+                                  ...cue.shaftColors,
+                                  ...cue.handleColors,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            _buildStatMiniItem('Lực', cue.baseStats.force, const Color(0xFFFF7043)),
+                            const SizedBox(width: 8),
+                            _buildStatMiniItem('Ngắm', cue.baseStats.aim, const Color(0xFF42A5F5)),
+                            const SizedBox(width: 8),
+                            _buildStatMiniItem('Xoáy', cue.baseStats.spin, const Color(0xFFAB47BC)),
+                            const Spacer(),
+                            if (isP2 && isSelected) ...[
+                              Row(
+                                children: [
+                                  const Text('Cấp: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                  DropdownButton<int>(
+                                    value: currentLevel,
+                                    dropdownColor: const Color(0xFF1E2328),
+                                    isDense: true,
+                                    underline: const SizedBox.shrink(),
+                                    style: const TextStyle(color: Color(0xFFFFD54F), fontSize: 11, fontWeight: FontWeight.bold),
+                                    items: [for (int i = 1; i <= 10; i++) DropdownMenuItem(value: i, child: Text('Lv.$i'))],
+                                    onChanged: (newLv) {
+                                      if (newLv != null) {
+                                        gameInstance.player2CueLevel.value = newLv;
+                                        setDialogState(() {});
+                                      }
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ] else if (!isSelected) ...[
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: cue.rarity.color.withValues(alpha: 0.3),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                                  minimumSize: const Size(54, 24),
+                                  visualDensity: VisualDensity.compact,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(6),
+                                    side: BorderSide(color: cue.rarity.color, width: 0.8),
+                                  ),
+                                ),
+                                onPressed: () {
+                                  if (isP2) {
+                                    gameInstance.setPlayer2Cue(cue.id, currentLevel);
+                                  } else {
+                                    ProgressionService.instance.equipCue(cue.id);
+                                    gameInstance.matchVersion.value++;
+                                  }
+                                  setDialogState(() {});
+                                },
+                                child: const Text('Chọn', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF29B6F6),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  visualDensity: VisualDensity.compact,
+                ),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Đóng'),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+Widget _buildStatMiniItem(String label, double val, Color color) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Text('$label ', style: const TextStyle(color: Colors.white54, fontSize: 9)),
+      Text(
+        val.toStringAsFixed(1),
+        style: TextStyle(color: color, fontSize: 9.5, fontWeight: FontWeight.bold),
+      ),
+    ],
+  );
+}
+
 Widget _buildPlayerCard(
   String name,
   Color color,
@@ -3121,13 +3541,14 @@ Widget _buildPlayerCard(
   int cueLevel = 1,
   bool compact = false,
   bool ultraCompact = false,
+  VoidCallback? onTapCue,
 }) {
   final ballBoxSize = ultraCompact ? 15.0 : (compact ? 18.0 : 22.0);
   final ballImgSize = ultraCompact ? 13.0 : (compact ? 16.0 : 20.0);
   final nameFontSize = ultraCompact ? 9.5 : (compact ? 11.0 : 12.0);
   final detailFontSize = ultraCompact ? 7.0 : (compact ? 8.0 : 9.0);
 
-  return Container(
+  final cardWidget = Container(
     padding: EdgeInsets.symmetric(
       horizontal: ultraCompact ? 3 : 5,
       vertical: ultraCompact ? 1 : 2,
@@ -3244,17 +3665,32 @@ Widget _buildPlayerCard(
               ),
               // 3. Phân loại bi hoặc Thông tin Gậy Cơ
               if (cue != null)
-                Text(
-                  groupLabel.isNotEmpty
-                      ? '$groupLabel • ${cue.name} Lv.$cueLevel'
-                      : '🏒 ${cue.name} Lv.$cueLevel',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: cue.rarity.color,
-                    fontSize: detailFontSize,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        groupLabel.isNotEmpty
+                            ? '$groupLabel • ${cue.name} Lv.$cueLevel'
+                            : '🏒 ${cue.name} Lv.$cueLevel',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: cue.rarity.color,
+                          fontSize: detailFontSize,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (onTapCue != null) ...[
+                      const SizedBox(width: 2),
+                      Icon(
+                        Icons.swap_horiz,
+                        color: cue.rarity.color.withValues(alpha: 0.85),
+                        size: ultraCompact ? 8 : 10,
+                      ),
+                    ],
+                  ],
                 )
               else if (groupLabel.isNotEmpty)
                 Text(
@@ -3313,6 +3749,14 @@ Widget _buildPlayerCard(
       ],
     ),
   );
+  if (onTapCue != null) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTapCue,
+      child: cardWidget,
+    );
+  }
+  return cardWidget;
 }
 
 String _formatPlayerCardCoins(int amount) {
@@ -3351,6 +3795,16 @@ class BilliardGame extends Forge2DGame with PanDetector {
   ValueNotifier<int> matchVersion = ValueNotifier<int>(0);
   final Map<int, int> playerScores = {1: 0, 2: 0};
   int? winningPlayer;
+
+  // Cây gậy cơ và cấp độ riêng cho Player 2 (chế độ Pass & Play 2 người trên cùng thiết bị)
+  final ValueNotifier<String> player2CueId = ValueNotifier<String>('phoenix_flame');
+  final ValueNotifier<int> player2CueLevel = ValueNotifier<int>(2);
+
+  void setPlayer2Cue(String cueId, [int level = 1]) {
+    player2CueId.value = cueId;
+    player2CueLevel.value = level.clamp(1, 10);
+    matchVersion.value++;
+  }
 
   // Chế độ Ải Bot Campaign, Thế Bi Hàng Ngày, Mạng Local WiFi, Tournament, Online WebSocket
   BotStageModel? activeBotStage;
@@ -3471,8 +3925,19 @@ class BilliardGame extends Forge2DGame with PanDetector {
           activeBotStage!.stageNumber.clamp(1, 10),
         );
       }
-      return (CueCatalog.standardCue, 1);
+      final isHard = botDifficulty.value == 2;
+      return (
+        CueCatalog.getById(isHard ? 'dragon_god' : 'frostbite'),
+        isHard ? 4 : 2,
+      );
+    } else if (currentTurn.value == 2) {
+      // Chế độ 2 người chơi trên cùng thiết bị (Pass & Play): Player 2 sử dụng cây gậy riêng của Player 2
+      return (
+        CueCatalog.getById(player2CueId.value),
+        player2CueLevel.value,
+      );
     } else {
+      // Lượt Player 1: Sử dụng cây gậy đã trang bị trong Túi đồ / Shop
       return (
         ProgressionService.instance.equippedCue,
         ProgressionService.instance.equippedCueLevel,
@@ -4451,13 +4916,17 @@ class BilliardGame extends Forge2DGame with PanDetector {
     _keepBallsInsideTable();
     _applyClothPhysics(safeDt);
 
-    // Ghi nhận vệt mờ tốc độ cao của bi cái và các bi mục tiêu
+    // Ghi nhận vệt mờ tốc độ cao của bi cái và các bi mục tiêu (xóa ngay khi vào lỗ hoặc chậm)
     if (physicsReady && !cueBall.isSunk) {
       vfx.recordBallPosition(0, cueBall.body.position, cueBall.body.linearVelocity.length);
+    } else {
+      vfx.clearBallTrail(0);
     }
     for (final ball in poolBalls) {
       if (!ball.isRemoved && !ball.isSunk && ball.isMounted) {
         vfx.recordBallPosition(ball.number, ball.body.position, ball.body.linearVelocity.length);
+      } else {
+        vfx.clearBallTrail(ball.number);
       }
     }
 
@@ -4654,6 +5123,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void _checkContinuousPocketDrops() {
     for (final pocket in pockets) {
       if (!cueBall.isSunk && canBallEnterPocket(cueBall.body, pocket)) {
+        vfx.clearBallTrail(0);
         cueBall.sinkIntoPocket(pocket.position);
         cueBall.pocketedThisShot = true;
         AudioManager.instance.playPocket();
@@ -4664,6 +5134,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
         if (!ball.isRemoved &&
             !ball.isSunk &&
             canBallEnterPocket(ball.body, pocket)) {
+          vfx.clearBallTrail(ball.number);
           ball.sinkIntoPocket(pocket.position);
           ball.pocketedThisShot = true;
           handleBallPocketed(ball);
@@ -4694,6 +5165,32 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void switchTurn() {
     resetCueSpin();
     currentTurn.value = currentTurn.value == 1 ? 2 : 1;
+    _updateTurnRuleMessage();
+  }
+
+  void _updateTurnRuleMessage() {
+    if (rackOver || activeDailyPuzzle != null || activeLegendaryTrickshot != null) return;
+    final (cue, lvl) = getActivePlayerCue();
+    if (isOnlineMultiplayer.value) {
+      final oppName = OnlineMultiplayerService.instance.opponentName;
+      ruleMessage.value = isMyTurn
+          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn (${cue.name} Lv.$lvl)')
+          : 'Đấu mạng: Lượt của $oppName (${cue.name} Lv.$lvl)...';
+    } else if (isLocalMultiplayer.value) {
+      final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
+          ? LocalMultiplayerService.instance.opponentName
+          : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+      ruleMessage.value = isMyTurn
+          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn (${cue.name} Lv.$lvl)')
+          : 'Đấu mạng: Lượt của $oppName (${cue.name} Lv.$lvl)...';
+    } else if (isBotMode.value && currentTurn.value == 2) {
+      final botTitle = activeTournamentStage?.opponentName ??
+          activeBotStage?.botName ??
+          (botDifficulty.value == 2 ? 'Máy (Khó)' : 'Máy (Dễ)');
+      ruleMessage.value = 'Lượt $botTitle (${cue.name} Lv.$lvl)';
+    } else {
+      ruleMessage.value = 'Lượt Player ${currentTurn.value} (${cue.name} Lv.$lvl)';
+    }
   }
 
   void startPlayerMatch() {
@@ -4910,7 +5407,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
           ? 'Đấu mạng: Lượt của bạn (P1 break shot)'
           : 'Đấu mạng: Lượt của $oppName (P1 break shot)';
     } else {
-      ruleMessage.value = 'Player 1: break shot';
+      final (p1Cue, p1Lvl) = getActivePlayerCue();
+      ruleMessage.value = 'Player 1: break shot (${p1Cue.name} Lv.$p1Lvl)';
     }
 
     resetCueSpin();
@@ -5974,22 +6472,23 @@ class BilliardGame extends Forge2DGame with PanDetector {
       rackOver = true;
     } else if (breakShot) {
       breakShot = false;
-      ruleMessage.value = pocketedThisShot.isNotEmpty
-          ? 'Player $currentPlayer continues'
-          : 'Player ${currentPlayer == 1 ? 2 : 1} turn';
-      if (pocketedThisShot.isEmpty) {
+      if (pocketedThisShot.isNotEmpty) {
+        final (cue, lvl) = getActivePlayerCue();
+        ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
+      } else {
         switchTurn();
       }
     } else if (group == null &&
         pocketedThisShot.any((ball) => ball.number != 8)) {
       assignGroupAfterBreak(pocketedThisShot);
-      ruleMessage.value = 'Player $currentPlayer continues';
+      final (cue, lvl) = getActivePlayerCue();
+      ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
     } else if (pocketedThisShot.any(
       (ball) => ballGroup(ball.number) == group,
     )) {
-      ruleMessage.value = 'Player $currentPlayer continues';
+      final (cue, lvl) = getActivePlayerCue();
+      ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
     } else {
-      ruleMessage.value = 'Player ${currentPlayer == 1 ? 2 : 1} turn';
       switchTurn();
     }
     if ((isLocalMultiplayer.value || isOnlineMultiplayer.value) && !rackOver) {
@@ -6561,6 +7060,7 @@ class BilliardContactListener extends ContactListener {
       if (ballBody.userData is PoolBall) {
         final ball = ballBody.userData as PoolBall;
         if (!ball.isSunk) {
+          game?.vfx.clearBallTrail(ball.number);
           ball.sinkIntoPocket(pocket.position);
           ball.pocketedThisShot = true;
           game?.handleBallPocketed(ball);
@@ -6569,6 +7069,7 @@ class BilliardContactListener extends ContactListener {
       } else if (ballBody.userData is CueBall) {
         final cueBall = ballBody.userData as CueBall;
         if (!cueBall.isSunk) {
+          game?.vfx.clearBallTrail(0);
           cueBall.sinkIntoPocket(pocket.position);
           cueBall.pocketedThisShot = true;
           AudioManager.instance.playPocket();
@@ -6677,6 +7178,9 @@ class CueBall extends BodyComponent {
   void sinkIntoPocket(Vector2 pocketPos) {
     if (isSunk) return;
     isSunk = true;
+    try {
+      gameInstance.vfx.clearBallTrail(0);
+    } catch (_) {}
     _sunkStartPos = body.position.clone();
     _sunkCurrentPos = body.position.clone();
     _sunkTargetPocket = pocketPos.clone();
@@ -7313,6 +7817,9 @@ class PoolBall extends BodyComponent {
   void sinkIntoPocket(Vector2 pocketPos) {
     if (isSunk) return;
     isSunk = true;
+    try {
+      gameInstance.vfx.clearBallTrail(number);
+    } catch (_) {}
     _sunkStartPos = body.position.clone();
     _sunkCurrentPos = body.position.clone();
     _sunkTargetPocket = pocketPos.clone();
@@ -7348,6 +7855,9 @@ class PoolBall extends BodyComponent {
     _sunkCurrentPos = null;
     _sunkTargetPocket = null;
     _sunkVelocity = null;
+    try {
+      gameInstance.vfx.clearBallTrail(number);
+    } catch (_) {}
   }
 
   // Quản lý góc lăn và xoay 3D thực tế của quả bi
