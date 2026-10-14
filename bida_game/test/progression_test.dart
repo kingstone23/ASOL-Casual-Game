@@ -13,6 +13,7 @@ import 'package:bida_game/ui/cue_power_slider.dart';
 import 'package:bida_game/ui/aim_ruler_slider.dart';
 import 'package:bida_game/ui/cue_shop_dialog.dart';
 import 'package:bida_game/services/online_multiplayer_service.dart';
+import 'package:bida_game/services/language_service.dart';
 import 'package:bida_game/main.dart';
 
 void main() {
@@ -20,6 +21,7 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
+    await LanguageService.instance.init();
   });
 
   group('Cue Catalog & Stats Scaling Tests', () {
@@ -421,7 +423,7 @@ void main() {
 
       // Kiểm tra tiêu đề và logo
       expect(find.text('8 POOL BILLIARDS'), findsOneWidget);
-      expect(find.text('CHOOSE YOUR MATCH'), findsOneWidget);
+      expect(find.text('choose_match'.tr), findsOneWidget);
 
       // Kiểm tra các nút chế độ
       expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
@@ -450,7 +452,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('8 POOL BILLIARDS'), findsOneWidget);
-      expect(find.text('CHOOSE YOUR MATCH'), findsOneWidget);
+      expect(find.text('choose_match'.tr), findsOneWidget);
       expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
     });
   });

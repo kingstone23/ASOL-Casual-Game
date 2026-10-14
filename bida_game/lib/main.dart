@@ -32,6 +32,8 @@ import 'ui/tournament_dialog.dart';
 import 'models/legendary_trickshot_model.dart';
 import 'ui/legendary_trickshot_dialog.dart';
 import 'ui/billiard_vfx_component.dart';
+import 'services/language_service.dart';
+import 'ui/language_selector_dialog.dart';
 
 enum BallGroup { solids, stripes }
 
@@ -48,6 +50,7 @@ Future<void> main() async {
     debugPrint('Firebase initialization error: $e');
   }
   await ProgressionService.instance.init();
+  await LanguageService.instance.init();
   try {
     await AuthService.instance.init();
     final hasNet = await AuthService.hasNetworkConnection();
@@ -262,159 +265,219 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
-    if (showGame) {
-      return PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
-          // // Trận đấu Online ẩn bằng //:
-          // if (gameInstance.isOnlineMultiplayer.value && !gameInstance.rackOver) {
-          //   setState(() => showGame = false);
-          //   ScaffoldMessenger.of(context).showSnackBar(
-          //     const SnackBar(
-          //       content: Text(
-          //         '⚡ Trận đấu Online vẫn đang tiếp tục theo thời gian thực! Bấm "QUAY LẠI TRẬN" để chơi tiếp.',
-          //       ),
-          //       duration: Duration(seconds: 4),
-          //       backgroundColor: Color(0xFF0091EA),
-          //     ),
-          //   );
-          // } else {
-          //   setState(() => showGame = false);
-          // }
-          setState(() => showGame = false);
-        },
-        child: _buildGameScreen(
-          context,
-          onHome: () => setState(() => showGame = false),
-        ),
-      );
-    }
-    return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F1318), Color(0xFF161C24), Color(0xFF0A0D12)],
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isLandscape = constraints.maxWidth >= 540;
-              final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
+    return ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) {
+        if (showGame) {
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, result) {
+              if (didPop) return;
+              setState(() => showGame = false);
+            },
+            child: _buildGameScreen(
+              context,
+              onHome: () => setState(() => showGame = false),
+            ),
+          );
+        }
+        return Scaffold(
+          body: DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF0F1318), Color(0xFF161C24), Color(0xFF0A0D12)],
+              ),
+            ),
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isLandscape = constraints.maxWidth >= 540;
+                  final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
 
-              return Column(
-                children: [
-                  // --- THANH TRẠNG THÁI TRÊN CÙNG (KHÔNG ĐÈ NỘI DUNG THẺ) ---
-                  Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: compact ? 12 : 20,
-                      vertical: compact ? 4 : 8,
-                    ),
-                    child: Row(
-                      children: [
-                        if (isLandscape) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: Colors.black45,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: const Color(0xFFB77A35).withValues(alpha: 0.5),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 18,
-                                  height: 18,
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: const BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: Colors.black,
-                                  ),
-                                  child: Image.asset('assets/images/ball_8.png'),
-                                ),
-                                const SizedBox(width: 6),
-                                const Text(
-                                  '8 POOL CASUAL',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 11,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                        ],
-                        // Thanh thông tin người chơi (Cấp, Vàng, Kim Cương, Nút Shop)
-                        Expanded(
-                          child: Align(
-                            alignment: isLandscape ? Alignment.centerRight : Alignment.center,
-                            child: const FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: PlayerProfileBar(compact: true),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // // --- BANNER TRẬN ĐẤU ONLINE THEO THỜI GIAN THỰC (NẾU ĐANG CÓ TRẬN) ---
-                  // _buildActiveOnlineMatchBanner(compact: compact),
-
-                  // --- THẺ BIDA NỈ XANH VIỀN GỖ VÀNG CỔ ĐIỂN (CHUẨN MOBILE, KHÔNG TRÀN MÀN HÌNH) ---
-                  Expanded(
-                    child: Center(
-                      child: SingleChildScrollView(
+                  return Column(
+                    children: [
+                      // --- THANH TRẠNG THÁI TRÊN CÙNG (KHÔNG ĐÈ NỘI DUNG THẺ) ---
+                      Padding(
                         padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 10 : 20,
-                          vertical: compact ? 4 : 10,
+                          horizontal: compact ? 12 : 20,
+                          vertical: compact ? 4 : 8,
                         ),
-                        child: Container(
-                          constraints: BoxConstraints(
-                            maxWidth: isLandscape ? 720 : 440,
-                          ),
-                          padding: EdgeInsets.symmetric(
-                            horizontal: compact ? 14 : 24,
-                            vertical: compact ? 12 : 22,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF11633F),
-                            borderRadius: BorderRadius.circular(18),
-                            border: Border.all(
-                              color: const Color(0xFFB77A35),
-                              width: compact ? 4.0 : 6.0,
-                            ),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Colors.black54,
-                                blurRadius: 20,
-                                offset: Offset(0, 8),
+                        child: Row(
+                          children: [
+                            if (isLandscape) ...[
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: Colors.black45,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: const Color(0xFFB77A35).withValues(alpha: 0.5),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      width: 18,
+                                      height: 18,
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Colors.black,
+                                      ),
+                                      child: Image.asset('assets/images/ball_8.png'),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    const Text(
+                                      '8 POOL CASUAL',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 11,
+                                        letterSpacing: 1.0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
+                              const SizedBox(width: 8),
+                              // Nút chọn ngôn ngữ nhanh (5 loại ngôn ngữ: Việt, Anh, Trung, Nhật, Hàn)
+                              InkWell(
+                                onTap: () => LanguageSelectorDialog.show(context),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black45,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        LanguageService.instance.currentLanguage.flag,
+                                        style: const TextStyle(fontSize: 14),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        LanguageService.instance.currentLanguage.code.toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E5FF),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 2),
+                                      const Icon(Icons.arrow_drop_down, color: Color(0xFF00E5FF), size: 14),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                            ] else ...[
+                              // Nút chọn ngôn ngữ chế độ dọc
+                              InkWell(
+                                onTap: () => LanguageSelectorDialog.show(context),
+                                borderRadius: BorderRadius.circular(16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black45,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        LanguageService.instance.currentLanguage.flag,
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        LanguageService.instance.currentLanguage.code.toUpperCase(),
+                                        style: const TextStyle(
+                                          color: Color(0xFF00E5FF),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
                             ],
-                          ),
-                          child: isLandscape
-                              ? _buildLandscapeMenuContent(compact)
-                              : _buildPortraitMenuContent(compact),
+                            // Thanh thông tin người chơi (Cấp, Vàng, Kim Cương, Nút Shop)
+                            Expanded(
+                              child: Align(
+                                alignment: isLandscape ? Alignment.centerRight : Alignment.center,
+                                child: const FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: PlayerProfileBar(compact: true),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              );
-            },
+
+                      // --- THẺ BIDA NỈ XANH VIỀN GỖ VÀNG CỔ ĐIỂN (CHUẨN MOBILE, KHÔNG TRÀN MÀN HÌNH) ---
+                      Expanded(
+                        child: Center(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: compact ? 10 : 20,
+                              vertical: compact ? 4 : 10,
+                            ),
+                            child: Container(
+                              constraints: BoxConstraints(
+                                maxWidth: isLandscape ? 720 : 440,
+                              ),
+                              padding: EdgeInsets.symmetric(
+                                horizontal: compact ? 14 : 24,
+                                vertical: compact ? 12 : 22,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF11633F),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(
+                                  color: const Color(0xFFB77A35),
+                                  width: compact ? 4.0 : 6.0,
+                                ),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black54,
+                                    blurRadius: 20,
+                                    offset: Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: isLandscape
+                                  ? _buildLandscapeMenuContent(compact)
+                                  : _buildPortraitMenuContent(compact),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -599,9 +662,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                 ),
               ),
               const SizedBox(height: 3),
-              const Text(
-                'CHOOSE YOUR MATCH',
-                style: TextStyle(
+              Text(
+                'choose_match'.tr,
+                style: const TextStyle(
                   color: Color(0xFFFFD166),
                   fontSize: 10.5,
                   fontWeight: FontWeight.bold,
@@ -624,8 +687,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.people,
-                      label: 'P1 vs P2 (CÙNG MÁY)',
-                      detail: '2 người trên 1 thiết bị',
+                      label: 'p1_vs_p2'.tr,
+                      detail: 'p1_vs_p2_desc'.tr,
                       background: const Color(0xFF1D4ED8),
                       onPressed: _startPlayerMatch,
                       compact: compact,
@@ -635,8 +698,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.star_rounded,
-                      label: 'THẾ ĐÁNH HUYỀN THOẠI',
-                      detail: '8 thế đánh của cơ thủ thế giới',
+                      label: 'legendary_trickshot'.tr,
+                      detail: 'legendary_trickshot_desc'.tr,
                       background: const Color(0xFFB71C1C),
                       onPressed: () {
                         showDialog(
@@ -658,8 +721,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.emoji_events,
-                      label: 'TOURNAMENT 6 BRACKETS',
-                      detail: 'Tranh cúp Quán Quân • Siêu quà',
+                      label: 'tournament'.tr,
+                      detail: 'tournament_desc'.tr,
                       background: const Color(0xFFC77700),
                       onPressed: () {
                         showDialog(
@@ -677,8 +740,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.wifi_tethering,
-                      label: 'ĐẤU MẠNG LOCAL',
-                      detail: 'Chung mạng WiFi / Hotspot',
+                      label: 'local_wifi'.tr,
+                      detail: 'local_wifi_desc'.tr,
                       background: const Color(0xFF00897B),
                       onPressed: () {
                         showDialog(
@@ -700,8 +763,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.military_tech,
-                      label: '10 ẢI THỬ THÁCH BOT',
-                      detail: '4 Hạng: Đồng, Bạc, Vàng, Kim Cương',
+                      label: 'bot_stages'.tr,
+                      detail: 'bot_stages_desc'.tr,
                       background: const Color(0xFFE65100),
                       onPressed: () {
                         showDialog(
@@ -718,8 +781,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.event_note,
-                      label: 'THẾ BI HÀNG NGÀY',
-                      detail: '1 thế bi / ngày • Quà lớn',
+                      label: 'daily_puzzle'.tr,
+                      detail: 'daily_puzzle_desc'.tr,
                       background: const Color(0xFF7B1FA2),
                       onPressed: () {
                         showDialog(
@@ -774,9 +837,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
           ),
         ),
         const SizedBox(height: 2),
-        const Text(
-          'CHOOSE YOUR MATCH',
-          style: TextStyle(
+        Text(
+          'choose_match'.tr,
+          style: const TextStyle(
             color: Color(0xFFFFD166),
             fontSize: 11,
             fontWeight: FontWeight.bold,
@@ -786,8 +849,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         const SizedBox(height: 12),
         _buildMenuButton(
           icon: Icons.emoji_events,
-          label: 'TOURNAMENT 6 BRACKETS',
-          detail: 'Vượt 6 vòng tranh Cúp Quán Quân, EXP & Huy Chương',
+          label: 'tournament'.tr,
+          detail: 'tournament_desc'.tr,
           background: const Color(0xFFC77700),
           onPressed: () {
             showDialog(
@@ -800,27 +863,11 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
           },
           compact: compact,
         ),
-        // const SizedBox(height: 8),
-        // _buildMenuButton(
-        //   icon: Icons.public,
-        //   label: 'ĐẤU ONLINE TOÀN CẦU',
-        //   detail: 'Ghép cặp 1v1 hoặc tạo phòng mã PIN qua WebSocket',
-        //   background: const Color(0xFF0091EA),
-        //   onPressed: () {
-        //     showDialog(
-        //       context: context,
-        //       builder: (context) => OnlineMultiplayerDialog(
-        //         onConnected: _startOnlineMultiplayerMatch,
-        //       ),
-        //     );
-        //   },
-        //   compact: compact,
-        // ),
         const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.people,
-          label: 'P1 vs P2 (CÙNG MÁY)',
-          detail: '2 người chơi trên 1 thiết bị',
+          label: 'p1_vs_p2'.tr,
+          detail: 'p1_vs_p2_desc'.tr,
           background: const Color(0xFF1D4ED8),
           onPressed: _startPlayerMatch,
           compact: compact,
@@ -828,8 +875,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.star_rounded,
-          label: 'THẾ ĐÁNH HUYỀN THOẠI',
-          detail: '8 thế đánh kinh điển của các cơ thủ thế giới',
+          label: 'legendary_trickshot'.tr,
+          detail: 'legendary_trickshot_desc'.tr,
           background: const Color(0xFFB71C1C),
           onPressed: () {
             showDialog(
@@ -844,8 +891,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.wifi_tethering,
-          label: 'ĐẤU MẠNG LOCAL (WIFI)',
-          detail: 'Chơi 2 máy chung WiFi / Hotspot',
+          label: 'local_wifi'.tr,
+          detail: 'local_wifi_desc'.tr,
           background: const Color(0xFF00897B),
           onPressed: () {
             showDialog(
@@ -860,8 +907,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.military_tech,
-          label: '10 ẢI THỬ THÁCH BOT',
-          detail: '4 Hạng: Đồng, Bạc, Vàng, Kim Cương',
+          label: 'bot_stages'.tr,
+          detail: 'bot_stages_desc'.tr,
           background: const Color(0xFFE65100),
           onPressed: () {
             showDialog(
@@ -876,8 +923,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         const SizedBox(height: 8),
         _buildMenuButton(
           icon: Icons.event_note,
-          label: 'THẾ BI HÀNG NGÀY',
-          detail: 'Nhiệm vụ 1 thế bi ngẫu nhiên/ngày',
+          label: 'daily_puzzle'.tr,
+          detail: 'daily_puzzle_desc'.tr,
           background: const Color(0xFF7B1FA2),
           onPressed: () {
             showDialog(
@@ -1067,7 +1114,6 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                         comboNotifier: gameInstance.comboNotifier,
                                       ),
                                       _buildRackOverlay(onHome: onHome),
-                                      _buildTurnCueTableBanner(ultraCompact: ultraCompact),
                                       // Banner khoá lượt và hiển thị trạng thái chờ đối thủ (Online & WiFi)
                                       ListenableBuilder(
                                         listenable: Listenable.merge([
@@ -1963,159 +2009,6 @@ void _updateSpinFromTouch(Offset localPosition, double controlSize) {
 
 MatchRewardResult? _lastMatchReward;
 
-Widget _buildTurnCueTableBanner({bool ultraCompact = false}) {
-  return ListenableBuilder(
-    listenable: Listenable.merge([
-      gameInstance.currentTurn,
-      gameInstance.player2CueId,
-      gameInstance.player2CueLevel,
-      ProgressionService.instance,
-      gameInstance.isBotMode,
-      gameInstance.isLocalMultiplayer,
-      gameInstance.isOnlineMultiplayer,
-      gameInstance.matchVersion,
-    ]),
-    builder: (context, _) {
-      if (gameInstance.rackOver) return const SizedBox.shrink();
-
-      // Không hiển thị đè lên màn hình Daily Puzzle hay Trickshot vốn đã có thanh thông tin riêng
-      if (gameInstance.activeDailyPuzzle != null || gameInstance.activeLegendaryTrickshot != null) {
-        return const SizedBox.shrink();
-      }
-
-      // Khi chơi mạng và chưa tới lượt mình: đã có banner khoá lượt riêng
-      final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-      if (isMultiplayer && !gameInstance.isMyTurn) {
-        return const SizedBox.shrink();
-      }
-
-      final (cue, level) = gameInstance.getActivePlayerCue();
-      final turn = gameInstance.currentTurn.value;
-      final isP1 = turn == 1;
-
-      String playerLabel;
-      Color turnColor;
-      if (isMultiplayer) {
-        playerLabel = 'LƯỢT CỦA BẠN';
-        turnColor = const Color(0xFF00E676);
-      } else if (gameInstance.isBotMode.value) {
-        if (isP1) {
-          playerLabel = 'LƯỢT CỦA BẠN';
-          turnColor = const Color(0xFF29B6F6);
-        } else {
-          final botName = gameInstance.activeTournamentStage?.opponentName ??
-              gameInstance.activeBotStage?.botName ??
-              (gameInstance.botDifficulty.value == 2 ? 'MÁY (KHÓ)' : 'MÁY (DỄ)');
-          playerLabel = 'LƯỢT $botName'.toUpperCase();
-          turnColor = const Color(0xFFFF5252);
-        }
-      } else {
-        playerLabel = isP1 ? 'LƯỢT PLAYER 1' : 'LƯỢT PLAYER 2';
-        turnColor = isP1 ? const Color(0xFF29B6F6) : const Color(0xFFFF5252);
-      }
-
-      return Positioned(
-        top: ultraCompact ? 6 : 9,
-        left: 0,
-        right: 0,
-        child: IgnorePointer(
-          child: Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeOutCubic,
-              padding: EdgeInsets.symmetric(
-                horizontal: ultraCompact ? 8 : 12,
-                vertical: ultraCompact ? 2.5 : 4,
-              ),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xF210161C),
-                    turnColor.withValues(alpha: 0.22),
-                    const Color(0xF210161C),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: cue.rarity.color.withValues(alpha: 0.8),
-                  width: 1.2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: cue.auraColor.withValues(alpha: 0.35),
-                    blurRadius: 8,
-                    spreadRadius: 1,
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: ultraCompact ? 6 : 8,
-                    height: ultraCompact ? 6 : 8,
-                    decoration: BoxDecoration(
-                      color: turnColor,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(color: turnColor, blurRadius: 4, spreadRadius: 1),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: ultraCompact ? 4 : 6),
-                  Text(
-                    playerLabel,
-                    style: TextStyle(
-                      color: turnColor,
-                      fontSize: ultraCompact ? 8.5 : 10.5,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  Container(
-                    margin: EdgeInsets.symmetric(horizontal: ultraCompact ? 4 : 6),
-                    width: 1,
-                    height: ultraCompact ? 9 : 12,
-                    color: Colors.white24,
-                  ),
-                  Text(
-                    '🏒 ${cue.name}',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: ultraCompact ? 8.5 : 10.5,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0.5),
-                    decoration: BoxDecoration(
-                      color: cue.rarity.color.withValues(alpha: 0.25),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(
-                        color: cue.rarity.color.withValues(alpha: 0.7),
-                        width: 0.6,
-                      ),
-                    ),
-                    child: Text(
-                      'Lv.$level',
-                      style: TextStyle(
-                        color: cue.rarity.color,
-                        fontSize: ultraCompact ? 7.5 : 9.0,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    },
-  );
-}
-
 Widget _buildRackOverlay({VoidCallback? onHome}) {
   return ValueListenableBuilder<int>(
     valueListenable: gameInstance.matchVersion,
@@ -2492,12 +2385,15 @@ Widget _buildControlBar(
   bool ultraCompact = false,
   required VoidCallback onHome,
 }) {
-  return ValueListenableBuilder<int>(
-    valueListenable: gameInstance.groupVersion,
-    builder: (context, _, child) {
+  return ListenableBuilder(
+    listenable: LanguageService.instance,
+    builder: (context, _) {
       return ValueListenableBuilder<int>(
-        valueListenable: gameInstance.currentTurn,
-        builder: (context, turn, child) {
+        valueListenable: gameInstance.groupVersion,
+        builder: (context, _, child) {
+          return ValueListenableBuilder<int>(
+            valueListenable: gameInstance.currentTurn,
+            builder: (context, turn, child) {
           // Giao diện thanh trạng thái riêng cho Thế Bi Hàng Ngày (Daily Trickshot)
           if (gameInstance.activeDailyPuzzle != null) {
             final puzzle = gameInstance.activeDailyPuzzle!;
@@ -2795,6 +2691,8 @@ Widget _buildControlBar(
               gameInstance.player2CueId,
               gameInstance.player2CueLevel,
               gameInstance.matchVersion,
+              gameInstance.groupVersion,
+              LanguageService.instance,
             ]),
             builder: (context, _) {
               // Tên hiển thị người chơi P1 và P2 theo chế độ
@@ -2824,7 +2722,7 @@ Widget _buildControlBar(
                 p2Level = gameInstance.activeBotStage!.stageNumber;
               } else if (gameInstance.isBotMode.value) {
                 final isHard = gameInstance.botDifficulty.value == 2;
-                p2Name = isHard ? 'Máy (Khó)' : 'Máy (Dễ)';
+                p2Name = isHard ? 'bot_hard'.tr : 'bot_easy'.tr;
                 p2Cue = CueCatalog.getById(isHard ? 'dragon_god' : 'frostbite');
                 p2CueLevel = isHard ? 4 : 2;
                 p2Level = isHard ? 6 : 2;
@@ -2844,7 +2742,7 @@ Widget _buildControlBar(
                   p2Cue = ProgressionService.instance.equippedCue;
                   p2CueLevel = ProgressionService.instance.equippedCueLevel;
                   p1Name = OnlineMultiplayerService.instance.opponentName;
-                  p2Name = 'Bạn';
+                  p2Name = 'you'.tr;
                 }
               } else if (gameInstance.isLocalMultiplayer.value) {
                 final oppCueId = LocalMultiplayerService.instance.opponentCueId;
@@ -2865,7 +2763,7 @@ Widget _buildControlBar(
                   p2Cue = ProgressionService.instance.equippedCue;
                   p2CueLevel = ProgressionService.instance.equippedCueLevel;
                   p1Name = oppName;
-                  p2Name = 'Bạn';
+                  p2Name = 'you'.tr;
                 }
               }
 
@@ -2934,7 +2832,7 @@ Widget _buildControlBar(
                     SizedBox(width: ultraCompact ? 2 : 4),
                     // Nút Cài đặt ở giữa (Shop đã đưa về góc phải màn hình chính theo yêu cầu)
                     IconButton(
-                      tooltip: 'Cài đặt',
+                      tooltip: 'settings_title'.tr,
                       icon: const Icon(Icons.settings),
                       color: Colors.white,
                       iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
@@ -2945,6 +2843,22 @@ Widget _buildControlBar(
                       ),
                       style: IconButton.styleFrom(backgroundColor: Colors.black54),
                       onPressed: () => _showSettings(context, onHome: onHome),
+                    ),
+                    SizedBox(width: ultraCompact ? 2 : 4),
+                    // Nút chuyển đổi nhanh Ngôn ngữ trực tiếp trên bàn
+                    IconButton(
+                      tooltip: 'language'.tr,
+                      icon: Text(
+                        LanguageService.instance.currentLanguage.flag,
+                        style: TextStyle(fontSize: ultraCompact ? 12 : (compact ? 14 : 16)),
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: BoxConstraints.tightFor(
+                        width: ultraCompact ? 28 : (compact ? 32 : 38),
+                        height: ultraCompact ? 28 : (compact ? 32 : 38),
+                      ),
+                      style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                      onPressed: () => LanguageSelectorDialog.show(context),
                     ),
                     SizedBox(width: ultraCompact ? 2 : 6),
                     Expanded(
@@ -2980,216 +2894,219 @@ Widget _buildControlBar(
       );
     },
   );
+    },
+  );
 }
 
 void _showSettings(BuildContext context, {required VoidCallback onHome}) {
   showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: const Color(0xFF1E2328),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Row(
-        children: [
-          Icon(Icons.tune, color: Color(0xFFFFD54F)),
-          SizedBox(width: 8),
-          Text('Cài đặt & Âm thanh', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+    builder: (context) => ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2328),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
           children: [
-            // 1. Nhạc nền (BGM)
-            ValueListenableBuilder<bool>(
-              valueListenable: AudioManager.instance.isMusicEnabled,
-              builder: (context, musicOn, _) {
-                return ValueListenableBuilder<double>(
-                  valueListenable: AudioManager.instance.musicVolume,
-                  builder: (context, musicVol, _) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  musicOn ? Icons.music_note : Icons.music_off,
-                                  color: musicOn ? const Color(0xFFFFD54F) : Colors.white38,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Nhạc nền Bida (BGM)',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-                                ),
-                              ],
-                            ),
-                            Switch(
-                              value: musicOn,
-                              activeThumbColor: const Color(0xFFFFD54F),
-                              onChanged: (_) {
-                                AudioManager.instance.toggleMusic();
-                              },
-                            ),
-                          ],
-                        ),
-                        if (musicOn)
-                          Row(
-                            children: [
-                              const Icon(Icons.volume_down, color: Colors.white54, size: 16),
-                              Expanded(
-                                child: Slider(
-                                  value: musicVol,
-                                  min: 0.0,
-                                  max: 1.0,
-                                  activeColor: const Color(0xFFFFD54F),
-                                  inactiveColor: Colors.white24,
-                                  onChanged: (v) {
-                                    AudioManager.instance.setMusicVolume(v);
-                                  },
-                                ),
-                              ),
-                              const Icon(Icons.volume_up, color: Colors.white54, size: 16),
-                            ],
-                          ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            const Divider(color: Colors.white24, height: 16),
-            // 2. Hiệu ứng âm thanh (SFX)
-            ValueListenableBuilder<bool>(
-              valueListenable: AudioManager.instance.isSfxEnabled,
-              builder: (context, sfxOn, _) {
-                return ValueListenableBuilder<double>(
-                  valueListenable: AudioManager.instance.sfxVolume,
-                  builder: (context, sfxVol, _) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  sfxOn ? Icons.volume_up : Icons.volume_off,
-                                  color: sfxOn ? const Color(0xFF00E5FF) : Colors.white38,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Hiệu ứng âm thanh (SFX)',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
-                                ),
-                              ],
-                            ),
-                            Switch(
-                              value: sfxOn,
-                              activeThumbColor: const Color(0xFF00E5FF),
-                              onChanged: (_) {
-                                AudioManager.instance.toggleSfx();
-                              },
-                            ),
-                          ],
-                        ),
-                        if (sfxOn)
-                          Row(
-                            children: [
-                              const Icon(Icons.volume_down, color: Colors.white54, size: 16),
-                              Expanded(
-                                child: Slider(
-                                  value: sfxVol,
-                                  min: 0.0,
-                                  max: 1.0,
-                                  activeColor: const Color(0xFF00E5FF),
-                                  inactiveColor: Colors.white24,
-                                  onChanged: (v) {
-                                    AudioManager.instance.setSfxVolume(v);
-                                  },
-                                ),
-                              ),
-                              const Icon(Icons.volume_up, color: Colors.white54, size: 16),
-                            ],
-                          ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-            const Divider(color: Colors.white24, height: 20),
-            const Text(
-              'Thao tác trận đấu:',
-              style: TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                // 1. Nút "Xử thua": CHỈ CÓ KHẢ NĂNG XỬ THUA KHI ĐẤU HOTSPOT LOCAL LAN (trọng tài / 2 người tự thỏa thuận)
-                // Tuyệt đối KHÔNG hiển thị trong trận Online để đảm bảo tính công bằng nhất!
-                if (gameInstance.isLocalMultiplayer.value && !gameInstance.isOnlineMultiplayer.value)
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showDeclareLoss(context);
-                    },
-                    icon: const Icon(Icons.flag, size: 16, color: Colors.orangeAccent),
-                    label: const Text('Xử thua (LAN)'),
-                  ),
-
-                // 2. Nút "Menu chính":
-                OutlinedButton.icon(
-                  onPressed: () {
-                    // // Xác nhận rời trận Online đã ẩn bằng //:
-                    // if (gameInstance.isOnlineMultiplayer.value && !gameInstance.rackOver) {
-                    //   _showConfirmOnlineForfeit(context, onHome: () {
-                    //     Navigator.pop(context);
-                    //     onHome();
-                    //   });
-                    // } else
-                    if (gameInstance.isLocalMultiplayer.value && !gameInstance.rackOver) {
-                      _showConfirmExitMatch(context, onHome: () {
-                        Navigator.pop(context);
-                        onHome();
-                      });
-                    } else {
-                      Navigator.pop(context);
-                      onHome();
-                    }
-                  },
-                  icon: const Icon(Icons.home, size: 16),
-                  label: const Text('Menu chính'),
-                ),
-
-                // 3. Nút "Bắt đầu lại": Không hiển thị khi đang đấu Online
-                if (!gameInstance.isOnlineMultiplayer.value)
-                  FilledButton.icon(
-                    onPressed: () {
-                      gameInstance.restartMatch();
-                      Navigator.pop(context);
-                    },
-                    icon: const Icon(Icons.restart_alt, size: 16),
-                    label: const Text('Bắt đầu lại'),
-                  ),
-              ],
+            const Icon(Icons.tune, color: Color(0xFFFFD54F)),
+            const SizedBox(width: 8),
+            Text(
+              'settings_title'.tr,
+              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Đóng', style: TextStyle(color: Colors.white70)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 0. Mục chuyển đổi 5 loại ngôn ngữ (Việt, Anh, Trung, Nhật, Hàn)
+              const LanguageSettingsTile(),
+              const Divider(color: Colors.white24, height: 20),
+              // 1. Nhạc nền (BGM)
+              ValueListenableBuilder<bool>(
+                valueListenable: AudioManager.instance.isMusicEnabled,
+                builder: (context, musicOn, _) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: AudioManager.instance.musicVolume,
+                    builder: (context, musicVol, _) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    musicOn ? Icons.music_note : Icons.music_off,
+                                    color: musicOn ? const Color(0xFFFFD54F) : Colors.white38,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'bgm_title'.tr,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: musicOn,
+                                activeThumbColor: const Color(0xFFFFD54F),
+                                onChanged: (_) {
+                                  AudioManager.instance.toggleMusic();
+                                },
+                              ),
+                            ],
+                          ),
+                          if (musicOn)
+                            Row(
+                              children: [
+                                const Icon(Icons.volume_down, color: Colors.white54, size: 16),
+                                Expanded(
+                                  child: Slider(
+                                    value: musicVol,
+                                    min: 0.0,
+                                    max: 1.0,
+                                    activeColor: const Color(0xFFFFD54F),
+                                    inactiveColor: Colors.white24,
+                                    onChanged: (v) {
+                                      AudioManager.instance.setMusicVolume(v);
+                                    },
+                                  ),
+                                ),
+                                const Icon(Icons.volume_up, color: Colors.white54, size: 16),
+                              ],
+                            ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+              const Divider(color: Colors.white24, height: 16),
+              // 2. Hiệu ứng âm thanh (SFX)
+              ValueListenableBuilder<bool>(
+                valueListenable: AudioManager.instance.isSfxEnabled,
+                builder: (context, sfxOn, _) {
+                  return ValueListenableBuilder<double>(
+                    valueListenable: AudioManager.instance.sfxVolume,
+                    builder: (context, sfxVol, _) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    sfxOn ? Icons.volume_up : Icons.volume_off,
+                                    color: sfxOn ? const Color(0xFF00E5FF) : Colors.white38,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'sfx_title'.tr,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                                  ),
+                                ],
+                              ),
+                              Switch(
+                                value: sfxOn,
+                                activeThumbColor: const Color(0xFF00E5FF),
+                                onChanged: (_) {
+                                  AudioManager.instance.toggleSfx();
+                                },
+                              ),
+                            ],
+                          ),
+                          if (sfxOn)
+                            Row(
+                              children: [
+                                const Icon(Icons.volume_down, color: Colors.white54, size: 16),
+                                Expanded(
+                                  child: Slider(
+                                    value: sfxVol,
+                                    min: 0.0,
+                                    max: 1.0,
+                                    activeColor: const Color(0xFF00E5FF),
+                                    inactiveColor: Colors.white24,
+                                    onChanged: (v) {
+                                      AudioManager.instance.setSfxVolume(v);
+                                    },
+                                  ),
+                                ),
+                                const Icon(Icons.volume_up, color: Colors.white54, size: 16),
+                              ],
+                            ),
+                        ],
+                      );
+                    },
+                  );
+                },
+              ),
+              const Divider(color: Colors.white24, height: 20),
+              Text(
+                'match_actions'.tr,
+                style: const TextStyle(color: Colors.white70, fontSize: 12.5, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  // 1. Nút "Xử thua": CHỈ CÓ KHẢ NĂNG XỬ THUA KHI ĐẤU HOTSPOT LOCAL LAN
+                  if (gameInstance.isLocalMultiplayer.value && !gameInstance.isOnlineMultiplayer.value)
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _showDeclareLoss(context);
+                      },
+                      icon: const Icon(Icons.flag, size: 16, color: Colors.orangeAccent),
+                      label: Text('surrender_lan'.tr),
+                    ),
+
+                  // 2. Nút "Menu chính":
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      if (gameInstance.isLocalMultiplayer.value && !gameInstance.rackOver) {
+                        _showConfirmExitMatch(context, onHome: () {
+                          Navigator.pop(context);
+                          onHome();
+                        });
+                      } else {
+                        Navigator.pop(context);
+                        onHome();
+                      }
+                    },
+                    icon: const Icon(Icons.home, size: 16),
+                    label: Text('main_menu'.tr),
+                  ),
+
+                  // 3. Nút "Bắt đầu lại":
+                  if (!gameInstance.isOnlineMultiplayer.value)
+                    FilledButton.icon(
+                      onPressed: () {
+                        gameInstance.restartMatch();
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(Icons.restart_alt, size: 16),
+                      label: Text('restart'.tr),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('close'.tr, style: const TextStyle(color: Colors.white70)),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -3326,7 +3243,7 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    isP2 ? 'CHỌN GẬY CƠ • PLAYER 2' : 'CHỌN GẬY CƠ • PLAYER 1',
+                    isP2 ? 'select_cue_p2'.tr : 'select_cue_p1'.tr,
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 14,
@@ -3405,9 +3322,9 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(color: const Color(0xFF00E676), width: 0.7),
                                 ),
-                                child: const Text(
-                                  'ĐANG DÙNG',
-                                  style: TextStyle(
+                                child: Text(
+                                  'equipped'.tr.toUpperCase(),
+                                  style: const TextStyle(
                                     color: Color(0xFF00E676),
                                     fontSize: 8.5,
                                     fontWeight: FontWeight.bold,
@@ -3436,16 +3353,16 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                         const SizedBox(height: 5),
                         Row(
                           children: [
-                            _buildStatMiniItem('Lực', cue.baseStats.force, const Color(0xFFFF7043)),
+                            _buildStatMiniItem('force'.tr, cue.baseStats.force, const Color(0xFFFF7043)),
                             const SizedBox(width: 8),
-                            _buildStatMiniItem('Ngắm', cue.baseStats.aim, const Color(0xFF42A5F5)),
+                            _buildStatMiniItem('aim'.tr, cue.baseStats.aim, const Color(0xFF42A5F5)),
                             const SizedBox(width: 8),
-                            _buildStatMiniItem('Xoáy', cue.baseStats.spin, const Color(0xFFAB47BC)),
+                            _buildStatMiniItem('spin'.tr, cue.baseStats.spin, const Color(0xFFAB47BC)),
                             const Spacer(),
                             if (isP2 && isSelected) ...[
                               Row(
                                 children: [
-                                  const Text('Cấp: ', style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                  Text('${'level'.tr}: ', style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold)),
                                   DropdownButton<int>(
                                     value: currentLevel,
                                     dropdownColor: const Color(0xFF1E2328),
@@ -3484,7 +3401,7 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                                   }
                                   setDialogState(() {});
                                 },
-                                child: const Text('Chọn', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                                child: Text('select'.tr, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                               ),
                             ],
                           ],
@@ -3658,47 +3575,19 @@ Widget _buildPlayerCard(
                     style: TextStyle(color: Colors.white38, fontSize: detailFontSize),
                   ),
                   Text(
-                    'Tỷ số: $score',
+                    '${'score'.tr}: $score',
                     style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
                   ),
                 ],
               ),
-              // 3. Phân loại bi hoặc Thông tin Gậy Cơ
-              if (cue != null)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        groupLabel.isNotEmpty
-                            ? '$groupLabel • ${cue.name} Lv.$cueLevel'
-                            : '🏒 ${cue.name} Lv.$cueLevel',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: cue.rarity.color,
-                          fontSize: detailFontSize,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    if (onTapCue != null) ...[
-                      const SizedBox(width: 2),
-                      Icon(
-                        Icons.swap_horiz,
-                        color: cue.rarity.color.withValues(alpha: 0.85),
-                        size: ultraCompact ? 8 : 10,
-                      ),
-                    ],
-                  ],
-                )
-              else if (groupLabel.isNotEmpty)
+              // 3. Phân loại bi mục tiêu (Bi trơn / Bi sọc)
+              if (groupLabel.isNotEmpty)
                 Text(
                   groupLabel,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: const Color(0xFF80D8FF),
+                    color: const Color(0xFFFFD54F),
                     fontSize: detailFontSize,
                     fontWeight: FontWeight.w600,
                   ),
@@ -5170,26 +5059,25 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void _updateTurnRuleMessage() {
     if (rackOver || activeDailyPuzzle != null || activeLegendaryTrickshot != null) return;
-    final (cue, lvl) = getActivePlayerCue();
     if (isOnlineMultiplayer.value) {
       final oppName = OnlineMultiplayerService.instance.opponentName;
       ruleMessage.value = isMyTurn
-          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn (${cue.name} Lv.$lvl)')
-          : 'Đấu mạng: Lượt của $oppName (${cue.name} Lv.$lvl)...';
+          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn')
+          : 'Đấu mạng: Lượt của $oppName...';
     } else if (isLocalMultiplayer.value) {
       final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
           ? LocalMultiplayerService.instance.opponentName
           : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
       ruleMessage.value = isMyTurn
-          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn (${cue.name} Lv.$lvl)')
-          : 'Đấu mạng: Lượt của $oppName (${cue.name} Lv.$lvl)...';
+          ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn')
+          : 'Đấu mạng: Lượt của $oppName...';
     } else if (isBotMode.value && currentTurn.value == 2) {
       final botTitle = activeTournamentStage?.opponentName ??
           activeBotStage?.botName ??
           (botDifficulty.value == 2 ? 'Máy (Khó)' : 'Máy (Dễ)');
-      ruleMessage.value = 'Lượt $botTitle (${cue.name} Lv.$lvl)';
+      ruleMessage.value = 'Lượt $botTitle';
     } else {
-      ruleMessage.value = 'Lượt Player ${currentTurn.value} (${cue.name} Lv.$lvl)';
+      ruleMessage.value = 'Lượt Player ${currentTurn.value}';
     }
   }
 
@@ -5407,8 +5295,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
           ? 'Đấu mạng: Lượt của bạn (P1 break shot)'
           : 'Đấu mạng: Lượt của $oppName (P1 break shot)';
     } else {
-      final (p1Cue, p1Lvl) = getActivePlayerCue();
-      ruleMessage.value = 'Player 1: break shot (${p1Cue.name} Lv.$p1Lvl)';
+      ruleMessage.value = 'Player 1: break shot';
     }
 
     resetCueSpin();
@@ -6473,21 +6360,18 @@ class BilliardGame extends Forge2DGame with PanDetector {
     } else if (breakShot) {
       breakShot = false;
       if (pocketedThisShot.isNotEmpty) {
-        final (cue, lvl) = getActivePlayerCue();
-        ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
+        ruleMessage.value = 'Player $currentPlayer tiếp tục';
       } else {
         switchTurn();
       }
     } else if (group == null &&
         pocketedThisShot.any((ball) => ball.number != 8)) {
       assignGroupAfterBreak(pocketedThisShot);
-      final (cue, lvl) = getActivePlayerCue();
-      ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
+      ruleMessage.value = 'Player $currentPlayer tiếp tục';
     } else if (pocketedThisShot.any(
       (ball) => ballGroup(ball.number) == group,
     )) {
-      final (cue, lvl) = getActivePlayerCue();
-      ruleMessage.value = 'Player $currentPlayer tiếp tục (${cue.name} Lv.$lvl)';
+      ruleMessage.value = 'Player $currentPlayer tiếp tục';
     } else {
       switchTurn();
     }
@@ -6553,10 +6437,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
   String groupLabel(int player) {
     final group = getPlayerGroup(player);
     if (group == BallGroup.solids) {
-      return 'Bi trơn 1-7';
+      return 'solids'.tr;
     }
     if (group == BallGroup.stripes) {
-      return 'Bi sọc 9-15';
+      return 'stripes'.tr;
     }
     return '';
   }
