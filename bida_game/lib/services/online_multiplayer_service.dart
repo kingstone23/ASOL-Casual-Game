@@ -22,7 +22,10 @@ class OnlineMultiplayerService extends ChangeNotifier {
     _loadSavedClientInfo();
   }
 
-  String defaultServerUrl = 'ws://127.0.0.1:8080';
+  /// Cổng máy chủ WebSocket dành riêng cho Điện thoại thật kết nối qua Wi-Fi LAN
+  static const String realPhoneDefaultUrl = 'ws://192.168.1.22:8080';
+  String defaultServerUrl = realPhoneDefaultUrl;
+  String? get lastConnectedUrl => _lastConnectedUrl;
   WebSocket? _socket;
   StreamSubscription? _socketSubscription;
 
@@ -32,9 +35,16 @@ class OnlineMultiplayerService extends ChangeNotifier {
   String? myClientId;
   String? _lastConnectedUrl;
 
+  // Trạng thái phòng Tournament Online
+  bool isTournamentMatch = false;
+  int tournamentBracket = 1;
+  int? currentTournamentBracket;
+
   String opponentName = 'Đối thủ Online';
   int opponentLevel = 1;
   int opponentCoins = 1000;
+  String opponentCueId = 'standard_cue';
+  int opponentCueLevel = 1;
 
   void Function(Map<String, dynamic> data)? onMessageReceived;
   void Function(String roomId, bool isHost)? onMatchStart;
@@ -55,7 +65,13 @@ class OnlineMultiplayerService extends ChangeNotifier {
         myClientId = 'player_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecond % 9000))}';
         await prefs.setString('online_client_id', myClientId!);
       }
-      _lastConnectedUrl = prefs.getString('online_server_url') ?? defaultServerUrl;
+      final savedUrl = prefs.getString('online_server_url');
+      if (savedUrl == null || savedUrl.contains('127.0.0.1') || savedUrl.contains('10.0.2.2')) {
+        _lastConnectedUrl = realPhoneDefaultUrl;
+        await prefs.setString('online_server_url', realPhoneDefaultUrl);
+      } else {
+        _lastConnectedUrl = savedUrl;
+      }
     } catch (_) {}
   }
 
@@ -71,6 +87,8 @@ class OnlineMultiplayerService extends ChangeNotifier {
   }
 
   Future<void> clearActiveMatch() async {
+    opponentCueId = 'standard_cue';
+    opponentCueLevel = 1;
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('active_online_room_id');
@@ -158,6 +176,8 @@ class OnlineMultiplayerService extends ChangeNotifier {
       case 'room_created':
         currentRoomId = data['roomId']?.toString();
         isHost = true;
+        isTournamentMatch = data['mode'] == 'tournament';
+        tournamentBracket = (data['bracket'] as num?)?.toInt() ?? (currentTournamentBracket ?? 1);
         connectionState = OnlineConnectionState.waitingInRoom;
         notifyListeners();
         break;
@@ -165,6 +185,8 @@ class OnlineMultiplayerService extends ChangeNotifier {
       case 'room_joined':
         currentRoomId = data['roomId']?.toString();
         isHost = false;
+        isTournamentMatch = data['mode'] == 'tournament';
+        tournamentBracket = (data['bracket'] as num?)?.toInt() ?? (currentTournamentBracket ?? 1);
         connectionState = OnlineConnectionState.waitingInRoom;
         notifyListeners();
         break;
@@ -173,11 +195,26 @@ class OnlineMultiplayerService extends ChangeNotifier {
         opponentName = data['opponentName']?.toString() ?? opponentName;
         opponentLevel = (data['opponentLevel'] as num?)?.toInt() ?? opponentLevel;
         opponentCoins = (data['opponentCoins'] as num?)?.toInt() ?? opponentCoins;
+        opponentCueId = data['opponentCueId']?.toString() ?? opponentCueId;
+        opponentCueLevel = (data['opponentCueLevel'] as num?)?.toInt() ?? opponentCueLevel;
+        notifyListeners();
+        break;
+
+      case 'opponent_profile_sync':
+        opponentName = data['opponentName']?.toString() ?? opponentName;
+        opponentLevel = (data['opponentLevel'] as num?)?.toInt() ?? opponentLevel;
+        opponentCoins = (data['opponentCoins'] as num?)?.toInt() ?? opponentCoins;
+        opponentCueId = data['opponentCueId']?.toString() ?? opponentCueId;
+        opponentCueLevel = (data['opponentCueLevel'] as num?)?.toInt() ?? opponentCueLevel;
         notifyListeners();
         break;
 
       case 'match_start':
         currentRoomId = data['roomId']?.toString() ?? currentRoomId;
+        isTournamentMatch = data['mode'] == 'tournament' || isTournamentMatch;
+        tournamentBracket = (data['bracket'] as num?)?.toInt() ?? (currentTournamentBracket ?? tournamentBracket);
+        opponentCueId = data['opponentCueId']?.toString() ?? opponentCueId;
+        opponentCueLevel = (data['opponentCueLevel'] as num?)?.toInt() ?? opponentCueLevel;
         connectionState = OnlineConnectionState.inMatch;
         if (currentRoomId != null) {
           _saveActiveMatch(currentRoomId!, isHost);
@@ -190,9 +227,13 @@ class OnlineMultiplayerService extends ChangeNotifier {
       case 'match_found':
         currentRoomId = data['roomId']?.toString();
         isHost = data['role'] == 'host';
+        isTournamentMatch = data['mode'] == 'tournament' || isTournamentMatch;
+        tournamentBracket = (data['bracket'] as num?)?.toInt() ?? (currentTournamentBracket ?? tournamentBracket);
         opponentName = data['opponentName']?.toString() ?? opponentName;
         opponentLevel = (data['opponentLevel'] as num?)?.toInt() ?? opponentLevel;
         opponentCoins = (data['opponentCoins'] as num?)?.toInt() ?? opponentCoins;
+        opponentCueId = data['opponentCueId']?.toString() ?? opponentCueId;
+        opponentCueLevel = (data['opponentCueLevel'] as num?)?.toInt() ?? opponentCueLevel;
         connectionState = OnlineConnectionState.inMatch;
         if (currentRoomId != null) {
           _saveActiveMatch(currentRoomId!, isHost);
@@ -216,9 +257,17 @@ class OnlineMultiplayerService extends ChangeNotifier {
       case 'reconnected_success':
         currentRoomId = data['roomId']?.toString() ?? currentRoomId;
         isHost = data['role'] == 'p1' || data['role'] == 'host';
+        if (data['mode'] != null) {
+          isTournamentMatch = data['mode'] == 'tournament';
+        }
+        if (data['bracket'] != null) {
+          tournamentBracket = (data['bracket'] as num?)?.toInt() ?? 1;
+        }
         opponentName = data['opponentName']?.toString() ?? opponentName;
         opponentLevel = (data['opponentLevel'] as num?)?.toInt() ?? opponentLevel;
         opponentCoins = (data['opponentCoins'] as num?)?.toInt() ?? opponentCoins;
+        opponentCueId = data['opponentCueId']?.toString() ?? opponentCueId;
+        opponentCueLevel = (data['opponentCueLevel'] as num?)?.toInt() ?? opponentCueLevel;
         connectionState = OnlineConnectionState.inMatch;
         if (currentRoomId != null) {
           _saveActiveMatch(currentRoomId!, isHost);
@@ -287,23 +336,70 @@ class OnlineMultiplayerService extends ChangeNotifier {
       'name': AuthService.instance.displayName,
       'level': ProgressionService.instance.playerLevel,
       'coins': ProgressionService.instance.coins,
+      'cueId': ProgressionService.instance.equippedCue.id,
+      'cueLevel': ProgressionService.instance.equippedCueLevel,
       'showcasedMedals': ProgressionService.instance.showcasedMedals,
     });
   }
 
   void createRoom() {
+    isTournamentMatch = false;
+    currentTournamentBracket = null;
     sendProfile();
-    sendJson({'type': 'create_room'});
+    sendJson({'type': 'create_room', 'mode': '1v1'});
   }
 
   void joinRoom(String roomId) {
+    isTournamentMatch = false;
+    currentTournamentBracket = null;
     sendProfile();
     sendJson({'type': 'join_room', 'roomId': roomId.trim()});
   }
 
   void startQuickMatch() {
+    isTournamentMatch = false;
+    currentTournamentBracket = null;
     sendProfile();
     sendJson({'type': 'quick_match'});
+  }
+
+  /// Tạo phòng Tournament Online theo Bracket
+  void createTournamentRoom(int bracketNumber) {
+    isTournamentMatch = true;
+    currentTournamentBracket = bracketNumber;
+    tournamentBracket = bracketNumber;
+    sendProfile();
+    sendJson({
+      'type': 'create_room',
+      'mode': 'tournament',
+      'bracket': bracketNumber,
+    });
+  }
+
+  /// Tham gia phòng Tournament Online bằng mã PIN
+  void joinTournamentRoom(String roomId, {int bracketNumber = 1}) {
+    isTournamentMatch = true;
+    currentTournamentBracket = bracketNumber;
+    tournamentBracket = bracketNumber;
+    sendProfile();
+    sendJson({
+      'type': 'join_room',
+      'roomId': roomId.trim(),
+      'mode': 'tournament',
+      'bracket': bracketNumber,
+    });
+  }
+
+  /// Tìm trận nhanh Tournament Online theo Bracket
+  void startTournamentQuickMatch(int bracketNumber) {
+    isTournamentMatch = true;
+    currentTournamentBracket = bracketNumber;
+    tournamentBracket = bracketNumber;
+    sendProfile();
+    sendJson({
+      'type': 'quick_match_tournament',
+      'bracket': bracketNumber,
+    });
   }
 
   void cancelQuickMatch() {
@@ -331,30 +427,96 @@ class OnlineMultiplayerService extends ChangeNotifier {
     }
     clearActiveMatch();
     currentRoomId = null;
+    isTournamentMatch = false;
+    currentTournamentBracket = null;
     if (connectionState == OnlineConnectionState.inMatch) {
       connectionState = OnlineConnectionState.connected;
     }
     notifyListeners();
   }
 
-  void sendAim({required double angle, required double power}) {
-    sendJson({'type': 'aim', 'angle': angle, 'power': power});
+  void sendAim({
+    required double angle,
+    required double power,
+    String? cueId,
+    int? cueLevel,
+  }) {
+    final payload = <String, dynamic>{
+      'type': 'aim',
+      'angle': angle,
+      'power': power,
+    };
+    if (cueId != null) payload['cueId'] = cueId;
+    if (cueLevel != null) payload['cueLevel'] = cueLevel;
+    sendJson(payload);
   }
 
   void sendSpin({required double dx, required double dy}) {
     sendJson({'type': 'spin', 'dx': dx, 'dy': dy});
   }
 
-  void sendShoot({required double power}) {
-    sendJson({'type': 'shoot', 'power': power});
+  void sendShoot({
+    required double power,
+    double? angle,
+    double? spinX,
+    double? spinY,
+    double? forceMult,
+    double? spinMult,
+    Map<String, dynamic>? cueBall,
+    List<Map<String, dynamic>>? balls,
+    String? cueId,
+    int? cueLevel,
+  }) {
+    final payload = <String, dynamic>{
+      'type': 'shoot',
+      'power': power,
+    };
+    if (angle != null) payload['angle'] = angle;
+    if (spinX != null) payload['spinX'] = spinX;
+    if (spinY != null) payload['spinY'] = spinY;
+    if (forceMult != null) payload['forceMult'] = forceMult;
+    if (spinMult != null) payload['spinMult'] = spinMult;
+    if (cueBall != null) payload['cueBall'] = cueBall;
+    if (balls != null) payload['balls'] = balls;
+    if (cueId != null) payload['cueId'] = cueId;
+    if (cueLevel != null) payload['cueLevel'] = cueLevel;
+    sendJson(payload);
   }
 
-  void sendBallInHand({required double x, required double y, bool placed = false}) {
-    sendJson({'type': 'ball_in_hand', 'x': x, 'y': y, 'placed': placed});
+  void sendBallInHand({
+    required double x,
+    required double y,
+    double? nx,
+    double? ny,
+    bool placed = false,
+  }) {
+    final payload = <String, dynamic>{
+      'type': 'ball_in_hand',
+      'x': x,
+      'y': y,
+      'placed': placed,
+    };
+    if (nx != null) payload['nx'] = nx;
+    if (ny != null) payload['ny'] = ny;
+    sendJson(payload);
   }
 
-  void sendSyncBalls(List<Map<String, dynamic>> balls) {
-    sendJson({'type': 'sync_balls', 'balls': balls});
+  void sendShotResult(Map<String, dynamic> result) {
+    sendJson(result);
+  }
+
+  void sendSyncBalls(
+    List<Map<String, dynamic>> balls, {
+    Map<String, dynamic>? cueBall,
+    bool? ballInHand,
+  }) {
+    final payload = <String, dynamic>{
+      'type': 'sync_balls',
+      'balls': balls,
+    };
+    if (cueBall != null) payload['cueBall'] = cueBall;
+    if (ballInHand != null) payload['ballInHand'] = ballInHand;
+    sendJson(payload);
   }
 
   void sendRestart() {
@@ -373,9 +535,11 @@ class OnlineMultiplayerService extends ChangeNotifier {
     if (!keepRoomId) {
       currentRoomId = null;
       isHost = false;
-      opponentName = 'Đối thủ Online';
+      isTournamentMatch = false;
+      currentTournamentBracket = null;
+      opponentName = 'Đối thủ Online'; 
       clearActiveMatch();
-    }
+    }   
     notifyListeners();
   }
 }

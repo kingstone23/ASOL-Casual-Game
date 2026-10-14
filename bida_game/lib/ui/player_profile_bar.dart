@@ -436,7 +436,9 @@ class PlayerProfileBar extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         auth.isLoggedIn
-                            ? (auth.isAdmin ? 'ADMIN' : auth.displayName)
+                            ? (auth.isAdmin
+                                ? 'ADMIN'
+                                : (auth.isGuest ? 'KHÁCH (OFFLINE)' : auth.displayName))
                             : 'ĐĂNG NHẬP',
                         style: TextStyle(
                           color: auth.isLoggedIn && auth.isAdmin ? Colors.black87 : Colors.white,

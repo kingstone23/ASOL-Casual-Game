@@ -20,6 +20,7 @@ void main(List<String> args) async {
   final rooms = <String, Room>{};
   final clients = <WebSocket, ClientSession>{};
   final matchmakingQueue = <WebSocket>[];
+  final tournamentQueue = <WebSocket>[];
 
   server.listen((HttpRequest request) async {
     if (WebSocketTransformer.isUpgradeRequest(request)) {
@@ -43,6 +44,45 @@ void main(List<String> args) async {
                 session.name = json['name']?.toString() ?? session.name;
                 session.level = (json['level'] as num?)?.toInt() ?? session.level;
                 session.coins = (json['coins'] as num?)?.toInt() ?? session.coins;
+                session.cueId = json['cueId']?.toString() ?? session.cueId;
+                session.cueLevel = (json['cueLevel'] as num?)?.toInt() ?? session.cueLevel;
+                if (session.roomId != null && rooms.containsKey(session.roomId)) {
+                  final room = rooms[session.roomId]!;
+                  final isP1 = (session.role == 'p1' || room.p1 == ws);
+                  if (isP1) {
+                    room.p1Name = session.name;
+                    room.p1Level = session.level;
+                    room.p1Coins = session.coins;
+                    room.p1CueId = session.cueId;
+                    room.p1CueLevel = session.cueLevel;
+                    if (room.p2 != null) {
+                      sendJson(room.p2!, {
+                        'type': 'opponent_profile_sync',
+                        'opponentName': session.name,
+                        'opponentLevel': session.level,
+                        'opponentCoins': session.coins,
+                        'opponentCueId': session.cueId,
+                        'opponentCueLevel': session.cueLevel,
+                      });
+                    }
+                  } else {
+                    room.p2Name = session.name;
+                    room.p2Level = session.level;
+                    room.p2Coins = session.coins;
+                    room.p2CueId = session.cueId;
+                    room.p2CueLevel = session.cueLevel;
+                    if (room.p1 != null) {
+                      sendJson(room.p1!, {
+                        'type': 'opponent_profile_sync',
+                        'opponentName': session.name,
+                        'opponentLevel': session.level,
+                        'opponentCoins': session.coins,
+                        'opponentCueId': session.cueId,
+                        'opponentCueLevel': session.cueLevel,
+                      });
+                    }
+                  }
+                }
                 break;
 
               case 'create_room':
@@ -50,17 +90,27 @@ void main(List<String> args) async {
                 while (rooms.containsKey(code)) {
                   code = (100000 + Random().nextInt(900000)).toString();
                 }
-                final room = Room(id: code, p1: ws);
+                final roomMode = json['mode']?.toString() ?? '1v1';
+                final roomBracket = (json['bracket'] as num?)?.toInt() ?? 1;
+                final room = Room(id: code, p1: ws, mode: roomMode, bracket: roomBracket);
                 room.p1Id = session.id;
                 room.p1Name = session.name;
                 room.p1Level = session.level;
                 room.p1Coins = session.coins;
+                room.p1CueId = session.cueId;
+                room.p1CueLevel = session.cueLevel;
                 rooms[code] = room;
 
                 session.roomId = code;
                 session.role = 'p1';
-                print('[Room] Tạo phòng #${code} bởi ${session.name}');
-                sendJson(ws, {'type': 'room_created', 'roomId': code, 'role': 'host'});
+                print('[Room] Tạo phòng #${code} (${room.mode} B${room.bracket}) bởi ${session.name}');
+                sendJson(ws, {
+                  'type': 'room_created',
+                  'roomId': code,
+                  'role': 'host',
+                  'mode': room.mode,
+                  'bracket': room.bracket,
+                });
                 break;
 
               case 'join_room':
@@ -79,18 +129,28 @@ void main(List<String> args) async {
                 room.p2Name = session.name;
                 room.p2Level = session.level;
                 room.p2Coins = session.coins;
+                room.p2CueId = session.cueId;
+                room.p2CueLevel = session.cueLevel;
                 room.state = 'playing';
 
                 session.roomId = code;
                 session.role = 'p2';
 
-                sendJson(ws, {'type': 'room_joined', 'roomId': code, 'role': 'client'});
+                sendJson(ws, {
+                  'type': 'room_joined',
+                  'roomId': code,
+                  'role': 'client',
+                  'mode': room.mode,
+                  'bracket': room.bracket,
+                });
                 if (room.p1 != null) {
                   sendJson(room.p1!, {
                     'type': 'opponent_joined',
                     'opponentName': session.name,
                     'opponentLevel': session.level,
                     'opponentCoins': session.coins,
+                    'opponentCueId': session.cueId,
+                    'opponentCueLevel': session.cueLevel,
                   });
                 }
                 sendJson(ws, {
@@ -98,9 +158,25 @@ void main(List<String> args) async {
                   'opponentName': room.p1Name,
                   'opponentLevel': room.p1Level,
                   'opponentCoins': room.p1Coins,
+                  'opponentCueId': room.p1CueId,
+                  'opponentCueLevel': room.p1CueLevel,
                 });
-                final startMsg = {'type': 'match_start', 'roomId': code, 'firstTurn': 1};
-                if (room.p1 != null) sendJson(room.p1!, startMsg);
+                final startMsg = {
+                  'type': 'match_start',
+                  'roomId': code,
+                  'firstTurn': 1,
+                  'mode': room.mode,
+                  'bracket': room.bracket,
+                  'opponentCueId': room.p1CueId,
+                  'opponentCueLevel': room.p1CueLevel,
+                };
+                if (room.p1 != null) {
+                  sendJson(room.p1!, {
+                    ...startMsg,
+                    'opponentCueId': room.p2CueId,
+                    'opponentCueLevel': room.p2CueLevel,
+                  });
+                }
                 sendJson(room.p2!, startMsg);
                 break;
 
@@ -110,16 +186,20 @@ void main(List<String> args) async {
                   final oppWs = matchmakingQueue.removeAt(0);
                   final oppSession = clients[oppWs];
                   var code = (100000 + Random().nextInt(900000)).toString();
-                  final room = Room(id: code, p1: oppWs, p2: ws);
+                  final room = Room(id: code, p1: oppWs, p2: ws, mode: '1v1');
                   room.state = 'playing';
                   room.p1Id = oppSession?.id ?? 'p1';
                   room.p1Name = oppSession?.name ?? 'Cơ Thủ 1';
                   room.p1Level = oppSession?.level ?? 1;
                   room.p1Coins = oppSession?.coins ?? 1000;
+                  room.p1CueId = oppSession?.cueId ?? 'standard_cue';
+                  room.p1CueLevel = oppSession?.cueLevel ?? 1;
                   room.p2Id = session.id;
                   room.p2Name = session.name;
                   room.p2Level = session.level;
                   room.p2Coins = session.coins;
+                  room.p2CueId = session.cueId;
+                  room.p2CueLevel = session.cueLevel;
                   rooms[code] = room;
 
                   if (oppSession != null) {
@@ -133,28 +213,102 @@ void main(List<String> args) async {
                     'type': 'match_found',
                     'roomId': code,
                     'role': 'host',
+                    'mode': '1v1',
                     'opponentName': session.name,
                     'opponentLevel': session.level,
                     'opponentCoins': session.coins,
+                    'opponentCueId': session.cueId,
+                    'opponentCueLevel': session.cueLevel,
                     'firstTurn': 1,
                   });
                   sendJson(ws, {
                     'type': 'match_found',
                     'roomId': code,
                     'role': 'client',
+                    'mode': '1v1',
                     'opponentName': oppSession?.name ?? 'Đối thủ',
                     'opponentLevel': oppSession?.level ?? 1,
                     'opponentCoins': oppSession?.coins ?? 1000,
+                    'opponentCueId': oppSession?.cueId ?? 'standard_cue',
+                    'opponentCueLevel': oppSession?.cueLevel ?? 1,
                     'firstTurn': 1,
                   });
                 } else {
                   matchmakingQueue.add(ws);
-                  sendJson(ws, {'type': 'matchmaking_waiting', 'message': 'Đang tìm đối thủ...'});
+                  sendJson(ws, {'type': 'matchmaking_waiting', 'message': 'Đang tìm đối thủ 1v1...'});
+                }
+                break;
+
+              case 'quick_match_tournament':
+                tournamentQueue.remove(ws);
+                final bracket = (json['bracket'] as num?)?.toInt() ?? 1;
+                if (tournamentQueue.isNotEmpty) {
+                  final oppWs = tournamentQueue.removeAt(0);
+                  final oppSession = clients[oppWs];
+                  var code = (100000 + Random().nextInt(900000)).toString();
+                  final room = Room(id: code, p1: oppWs, p2: ws, mode: 'tournament', bracket: bracket);
+                  room.state = 'playing';
+                  room.p1Id = oppSession?.id ?? 'p1';
+                  room.p1Name = oppSession?.name ?? 'Cơ Thủ 1';
+                  room.p1Level = oppSession?.level ?? 1;
+                  room.p1Coins = oppSession?.coins ?? 1000;
+                  room.p1CueId = oppSession?.cueId ?? 'standard_cue';
+                  room.p1CueLevel = oppSession?.cueLevel ?? 1;
+                  room.p2Id = session.id;
+                  room.p2Name = session.name;
+                  room.p2Level = session.level;
+                  room.p2Coins = session.coins;
+                  room.p2CueId = session.cueId;
+                  room.p2CueLevel = session.cueLevel;
+                  rooms[code] = room;
+
+                  if (oppSession != null) {
+                    oppSession.roomId = code;
+                    oppSession.role = 'p1';
+                  }
+                  session.roomId = code;
+                  session.role = 'p2';
+
+                  sendJson(oppWs, {
+                    'type': 'match_found',
+                    'roomId': code,
+                    'role': 'host',
+                    'mode': 'tournament',
+                    'bracket': bracket,
+                    'opponentName': session.name,
+                    'opponentLevel': session.level,
+                    'opponentCoins': session.coins,
+                    'opponentCueId': session.cueId,
+                    'opponentCueLevel': session.cueLevel,
+                    'firstTurn': 1,
+                  });
+                  sendJson(ws, {
+                    'type': 'match_found',
+                    'roomId': code,
+                    'role': 'client',
+                    'mode': 'tournament',
+                    'bracket': bracket,
+                    'opponentName': oppSession?.name ?? 'Đối thủ',
+                    'opponentLevel': oppSession?.level ?? 1,
+                    'opponentCoins': oppSession?.coins ?? 1000,
+                    'opponentCueId': oppSession?.cueId ?? 'standard_cue',
+                    'opponentCueLevel': oppSession?.cueLevel ?? 1,
+                    'firstTurn': 1,
+                  });
+                } else {
+                  tournamentQueue.add(ws);
+                  sendJson(ws, {
+                    'type': 'matchmaking_waiting',
+                    'mode': 'tournament',
+                    'bracket': bracket,
+                    'message': 'Đang tìm đối thủ giải đấu Tournament...',
+                  });
                 }
                 break;
 
               case 'cancel_matchmaking':
                 matchmakingQueue.remove(ws);
+                tournamentQueue.remove(ws);
                 sendJson(ws, {'type': 'matchmaking_cancelled'});
                 break;
 
@@ -191,11 +345,23 @@ void main(List<String> args) async {
                         'type': 'reconnected_success',
                         'roomId': room.id,
                         'role': session.role,
+                        'mode': room.mode,
+                        'bracket': room.bracket,
                         'opponentName': session.role == 'p1' ? room.p2Name : room.p1Name,
                         'opponentLevel': session.role == 'p1' ? room.p2Level : room.p1Level,
                         'opponentCoins': session.role == 'p1' ? room.p2Coins : room.p1Coins,
+                        'opponentCueId': session.role == 'p1' ? room.p2CueId : room.p1CueId,
+                        'opponentCueLevel': session.role == 'p1' ? room.p2CueLevel : room.p1CueLevel,
                         'lastBalls': room.lastBalls,
+                        'cueBall': room.lastCueBall,
                         'currentTurn': room.currentTurn,
+                        'ballInHand': room.ballInHand,
+                        'p1Group': room.p1Group,
+                        'p2Group': room.p2Group,
+                        'breakShot': room.breakShot,
+                        'rackOver': room.rackOver,
+                        'winningPlayer': room.winningPlayer,
+                        'ruleMessage': room.ruleMessage,
                       });
 
                       final opp = session.role == 'p1' ? room.p2 : room.p1;
@@ -204,6 +370,7 @@ void main(List<String> args) async {
                           'type': 'opponent_reconnected',
                           'message': 'Đối thủ đã kết nối lại! Tiếp tục trận đấu.',
                         });
+                        sendJson(opp, {'type': 'request_sync_state'});
                       }
                       return;
                     }
@@ -237,6 +404,76 @@ void main(List<String> args) async {
                 if (session.roomId != null && rooms.containsKey(session.roomId)) {
                   final room = rooms[session.roomId]!;
                   room.lastBalls = json['balls'] as List<dynamic>?;
+                  if (json['cueBall'] != null) {
+                    room.lastCueBall = json['cueBall'] as Map<String, dynamic>?;
+                  }
+                  if (json['ballInHand'] != null) {
+                    room.ballInHand = json['ballInHand'] == true;
+                  }
+                  final target = ws == room.p1 ? room.p2 : room.p1;
+                  if (target != null) sendJson(target, json);
+                }
+                break;
+
+              case 'shot_result':
+                if (session.roomId != null && rooms.containsKey(session.roomId)) {
+                  final room = rooms[session.roomId]!;
+                  room.lastBalls = json['balls'] as List<dynamic>?;
+                  if (json['cueBall'] != null) {
+                    room.lastCueBall = json['cueBall'] as Map<String, dynamic>?;
+                  }
+                  if (json['nextTurn'] != null) {
+                    room.currentTurn = (json['nextTurn'] as num).toInt();
+                  }
+                  if (json['ballInHand'] != null) {
+                    room.ballInHand = json['ballInHand'] == true;
+                  }
+                  if (json['p1Group'] != null) room.p1Group = json['p1Group']?.toString();
+                  if (json['p2Group'] != null) room.p2Group = json['p2Group']?.toString();
+                  if (json['breakShot'] != null) room.breakShot = json['breakShot'] == true;
+                  if (json['rackOver'] != null) room.rackOver = json['rackOver'] == true;
+                  if (json['winningPlayer'] != null) {
+                    room.winningPlayer = (json['winningPlayer'] as num?)?.toInt();
+                  }
+                  if (json['ruleMessage'] != null) {
+                    room.ruleMessage = json['ruleMessage']?.toString();
+                  }
+                  final target = ws == room.p1 ? room.p2 : room.p1;
+                  if (target != null) sendJson(target, json);
+                }
+                break;
+
+              case 'shoot':
+                if (session.roomId != null && rooms.containsKey(session.roomId)) {
+                  final room = rooms[session.roomId]!;
+                  if (json['balls'] != null) {
+                    room.lastBalls = json['balls'] as List<dynamic>?;
+                  }
+                  if (json['cueBall'] != null) {
+                    room.lastCueBall = json['cueBall'] as Map<String, dynamic>?;
+                  }
+                  final target = ws == room.p1 ? room.p2 : room.p1;
+                  if (target != null) sendJson(target, json);
+                }
+                break;
+
+              case 'ball_in_hand':
+                if (session.roomId != null && rooms.containsKey(session.roomId)) {
+                  final room = rooms[session.roomId]!;
+                  if (json['nx'] != null && json['ny'] != null) {
+                    room.lastCueBall = {'nx': json['nx'], 'ny': json['ny'], 'sunk': false};
+                  }
+                  if (json['placed'] != null) {
+                    room.ballInHand = json['placed'] != true;
+                  }
+                  final target = ws == room.p1 ? room.p2 : room.p1;
+                  if (target != null) sendJson(target, json);
+                }
+                break;
+
+              case 'request_sync_state':
+                if (session.roomId != null && rooms.containsKey(session.roomId)) {
+                  final room = rooms[session.roomId]!;
                   final target = ws == room.p1 ? room.p2 : room.p1;
                   if (target != null) sendJson(target, json);
                 }
@@ -244,8 +481,6 @@ void main(List<String> args) async {
 
               case 'aim':
               case 'spin':
-              case 'shoot':
-              case 'ball_in_hand':
               case 'restart':
               case 'player_info':
               case 'chat':
@@ -264,6 +499,7 @@ void main(List<String> args) async {
         },
         onDone: () {
           matchmakingQueue.remove(ws);
+          tournamentQueue.remove(ws);
           if (session.roomId != null && rooms.containsKey(session.roomId)) {
             final room = rooms[session.roomId]!;
             if (room.state == 'playing') {
@@ -280,21 +516,21 @@ void main(List<String> args) async {
                 sendJson(target, {
                   'type': 'opponent_disconnected',
                   'message': 'Đối thủ bị mất kết nối tạm thời! Trận đấu vẫn diễn ra theo thời gian thực.',
-                  'graceSeconds': 120,
+                  'graceSeconds': 180,
                 });
               }
-              print('[Disconnect] Client ${session.name} ngắt kết nối. Phòng #${room.id} tiếp tục chạy theo thời gian thực (chờ reconnect 120s)...');
+              print('[Disconnect] Client ${session.name} ngắt kết nối. Phòng #${room.id} tiếp tục chạy theo thời gian thực (chờ reconnect 180s)...');
 
-              // Bắt đầu đếm ngược 120s nếu không reconnect
+              // Bắt đầu đếm ngược 180s nếu không reconnect
               room.disconnectTimer?.cancel();
-              room.disconnectTimer = Timer(const Duration(seconds: 120), () {
+              room.disconnectTimer = Timer(const Duration(seconds: 180), () {
                 if (rooms.containsKey(room.id)) {
                   final activeOpp = isP1 ? room.p2 : room.p1;
                   if (activeOpp != null) {
                     sendJson(activeOpp, {
                       'type': 'opponent_forfeited',
                       'winnerRole': isP1 ? 'p2' : 'p1',
-                      'message': 'Đối thủ không kết nối lại sau 120s. Bạn giành chiến thắng!',
+                      'message': 'Đối thủ không kết nối lại sau 180s. Bạn giành chiến thắng!',
                     });
                   }
                   rooms.remove(room.id);
@@ -339,6 +575,8 @@ class ClientSession {
   String name = 'Cơ Thủ';
   int level = 1;
   int coins = 1000;
+  String cueId = 'standard_cue';
+  int cueLevel = 1;
   String? roomId;
   String? role;
 
@@ -357,17 +595,34 @@ class Room {
   int p2Level = 1;
   int p1Coins = 1000;
   int p2Coins = 1000;
+  String p1CueId = 'standard_cue';
+  int p1CueLevel = 1;
+  String p2CueId = 'standard_cue';
+  int p2CueLevel = 1;
   String state = 'waiting';
   DateTime createdAt;
   DateTime? p1DisconnectedAt;
   DateTime? p2DisconnectedAt;
   Timer? disconnectTimer;
   List<dynamic>? lastBalls;
+  Map<String, dynamic>? lastCueBall;
   int currentTurn = 1;
+  bool ballInHand = false;
+  String? p1Group;
+  String? p2Group;
+  bool breakShot = true;
+  bool rackOver = false;
+  int? winningPlayer;
+  String? ruleMessage;
+
+  String mode = '1v1';
+  int bracket = 1;
 
   Room({
     required this.id,
     required this.p1,
     this.p2,
+    this.mode = '1v1',
+    this.bracket = 1,
   }) : createdAt = DateTime.now();
 }

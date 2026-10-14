@@ -230,35 +230,70 @@ class DailyPuzzleDialog extends StatelessWidget {
                   width: double.infinity,
                   height: compact ? 42 : 46,
                   child: isCompleted
-                      ? Container(
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.white10,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(0xFF00E676).withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.check_circle,
-                                color: Color(0xFF00E676),
-                                size: 18,
+                      ? Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white10,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: const Color(0xFF00E676).withValues(alpha: 0.5),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Color(0xFF00E676),
+                                      size: 16,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Flexible(
+                                      child: Text(
+                                        'ĐÃ HOÀN THÀNH HÔM NAY',
+                                        style: TextStyle(
+                                          color: Color(0xFF00E676),
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 11,
+                                          letterSpacing: 0.4,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                              SizedBox(width: 8),
-                              Text(
-                                'ĐÃ HOÀN THÀNH HÔM NAY • HẸN GẶP LẠI NGÀY MAI!',
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton.icon(
+                              onPressed: () {
+                                Navigator.of(context).pop();
+                                onStartPuzzle(puzzle);
+                              },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: const Color(0xFF00E676),
+                                foregroundColor: const Color(0xFF071F14),
+                                elevation: 2,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              icon: const Icon(Icons.replay, size: 18),
+                              label: const Text(
+                                'LUYỆN TẬP LẠI',
                                 style: TextStyle(
-                                  color: Color(0xFF00E676),
                                   fontWeight: FontWeight.w900,
                                   fontSize: 12,
                                   letterSpacing: 0.5,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         )
                       : FilledButton.icon(
                           onPressed: () {

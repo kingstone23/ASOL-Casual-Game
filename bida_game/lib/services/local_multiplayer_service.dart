@@ -49,6 +49,8 @@ class LocalMultiplayerService extends ChangeNotifier {
   String opponentName = '';
   int opponentLevel = 1;
   int opponentCoins = 1000;
+  String opponentCueId = 'standard_cue';
+  int opponentCueLevel = 1;
 
   // UDP Broadcast & Discovery
   RawDatagramSocket? _broadcastSocket;
@@ -310,6 +312,8 @@ class LocalMultiplayerService extends ChangeNotifier {
             opponentName = (data['name'] as String?)?.trim() ?? 'Đối thủ';
             opponentLevel = (data['level'] as num?)?.toInt() ?? 1;
             opponentCoins = (data['coins'] as num?)?.toInt() ?? 1000;
+            opponentCueId = (data['cueId'] as String?)?.trim() ?? 'standard_cue';
+            opponentCueLevel = (data['cueLevel'] as num?)?.toInt() ?? 1;
             notifyListeners();
           }
           onMessageReceived?.call(data);
@@ -340,12 +344,20 @@ class LocalMultiplayerService extends ChangeNotifier {
     }
   }
 
-  void sendPlayerInfo({String? name, int? level, int? coins}) {
+  void sendPlayerInfo({
+    String? name,
+    int? level,
+    int? coins,
+    String? cueId,
+    int? cueLevel,
+  }) {
     sendData({
       'type': 'player_info',
       'name': name ?? AuthService.instance.displayName,
       'level': level ?? ProgressionService.instance.playerLevel,
       'coins': coins ?? ProgressionService.instance.coins,
+      'cueId': cueId ?? ProgressionService.instance.equippedCue.id,
+      'cueLevel': cueLevel ?? ProgressionService.instance.equippedCueLevel,
     });
   }
 
@@ -388,6 +400,8 @@ class LocalMultiplayerService extends ChangeNotifier {
     opponentName = '';
     opponentLevel = 1;
     opponentCoins = 1000;
+    opponentCueId = 'standard_cue';
+    opponentCueLevel = 1;
     notifyListeners();
   }
 }

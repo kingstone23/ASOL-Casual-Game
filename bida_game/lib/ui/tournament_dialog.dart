@@ -1,14 +1,31 @@
 import 'package:flutter/material.dart';
 import '../models/tournament_model.dart';
+// import '../services/online_multiplayer_service.dart';
 import '../services/progression_service.dart';
 
-class TournamentDialog extends StatelessWidget {
+class TournamentDialog extends StatefulWidget {
   final void Function(TournamentBracketStage stage) onStartBracketMatch;
+  // final void Function(TournamentBracketStage stage, String roomId, bool isHost)? onStartBracketOnlineMatch;
 
   const TournamentDialog({
     super.key,
     required this.onStartBracketMatch,
+    // this.onStartBracketOnlineMatch,
   });
+
+  @override
+  State<TournamentDialog> createState() => _TournamentDialogState();
+}
+
+class _TournamentDialogState extends State<TournamentDialog> {
+  // TournamentBracketStage? _selectedStage;
+
+  @override
+  void initState() {
+    super.initState();
+    // // Chế độ Online đã được ẩn bằng // để ưu tiên offline thuần túy
+    // final service = OnlineMultiplayerService.instance;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,12 +35,12 @@ class TournamentDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
-        horizontal: isMobile ? 10 : 30,
-        vertical: isMobile ? 10 : 20,
+        horizontal: isMobile ? 8 : 28,
+        vertical: isMobile ? 8 : 18,
       ),
       child: Container(
         width: 860,
-        height: screenSize.height * 0.90,
+        height: screenSize.height * 0.92,
         decoration: BoxDecoration(
           color: const Color(0xFF0D1D17),
           borderRadius: BorderRadius.circular(22),
@@ -38,7 +55,7 @@ class TournamentDialog extends StatelessWidget {
         ),
         child: Column(
           children: [
-            // Header
+            // Header Giải Đấu Offline Vô Địch 6 Brackets
             _buildHeader(context),
 
             // Grand Champion Reward Banner
@@ -49,7 +66,7 @@ class TournamentDialog extends StatelessWidget {
               child: ListenableBuilder(
                 listenable: ProgressionService.instance,
                 builder: (context, _) {
-                  return _buildBracketLadder(context);
+                  return _buildBracketLadder(context, isMobile);
                 },
               ),
             ),
@@ -60,8 +77,10 @@ class TournamentDialog extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) {
+    // final serverUrl = service.lastConnectedUrl ?? OnlineMultiplayerService.realPhoneDefaultUrl;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1B3D30), Color(0xFF10261E)],
@@ -79,32 +98,100 @@ class TournamentDialog extends StatelessWidget {
                 colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)],
               ),
             ),
-            child: const Icon(Icons.emoji_events, color: Colors.black87, size: 22),
+            child: const Icon(Icons.emoji_events, color: Colors.black87, size: 20),
           ),
-          const SizedBox(width: 12),
-          const Expanded(
+          const SizedBox(width: 10),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'GIẢI ĐẤU VÔ ĐỊCH 6 BRACKETS (TOURNAMENT)',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
-                    fontSize: 15,
-                    letterSpacing: 1.2,
+                    fontSize: 13.5,
+                    letterSpacing: 1.1,
                   ),
                 ),
-                Text(
-                  'Vượt qua 6 vòng đấu tử thần • Giành Cúp Vàng Quán Quân, EXP & Thành Tựu!',
-                  style: TextStyle(color: Color(0xFFFFD54F), fontSize: 11),
+                const SizedBox(height: 2),
+                const Text(
+                  '6 Vòng Đấu Trực Tiếp • Thử Thách Cúp Vô Địch',
+                  style: TextStyle(
+                    color: Color(0xFFFFD54F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
+                // Row(
+                //   children: [
+                //     Container(
+                //       width: 7,
+                //       height: 7,
+                //       decoration: BoxDecoration(
+                //         shape: BoxShape.circle,
+                //         color: service.isConnected ? const Color(0xFF00E676) : Colors.orangeAccent,
+                //       ),
+                //     ),
+                //     const SizedBox(width: 5),
+                //     Expanded(
+                //       child: Text(
+                //         service.isConnected
+                //             ? 'Cổng ĐT thật kết nối sẵn: $serverUrl'
+                //             : 'Đang kết nối cổng điện thoại thật ($serverUrl)...',
+                //         style: TextStyle(
+                //           color: service.isConnected ? const Color(0xFF00E676) : Colors.orangeAccent,
+                //           fontSize: 10,
+                //           fontWeight: FontWeight.bold,
+                //         ),
+                //         overflow: TextOverflow.ellipsis,
+                //       ),
+                //     ),
+                //   ],
+                // ),
               ],
             ),
           ),
+          ListenableBuilder(
+            listenable: ProgressionService.instance,
+            builder: (context, _) {
+              if (ProgressionService.instance.currentTournamentBracket <= 1) {
+                return const SizedBox.shrink();
+              }
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: TextButton.icon(
+                  onPressed: () {
+                    ProgressionService.instance.resetTournament();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🔄 Đã làm mới giải đấu về Vòng 1!'),
+                        backgroundColor: Color(0xFFC77700),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.restart_alt, size: 14, color: Color(0xFFFFD54F)),
+                  label: const Text(
+                    'LÀM MỚI',
+                    style: TextStyle(
+                      color: Color(0xFFFFD54F),
+                      fontSize: 10.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white10,
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close, color: Colors.white70),
+            icon: const Icon(Icons.close, color: Colors.white70, size: 20),
             tooltip: 'Đóng',
           ),
         ],
@@ -114,8 +201,8 @@ class TournamentDialog extends StatelessWidget {
 
   Widget _buildChampionBanner() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [Color(0xFF5D4037), Color(0xFF2E1C14)],
@@ -125,8 +212,8 @@ class TournamentDialog extends StatelessWidget {
       ),
       child: const Row(
         children: [
-          Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 28),
-          SizedBox(width: 10),
+          Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 26),
+          SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,13 +223,13 @@ class TournamentDialog extends StatelessWidget {
                   style: TextStyle(
                     color: Color(0xFFFFD54F),
                     fontWeight: FontWeight.w900,
-                    fontSize: 11.5,
+                    fontSize: 11,
                   ),
                 ),
                 SizedBox(height: 2),
                 Text(
                   '+15.000 Vàng • +2.500 EXP • Cúp Quán Quân Tournament • Thành Tựu Vua Giải Đấu!',
-                  style: TextStyle(color: Colors.white, fontSize: 11),
+                  style: TextStyle(color: Colors.white, fontSize: 10.5),
                 ),
               ],
             ),
@@ -152,14 +239,14 @@ class TournamentDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildBracketLadder(BuildContext context) {
+  Widget _buildBracketLadder(BuildContext context, bool isMobile) {
     final currentBracket = ProgressionService.instance.currentTournamentBracket;
     final brackets = TournamentCatalog.brackets;
 
     return ListView.separated(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       itemCount: brackets.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final stage = brackets[index];
         final isPassed = stage.bracketNumber < currentBracket;
@@ -182,7 +269,7 @@ class TournamentDialog extends StatelessWidget {
             boxShadow: isCurrent
                 ? [
                     BoxShadow(
-                      color: Colors.amber.withValues(alpha: 0.3),
+                      color: Colors.amber.withValues(alpha: 0.25),
                       blurRadius: 10,
                       offset: const Offset(0, 2),
                     ),
@@ -190,13 +277,13 @@ class TournamentDialog extends StatelessWidget {
                 : null,
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(10),
             child: Row(
               children: [
                 // Bracket Badge Number
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 44,
+                  height: 44,
                   decoration: BoxDecoration(
                     gradient: isPassed
                         ? const LinearGradient(colors: [Color(0xFF00E676), Color(0xFF00B0FF)])
@@ -208,22 +295,22 @@ class TournamentDialog extends StatelessWidget {
                   ),
                   child: Center(
                     child: isPassed
-                        ? const Icon(Icons.check, color: Colors.black, size: 26)
+                        ? const Icon(Icons.check, color: Colors.black, size: 24)
                         : (isLocked
-                            ? const Icon(Icons.lock, color: Colors.white38, size: 22)
+                            ? const Icon(Icons.lock, color: Colors.white38, size: 20)
                             : (isFinal
-                                ? const Icon(Icons.emoji_events, color: Colors.black87, size: 26)
+                                ? const Icon(Icons.emoji_events, color: Colors.black87, size: 24)
                                 : Text(
                                     '${stage.bracketNumber}',
                                     style: const TextStyle(
                                       color: Colors.black87,
                                       fontWeight: FontWeight.w900,
-                                      fontSize: 20,
+                                      fontSize: 18,
                                     ),
                                   ))),
                   ),
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 12),
 
                 // Info: Title, Round Name, Opponent, Rewards
                 Expanded(
@@ -233,7 +320,7 @@ class TournamentDialog extends StatelessWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: isFinal
                                   ? Colors.amber.withValues(alpha: 0.25)
@@ -244,45 +331,45 @@ class TournamentDialog extends StatelessWidget {
                               'BRACKET ${stage.bracketNumber} • ${stage.roundName}',
                               style: TextStyle(
                                 color: isFinal ? const Color(0xFFFFD54F) : Colors.tealAccent,
-                                fontSize: 9.5,
+                                fontSize: 9,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           if (isFinal) ...[
                             const Text(
                               '👑 TRẬN TRANH CÚP VÔ ĐỊCH',
                               style: TextStyle(
                                 color: Color(0xFFFFD54F),
                                 fontWeight: FontWeight.w900,
-                                fontSize: 10,
+                                fontSize: 9.5,
                               ),
                             ),
                           ],
                         ],
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 2),
                       Text(
                         stage.title,
                         style: TextStyle(
                           color: isLocked ? Colors.white54 : Colors.white,
-                          fontSize: 14,
+                          fontSize: 13,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Row(
                         children: [
-                          const Icon(Icons.sports_esports, color: Colors.white60, size: 14),
+                          const Icon(Icons.sports_esports, color: Colors.white60, size: 13),
                           const SizedBox(width: 4),
                           Text(
                             'Đối thủ: ${stage.opponentName} (Lv.${stage.opponentLevel}) • ${stage.opponentCue.name}',
-                            style: const TextStyle(color: Colors.white70, fontSize: 11),
+                            style: const TextStyle(color: Colors.white70, fontSize: 10.5),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       // Rewards Row
                       Wrap(
                         spacing: 8,
@@ -290,14 +377,14 @@ class TournamentDialog extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.monetization_on, color: Color(0xFFFFD54F), size: 13),
+                              const Icon(Icons.monetization_on, color: Color(0xFFFFD54F), size: 12),
                               const SizedBox(width: 3),
                               Text(
                                 '+${stage.coinReward} Vàng',
                                 style: const TextStyle(
                                   color: Color(0xFFFFD54F),
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 10.5,
+                                  fontSize: 10,
                                 ),
                               ),
                             ],
@@ -305,14 +392,14 @@ class TournamentDialog extends StatelessWidget {
                           Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.star, color: Colors.tealAccent, size: 13),
+                              const Icon(Icons.star, color: Colors.tealAccent, size: 12),
                               const SizedBox(width: 3),
                               Text(
                                 '+${stage.xpReward} EXP',
                                 style: const TextStyle(
                                   color: Colors.tealAccent,
                                   fontWeight: FontWeight.bold,
-                                  fontSize: 10.5,
+                                  fontSize: 10,
                                 ),
                               ),
                             ],
@@ -321,14 +408,14 @@ class TournamentDialog extends StatelessWidget {
                             Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                const Icon(Icons.workspace_premium, color: Color(0xFFFF4081), size: 13),
+                                const Icon(Icons.workspace_premium, color: Color(0xFFFF4081), size: 12),
                                 const SizedBox(width: 3),
                                 Text(
                                   isFinal ? '🏆 Cúp Quán Quân' : '🎖️ Huy Chương',
                                   style: const TextStyle(
                                     color: Color(0xFFFF4081),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 10.5,
+                                    fontSize: 10,
                                   ),
                                 ),
                               ],
@@ -339,73 +426,136 @@ class TournamentDialog extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
 
-                // Action Button
+                // Action Buttons for Current Bracket
                 if (isCurrent) ...[
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      onStartBracketMatch(stage);
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFB300),
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      elevation: 5,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(isFinal ? Icons.emoji_events : Icons.play_arrow, size: 18),
-                        const SizedBox(width: 4),
-                        Text(
-                          isFinal ? 'TRANH CÚP' : 'VÀO TRẬN',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12,
-                          ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // // Nút 1: Đấu Phòng Online qua WebSocket cổng điện thoại thật
+                      // ElevatedButton(
+                      //   onPressed: () async {
+                      //     setState(() => _selectedStage = stage);
+                      //     if (!service.isConnected) {
+                      //       await service.connect();
+                      //     }
+                      //     if (service.isConnected) {
+                      //       service.startTournamentQuickMatch(stage.bracketNumber);
+                      //     }
+                      //   },
+                      //   style: ElevatedButton.styleFrom(
+                      //     backgroundColor: const Color(0xFF00B0FF),
+                      //     foregroundColor: Colors.white,
+                      //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      //     elevation: 3,
+                      //   ),
+                      //   child: const Row(
+                      //     mainAxisSize: MainAxisSize.min,
+                      //     children: [
+                      //       Icon(Icons.public, size: 13),
+                      //       SizedBox(width: 3),
+                      //       Text(
+                      //         'PHÒNG ONLINE',
+                      //         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
+                      // const SizedBox(height: 4),
+
+                      // Nút 2: Vào trận Offline (Đấu Bot)
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.onStartBracketMatch(stage);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFFFB300),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 3,
                         ),
-                      ],
-                    ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(isFinal ? Icons.emoji_events : Icons.smart_toy, size: 13),
+                            const SizedBox(width: 3),
+                            Text(
+                              isFinal ? 'TRANH CÚP' : 'ĐẤU VỚI BOT',
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ] else if (isPassed) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF00E676)),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.check_circle, color: Color(0xFF00E676), size: 15),
-                        SizedBox(width: 4),
-                        Text(
-                          'ĐÃ THẮNG',
-                          style: TextStyle(
-                            color: Color(0xFF00E676),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10.5,
-                          ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF00E676)),
                         ),
-                      ],
-                    ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, color: Color(0xFF00E676), size: 14),
+                            SizedBox(width: 4),
+                            Text(
+                              'ĐÃ THẮNG',
+                              style: TextStyle(
+                                color: Color(0xFF00E676),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          widget.onStartBracketMatch(stage);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white12,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          elevation: 1,
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.replay, size: 12),
+                            SizedBox(width: 3),
+                            Text(
+                              'ĐẤU LẠI',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 9.5),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ] else ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
                       color: Colors.white12,
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
                       'Khóa',
-                      style: TextStyle(color: Colors.white38, fontSize: 11),
+                      style: TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                   ),
                 ],
@@ -416,4 +566,130 @@ class TournamentDialog extends StatelessWidget {
       },
     );
   }
+
+  // Widget _buildMatchmakingView(OnlineMultiplayerService service) {
+  //   final bracket = service.tournamentBracket;
+  //   final serverUrl = service.lastConnectedUrl ?? OnlineMultiplayerService.realPhoneDefaultUrl;
+  //
+  //   return Center(
+  //     child: Container(
+  //       padding: const EdgeInsets.all(24),
+  //       margin: const EdgeInsets.all(24),
+  //       decoration: BoxDecoration(
+  //         color: Colors.black54,
+  //         borderRadius: BorderRadius.circular(20),
+  //         border: Border.all(color: const Color(0xFFFFD54F), width: 1.6),
+  //       ),
+  //       child: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           const SizedBox(
+  //             width: 46,
+  //             height: 46,
+  //             child: CircularProgressIndicator(color: Color(0xFFFFD54F), strokeWidth: 3.5),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           Text(
+  //             'ĐANG TÌM ĐỐI THỦ ONLINE CHO BRACKET $bracket...',
+  //             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 15),
+  //             textAlign: TextAlign.center,
+  //           ),
+  //           const SizedBox(height: 6),
+  //           Text(
+  //             'Cổng kết nối điện thoại thật: $serverUrl\nSẵn sàng thi đấu và giành quà Bracket $bracket!',
+  //             style: const TextStyle(color: Colors.white70, fontSize: 11),
+  //             textAlign: TextAlign.center,
+  //           ),
+  //           const SizedBox(height: 20),
+  //           ElevatedButton(
+  //             onPressed: () {
+  //               service.cancelQuickMatch();
+  //             },
+  //             style: ElevatedButton.styleFrom(
+  //               backgroundColor: const Color(0xFFC62828),
+  //               foregroundColor: Colors.white,
+  //               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+  //               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  //             ),
+  //             child: const Text('HỦY TÌM TRẬN', style: TextStyle(fontWeight: FontWeight.bold)),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+  //
+  // Widget _buildWaitingInRoomView(OnlineMultiplayerService service) {
+  //   final roomId = service.currentRoomId ?? '------';
+  //   final bracket = service.tournamentBracket;
+  //
+  //   return Center(
+  //     child: Container(
+  //       padding: const EdgeInsets.all(24),
+  //       margin: const EdgeInsets.all(24),
+  //       decoration: BoxDecoration(
+  //         color: const Color(0xFF261810),
+  //         borderRadius: BorderRadius.circular(20),
+  //         border: Border.all(color: const Color(0xFFFFD54F), width: 1.8),
+  //       ),
+  //       child: Column(
+  //         mainAxisSize: MainAxisSize.min,
+  //         children: [
+  //           const Icon(Icons.emoji_events, color: Color(0xFFFFD54F), size: 36),
+  //           const SizedBox(height: 8),
+  //           Text(
+  //             'PHÒNG TOURNAMENT BRACKET $bracket SẴN SÀNG!',
+  //             style: const TextStyle(color: Color(0xFFFFD54F), fontWeight: FontWeight.w900, fontSize: 16),
+  //           ),
+  //           const SizedBox(height: 6),
+  //           const Text(
+  //             'Chia sẻ mã PIN dưới đây cho đối thủ để cùng vào thi đấu:',
+  //             style: TextStyle(color: Colors.white70, fontSize: 11),
+  //           ),
+  //           const SizedBox(height: 14),
+  //           Container(
+  //             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+  //             decoration: BoxDecoration(
+  //               color: Colors.black54,
+  //               borderRadius: BorderRadius.circular(14),
+  //               border: Border.all(color: const Color(0xFFFFD54F), width: 1.5),
+  //             ),
+  //             child: Text(
+  //               roomId,
+  //               style: const TextStyle(
+  //                 color: Color(0xFFFFD54F),
+  //                 fontWeight: FontWeight.w900,
+  //                 fontSize: 28,
+  //                 letterSpacing: 4.0,
+  //               ),
+  //             ),
+  //           ),
+  //           const SizedBox(height: 16),
+  //           const Row(
+  //             mainAxisAlignment: MainAxisAlignment.center,
+  //             children: [
+  //               SizedBox(
+  //                 width: 14,
+  //                 height: 14,
+  //                 child: CircularProgressIndicator(color: Colors.amber, strokeWidth: 2),
+  //               ),
+  //               SizedBox(width: 8),
+  //               Text(
+  //                 'Đang chờ đối thủ nhập mã...',
+  //                 style: TextStyle(color: Colors.amber, fontSize: 11),
+  //               ),
+  //             ],
+  //           ),
+  //           const SizedBox(height: 16),
+  //           TextButton(
+  //             onPressed: () {
+  //               service.disconnect();
+  //             },
+  //             child: const Text('Hủy & Rời Phòng', style: TextStyle(color: Colors.redAccent)),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 }

@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../main.dart';
 import '../models/cue_model.dart';
 import '../services/progression_service.dart';
+import '../services/online_multiplayer_service.dart';
+import '../services/local_multiplayer_service.dart';
 
 /// Widget Thanh Chỉnh Cơ Kéo Xuống Dạng Con Nhộng (Capsule Cue Slider)
 /// Thiết kế chuẩn phong cách 8 Ball Pool kinh điển:
@@ -102,9 +104,16 @@ class _CuePowerSliderControlState extends State<CuePowerSliderControl> {
 
     return SizedBox(
       width: controlWidth,
-      child: ValueListenableBuilder<double>(
-        valueListenable: widget.game.shotPower,
-        builder: (context, power, _) {
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          widget.game.shotPower,
+          widget.game.currentTurn,
+          ProgressionService.instance,
+          OnlineMultiplayerService.instance,
+          LocalMultiplayerService.instance,
+        ]),
+        builder: (context, _) {
+          final power = widget.game.shotPower.value;
           final ratio = ((power - 0.05) / 0.95).clamp(0.0, 1.0);
           final displayPercent = ratio <= 0.04 ? 0 : (ratio * 100).round();
 
@@ -297,8 +306,7 @@ class _CuePowerSliderControlState extends State<CuePowerSliderControl> {
 
   /// Widget vẽ Cây Gậy Cơ 3D chân thực: Đầu lơ xanh vòm cong, phíp trắng, thân gỗ phong vàng óng
   Widget _buildCapsuleCueStick(double capsuleWidth, double trackHeight) {
-    final cue = ProgressionService.instance.equippedCue;
-    final level = ProgressionService.instance.equippedCueLevel;
+    final (cue, level) = widget.game.getActivePlayerCue();
 
     return CustomPaint(
       size: Size(capsuleWidth, trackHeight),

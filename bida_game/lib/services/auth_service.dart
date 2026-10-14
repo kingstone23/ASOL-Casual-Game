@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -10,6 +11,27 @@ class AuthService extends ChangeNotifier {
   static final AuthService instance = AuthService._internal();
 
   AuthService._internal();
+
+  /// Kiểm tra xem thiết bị có kết nối Internet (WiFi hoặc 4G/5G) hay không
+  static Future<bool> hasNetworkConnection() async {
+    if (kIsWeb) return true;
+    try {
+      final lookup = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(milliseconds: 1500));
+      if (lookup.isNotEmpty && lookup[0].rawAddress.isNotEmpty) {
+        return true;
+      }
+    } catch (_) {
+      try {
+        final lookup2 = await InternetAddress.lookup('cloudflare.com')
+            .timeout(const Duration(milliseconds: 1500));
+        return lookup2.isNotEmpty && lookup2[0].rawAddress.isNotEmpty;
+      } catch (_) {
+        return false;
+      }
+    }
+    return false;
+  }
 
   bool get _isFirebaseReady {
     try {
@@ -86,7 +108,10 @@ class AuthService extends ChangeNotifier {
       }
     });
 
-    if (!_isFirebaseReady || _auth == null) return;
+    // Không tự động đăng nhập ngầm để người chơi luôn thấy bảng đăng nhập lúc mở game
+    if (!_isFirebaseReady || _auth == null) {
+      return;
+    }
     _currentUser = _auth!.currentUser;
     if (_currentUser != null) {
       _isGuest = _currentUser!.isAnonymous;
@@ -321,6 +346,10 @@ class AuthService extends ChangeNotifier {
 
       final user = credential.user;
       if (user != null) {
+        // Tắt cờ khách và cho phép lưu tiến trình vào bộ nhớ / cloud
+        ProgressionService.instance.isGuestSession = false;
+        await ProgressionService.instance.init();
+
         if (isLoggingAdmin) {
           _role = 'admin';
           _displayName = _displayName ?? user.displayName ?? 'Quản Trị Viên (Admin)';
@@ -355,38 +384,23 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Đăng nhập chế độ Chơi Ngay (Khách)
+  /// Đăng nhập chế độ Chơi Ngay (Khách / Offline)
+  /// Không cần mạng, không lưu tiến trình
   Future<String?> loginAsGuest() async {
     _isLoading = true;
     notifyListeners();
 
     try {
-      if (_isFirebaseReady && _auth != null) {
-        try {
-          final credential = await _auth!.signInAnonymously();
-          final user = credential.user;
-          if (user != null) {
-            _currentUser = user;
-            _isGuest = true;
-            _displayName = 'Cơ Thủ #${math.Random().nextInt(9000) + 1000}';
-            _role = 'player';
-            try {
-              await user.updateDisplayName(_displayName);
-            } catch (_) {}
-            _isLoading = false;
-            notifyListeners();
-            return null;
-          }
-        } catch (anonErr) {
-          debugPrint('Firebase anonymous login note: $anonErr (using local guest mode)');
-        }
-      }
-
-      // Guest mode offline / fallback
+      // Chế độ Khách (Guest / Offline) thuần túy
       _isGuest = true;
       _currentUser = null;
-      _displayName = 'Cơ Thủ #${math.Random().nextInt(9000) + 1000}';
+      _displayName = 'Cơ Thủ Khách #${math.Random().nextInt(9000) + 1000}';
       _role = 'player';
+
+      // Kích hoạt cờ không lưu tiến trình trong ProgressionService
+      ProgressionService.instance.isGuestSession = true;
+      ProgressionService.instance.resetToDefault(save: false);
+
       _isLoading = false;
       notifyListeners();
       return null;
@@ -406,13 +420,14 @@ class AuthService extends ChangeNotifier {
     _displayName = null;
     _role = 'player';
     _isGuest = false;
-    ProgressionService.instance.resetToDefault();
+    ProgressionService.instance.isGuestSession = false;
+    ProgressionService.instance.resetToDefault(save: false);
     notifyListeners();
   }
 
   /// Đồng bộ level, coins, số trận thắng lên Realtime Database (nhánh ranking)
   Future<void> syncCurrentPlayerStats() async {
-    if (!isLoggedIn || _currentUser == null || _database == null) return;
+    if (!isLoggedIn || _isGuest || _currentUser == null || _database == null) return;
     try {
       final uid = _currentUser!.uid;
       final rankingRef = _database!.ref('ranking/$uid');

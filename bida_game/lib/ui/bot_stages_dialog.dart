@@ -61,7 +61,7 @@ class BotStagesDialog extends StatelessWidget {
                         const Icon(Icons.military_tech, color: Color(0xFFFFD54F), size: 26),
                         const SizedBox(width: 8),
                         const Text(
-                          '7 ẢI THỬ THÁCH BOT (THEO CẤP GẬY CƠ)',
+                          '10 ẢI THỬ THÁCH BOT (THEO CẤP ĐỘ)',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -77,7 +77,7 @@ class BotStagesDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'Tiến độ: ${service.completedBotStages.length} / 7 ải',
+                            'Tiến độ: ${service.completedBotStages.length} / ${stages.length} ải',
                             style: const TextStyle(
                               color: Color(0xFF69F0AE),
                               fontSize: 12,
@@ -164,7 +164,10 @@ class BotStagesDialog extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
                                         Text(
                                           stage.title,
@@ -174,7 +177,22 @@ class BotStagesDialog extends StatelessWidget {
                                             fontSize: 14,
                                           ),
                                         ),
-                                        const SizedBox(width: 8),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFD54F).withValues(alpha: 0.15),
+                                            borderRadius: BorderRadius.circular(6),
+                                            border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.4), width: 0.8),
+                                          ),
+                                          child: Text(
+                                            stage.tierName,
+                                            style: const TextStyle(
+                                              color: Color(0xFFFFD54F),
+                                              fontSize: 9.5,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                           decoration: BoxDecoration(
@@ -191,7 +209,6 @@ class BotStagesDialog extends StatelessWidget {
                                           ),
                                         ),
                                         if (isCompleted) ...[
-                                          const SizedBox(width: 6),
                                           const Text(
                                             '★ ĐÃ VƯỢT',
                                             style: TextStyle(
@@ -213,7 +230,10 @@ class BotStagesDialog extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     // Phần thưởng lần đầu
-                                    Row(
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 2,
+                                      crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
                                         const Text(
                                           'Quà lần đầu: ',
@@ -227,7 +247,6 @@ class BotStagesDialog extends StatelessWidget {
                                             fontSize: 10,
                                           ),
                                         ),
-                                        const SizedBox(width: 6),
                                         Text(
                                           '+${stage.firstClearXP} XP',
                                           style: const TextStyle(
@@ -237,7 +256,6 @@ class BotStagesDialog extends StatelessWidget {
                                           ),
                                         ),
                                         if (stage.firstClearDiamonds > 0) ...[
-                                          const SizedBox(width: 6),
                                           Text(
                                             '+${stage.firstClearDiamonds} 💎',
                                             style: const TextStyle(

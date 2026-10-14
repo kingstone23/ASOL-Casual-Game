@@ -31,6 +31,12 @@ class _AuthScreenState extends State<AuthScreen> {
   bool _obscureRegPass = true;
 
   @override
+  void initState() {
+    super.initState();
+    // Luôn giữ bảng đăng nhập hiển thị khi mới mở game để người chơi lựa chọn
+  }
+
+  @override
   void dispose() {
     _loginAccountController.dispose();
     _loginPasswordController.dispose();
@@ -283,7 +289,7 @@ class _AuthScreenState extends State<AuthScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
                       Text(
-                        'CHƠI NGAY (KHÁCH)',
+                        'CHƠI KHÁCH (OFFLINE)',
                         style: TextStyle(
                           color: Color(0xFF00E676),
                           fontWeight: FontWeight.w900,
@@ -292,9 +298,9 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       Text(
-                        'Vào bàn ngay tức thì, không cần đăng ký',
+                        'Không cần mạng • Không lưu tiến trình',
                         style: TextStyle(
-                          color: Colors.white60,
+                          color: Colors.white70,
                           fontSize: 10,
                         ),
                       ),
@@ -585,6 +591,33 @@ class _AuthScreenState extends State<AuthScreen> {
                   ),
           ),
         ),
+        const SizedBox(height: 8),
+
+        // Nút Chơi Khách Offline phụ ngay trong Form đăng nhập
+        SizedBox(
+          height: 36,
+          child: OutlinedButton.icon(
+            onPressed: auth.isLoading ? null : _handleGuestLogin,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF00E676),
+              side: BorderSide(
+                color: const Color(0xFF00E676).withValues(alpha: 0.6),
+                width: 1.2,
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: EdgeInsets.zero,
+            ),
+            icon: const Icon(Icons.bolt, size: 16),
+            label: const Text(
+              'CHƠI KHÁCH OFFLINE (KHÔNG LƯU)',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                letterSpacing: 0.4,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -782,12 +815,12 @@ class _AuthScreenState extends State<AuthScreen> {
                 onPressed: auth.isLoading ? null : _handleGuestLogin,
                 icon: const Icon(Icons.bolt, color: Color(0xFF00E676), size: 18),
                 label: const Text(
-                  'HOẶC CHƠI NGAY DƯỚI DẠNG KHÁCH',
+                  'CHƠI KHÁCH OFFLINE (KHÔNG LƯU TIẾN TRÌNH)',
                   style: TextStyle(
                     color: Color(0xFF00E676),
                     fontWeight: FontWeight.bold,
-                    fontSize: 12,
-                    letterSpacing: 0.6,
+                    fontSize: 11.5,
+                    letterSpacing: 0.5,
                   ),
                 ),
               ),

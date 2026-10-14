@@ -81,14 +81,14 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                 labelColor: Colors.white,
                 unselectedLabelColor: Colors.white60,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                tabs: const [
+                tabs: [
                   Tab(
-                    icon: Icon(Icons.military_tech, size: 20),
-                    text: 'DANH SÁCH THÀNH TỰU (+XP)',
+                    icon: const Icon(Icons.military_tech, size: 20),
+                    text: isMobile ? 'THÀNH TỰU (+XP)' : 'DANH SÁCH THÀNH TỰU (+XP)',
                   ),
                   Tab(
-                    icon: Icon(Icons.workspace_premium, size: 20),
-                    text: 'KHO HUY CHƯƠNG (MAX 5 TRÊN PROFILE)',
+                    icon: const Icon(Icons.workspace_premium, size: 20),
+                    text: isMobile ? 'HUY CHƯƠNG' : 'KHO HUY CHƯƠNG (MAX 5 TRÊN PROFILE)',
                   ),
                 ],
               ),

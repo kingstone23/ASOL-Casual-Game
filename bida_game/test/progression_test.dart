@@ -5,12 +5,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:bida_game/models/cue_model.dart';
 import 'package:bida_game/models/bot_stage_model.dart';
 import 'package:bida_game/models/daily_puzzle_model.dart';
+import 'package:bida_game/models/legendary_trickshot_model.dart';
 import 'package:bida_game/services/progression_service.dart';
 import 'package:flame/game.dart';
 import 'package:bida_game/ui/player_profile_bar.dart';
 import 'package:bida_game/ui/cue_power_slider.dart';
 import 'package:bida_game/ui/aim_ruler_slider.dart';
 import 'package:bida_game/ui/cue_shop_dialog.dart';
+import 'package:bida_game/services/online_multiplayer_service.dart';
 import 'package:bida_game/main.dart';
 
 void main() {
@@ -59,25 +61,63 @@ void main() {
   });
 
   group('Bot Stage Campaign Catalog Tests', () {
-    test('BotStageCatalog contains 7 progressive stages', () {
+    test('BotStageCatalog contains 10 progressive stages across 4 tiers', () {
       final stages = BotStageCatalog.stages;
-      expect(stages.length, equals(7));
+      expect(stages.length, equals(10));
 
       final stage1 = stages[0];
-      final stage7 = stages[6];
+      final stage10 = stages[9];
 
       expect(stage1.stageNumber, equals(1));
-      expect(stage7.stageNumber, equals(7));
+      expect(stage1.tierName, contains('Đồng'));
+      expect(stage10.stageNumber, equals(10));
+      expect(stage10.tierName, contains('Kim Cương'));
 
-      // Stage 7 has higher accuracy than stage 1
-      expect(stage1.aimErrorRad, greaterThan(stage7.aimErrorRad));
-      expect(stage7.powerAccuracy, greaterThan(stage1.powerAccuracy));
+      // Stage 10 has higher accuracy than stage 1
+      expect(stage1.aimErrorRad, greaterThan(stage10.aimErrorRad));
+      expect(stage10.powerAccuracy, greaterThan(stage1.powerAccuracy));
 
       // High stages use advanced AI tricks
       expect(stage1.useSpin, isFalse);
-      expect(stage7.useSpin, isTrue);
-      expect(stage7.useSafetyShot, isTrue);
-      expect(stage7.useScratchPrevention, isTrue);
+      expect(stage10.useSpin, isTrue);
+      expect(stage10.useSafetyShot, isTrue);
+      expect(stage10.useScratchPrevention, isTrue);
+    });
+  });
+
+  group('Legendary Trickshot Master Tests', () {
+    test('Catalog contains 8 famous world trickshots with valid targets', () {
+      final shots = LegendaryTrickshotCatalog.trickshots;
+      expect(shots.length, equals(8));
+
+      // Contains legendary players
+      expect(shots.any((s) => s.playerName.contains('Efren')), isTrue);
+      expect(shots.any((s) => s.playerName.contains('Ronnie')), isTrue);
+      expect(shots.any((s) => s.playerName.contains('Shane')), isTrue);
+      expect(shots.any((s) => s.playerName.contains('Hoàng')), isTrue);
+      expect(shots.any((s) => s.playerName.contains('Florian')), isTrue);
+
+      for (final shot in shots) {
+        expect(shot.rewardCoins, greaterThan(0));
+        expect(shot.rewardXP, greaterThan(0));
+        expect(shot.balls.any((b) => b.ballNumber == shot.targetBallNumber), isTrue);
+        expect(shot.cueBallNormX, inInclusiveRange(0.05, 0.95));
+        expect(shot.cueBallNormY, inInclusiveRange(0.05, 0.95));
+      }
+    });
+
+    test('ProgressionService completes trickshot and records progress', () {
+      final service = ProgressionService.instance;
+      final shot = LegendaryTrickshotCatalog.trickshots.first;
+
+      expect(service.isTrickshotCompleted(shot.id), isFalse);
+      final initialCoins = service.coins;
+      final reward = service.completeLegendaryTrickshot(shot);
+
+      expect(service.isTrickshotCompleted(shot.id), isTrue);
+      expect(reward.earnedCoins, equals(shot.rewardCoins));
+      expect(reward.earnedXP, equals(shot.rewardXP));
+      expect(service.coins, greaterThanOrEqualTo(initialCoins + shot.rewardCoins));
     });
   });
 
@@ -383,10 +423,11 @@ void main() {
       expect(find.text('8 POOL BILLIARDS'), findsOneWidget);
       expect(find.text('CHOOSE YOUR MATCH'), findsOneWidget);
 
-      // Kiểm tra 4 nút chế độ cổ điển
+      // Kiểm tra các nút chế độ
       expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
+      expect(find.text('THẾ ĐÁNH HUYỀN THOẠI'), findsOneWidget);
       expect(find.text('ĐẤU MẠNG LOCAL'), findsOneWidget);
-      expect(find.text('7 ẢI THỬ THÁCH BOT'), findsOneWidget);
+      expect(find.text('10 ẢI THỬ THÁCH BOT'), findsOneWidget);
       expect(find.text('THẾ BI HÀNG NGÀY'), findsOneWidget);
 
       // Kiểm tra thanh người chơi
@@ -469,10 +510,92 @@ void main() {
       final buyButton = find.textContaining('MUA NGAY');
       expect(buyButton, findsOneWidget);
 
+      await tester.ensureVisible(buyButton);
+      await tester.pumpAndSettle();
       await tester.tap(buyButton);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(find.textContaining('Bạn không đủ Vàng để mua cây cơ này'), findsOneWidget);
+    });
+  });
+
+  group('Multiplayer Cue Synchronization Tests', () {
+    test('getActivePlayerCue dynamically displays active player cue on their turn', () {
+      ProgressionService.instance.applyAdminPrivileges();
+
+      final game = BilliardGame();
+      game.isOnlineMultiplayer.value = true;
+
+      // Giả lập Player 1 dùng cơ Titan Striker
+      ProgressionService.instance.equipCue('titan_striker');
+
+      // Giả lập Đối thủ dùng cơ Frostbite Lv 3
+      OnlineMultiplayerService.instance.opponentCueId = 'frostbite';
+      OnlineMultiplayerService.instance.opponentCueLevel = 3;
+
+      // 1. Góc nhìn của Host (Player 1):
+      OnlineMultiplayerService.instance.isHost = true;
+      // Khi đến lượt P1 (currentTurn = 1) -> Thấy cơ P1 (Titan Striker)
+      game.currentTurn.value = 1;
+      final (cueP1TurnHost, _) = game.getActivePlayerCue();
+      expect(cueP1TurnHost.id, equals('titan_striker'));
+
+      // Khi đến lượt P2 (currentTurn = 2) -> Host thấy cơ P2 (Frostbite Lv 3)
+      game.currentTurn.value = 2;
+      final (cueP2TurnHost, lvlP2TurnHost) = game.getActivePlayerCue();
+      expect(cueP2TurnHost.id, equals('frostbite'));
+      expect(lvlP2TurnHost, equals(3));
+
+      // 2. Góc nhìn của Guest (Player 2):
+      OnlineMultiplayerService.instance.isHost = false;
+      // Khi đến lượt P1 (currentTurn = 1) -> Guest thấy cơ P1 (Titan Striker Lv 5)
+      game.currentTurn.value = 1;
+      OnlineMultiplayerService.instance.opponentCueId = 'titan_striker';
+      OnlineMultiplayerService.instance.opponentCueLevel = 5;
+      final (cueP1TurnGuest, lvlP1TurnGuest) = game.getActivePlayerCue();
+      expect(cueP1TurnGuest.id, equals('titan_striker'));
+      expect(lvlP1TurnGuest, equals(5));
+
+      // Khi đến lượt P2 (currentTurn = 2) -> Guest thấy cơ mình trang bị
+      ProgressionService.instance.equipCue('frostbite');
+      game.currentTurn.value = 2;
+      final (cueP2TurnGuest, _) = game.getActivePlayerCue();
+      expect(cueP2TurnGuest.id, equals('frostbite'));
+    });
+  });
+
+  group('Online Multiplayer Real-Time Reconnection Tests', () {
+    test('resumeOnlineMultiplayer preserves live turn, ballInHand and groups without restart', () {
+      final game = BilliardGame();
+      game.playerGroups[1] = BallGroup.solids;
+      game.playerGroups[2] = BallGroup.stripes;
+      game.currentTurn.value = 2;
+      game.ballInHand = true;
+
+      // Giả lập kết nối lại phòng
+      final liveState = {
+        'lastBalls': [
+          {'num': 0, 'nx': 0.3, 'ny': 0.4, 'sunk': false},
+          {'num': 1, 'nx': 0.7, 'ny': 0.8, 'sunk': false},
+        ],
+        'cueBall': {'nx': 0.3, 'ny': 0.4, 'sunk': false},
+        'currentTurn': 2,
+        'ballInHand': true,
+        'p1Group': 'solids',
+        'p2Group': 'stripes',
+      };
+
+      game.resumeOnlineMultiplayer(
+        roomId: '123456',
+        isHost: true,
+        state: liveState,
+      );
+
+      expect(game.isOnlineMultiplayer.value, isTrue);
+      expect(game.currentTurn.value, equals(2));
+      expect(game.ballInHand, isTrue);
+      expect(game.playerGroups[1], equals(BallGroup.solids));
+      expect(game.playerGroups[2], equals(BallGroup.stripes));
     });
   });
 }

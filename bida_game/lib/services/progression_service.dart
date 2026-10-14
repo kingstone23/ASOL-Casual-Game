@@ -6,6 +6,7 @@ import '../models/bot_stage_model.dart';
 import '../models/daily_puzzle_model.dart';
 import '../models/achievement_model.dart';
 import '../models/tournament_model.dart';
+import '../models/legendary_trickshot_model.dart';
 
 class MatchRewardResult {
   final int earnedXP;
@@ -51,6 +52,9 @@ class ProgressionService extends ChangeNotifier {
   int _currentTournamentBracket = 1;
   int _tournamentWins = 0;
 
+  // Quản lý Chế Độ Luyện Tập Thế Đánh Huyền Thoại (Masters Trickshot)
+  final Set<String> _completedTrickshots = {};
+
   // Quản lý Thành Tựu & Huy Chương
   final Set<String> _unlockedAchievements = {};
   final Set<String> _claimedAchievements = {};
@@ -58,6 +62,7 @@ class ProgressionService extends ChangeNotifier {
   final List<String> _showcasedMedals = []; // Tối đa 5 huy chương hiển thị trên Profile
 
   bool _isInitialized = false;
+  bool isGuestSession = false; // Khi chơi Khách (Offline): không lưu tiến trình
 
   int get playerLevel => _playerLevel;
   int get currentXP => _currentXP;
@@ -75,6 +80,7 @@ class ProgressionService extends ChangeNotifier {
   Set<String> get claimedAchievements => Set.unmodifiable(_claimedAchievements);
   Set<String> get unlockedMedals => Set.unmodifiable(_unlockedMedals);
   List<String> get showcasedMedals => List.unmodifiable(_showcasedMedals);
+  Set<String> get completedTrickshots => Set.unmodifiable(_completedTrickshots);
   bool get isInitialized => _isInitialized;
 
   CueModel get equippedCue => CueCatalog.getById(_equippedCueId);
@@ -85,6 +91,7 @@ class ProgressionService extends ChangeNotifier {
 
   bool isBotStageUnlocked(int stageNumber) => stageNumber <= _unlockedBotStage;
   bool isBotStageCompleted(int stageNumber) => _completedBotStages.contains(stageNumber);
+  bool isTrickshotCompleted(String id) => _completedTrickshots.contains(id);
 
   bool isDailyPuzzleCompletedToday() {
     final now = DateTime.now();
@@ -136,6 +143,12 @@ class ProgressionService extends ChangeNotifier {
         _showcasedMedals.addAll(showList.take(5));
       }
 
+      final trickshotsList = prefs.getStringList('progression_completed_trickshots');
+      if (trickshotsList != null) {
+        _completedTrickshots.clear();
+        _completedTrickshots.addAll(trickshotsList);
+      }
+
       final ownedJson = prefs.getString('progression_owned_cues');
       if (ownedJson != null) {
         final decoded = jsonDecode(ownedJson) as Map<String, dynamic>;
@@ -160,6 +173,10 @@ class ProgressionService extends ChangeNotifier {
   }
 
   Future<void> _save() async {
+    if (isGuestSession) {
+      // Chế độ Khách (Guest / Offline): không lưu tiến trình vào bộ nhớ máy hay máy chủ
+      return;
+    }
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('progression_level', _playerLevel);
@@ -190,6 +207,10 @@ class ProgressionService extends ChangeNotifier {
       await prefs.setStringList(
         'progression_showcased_medals',
         _showcasedMedals.take(5).toList(),
+      );
+      await prefs.setStringList(
+        'progression_completed_trickshots',
+        _completedTrickshots.toList(),
       );
       if (_lastDailyPuzzleDateCompleted != null) {
         await prefs.setString('progression_last_daily_puzzle', _lastDailyPuzzleDateCompleted!);
@@ -237,9 +258,12 @@ class ProgressionService extends ChangeNotifier {
     _coins = 9999999;
     _diamonds = 99999;
     _totalWins = 999;
-    _unlockedBotStage = 7;
-    for (int i = 1; i <= 7; i++) {
+    _unlockedBotStage = 10;
+    for (int i = 1; i <= 10; i++) {
       _completedBotStages.add(i);
+    }
+    for (final shot in LegendaryTrickshotCatalog.trickshots) {
+      _completedTrickshots.add(shot.id);
     }
     for (final cue in CueCatalog.allCues) {
       _ownedCueLevels[cue.id] = 10;
@@ -293,8 +317,8 @@ class ProgressionService extends ChangeNotifier {
     }
   }
 
-  /// Đặt lại chỉ số về mặc định khi đăng xuất
-  void resetToDefault() {
+  /// Đặt lại chỉ số về mặc định khi đăng xuất hoặc vào chế độ Khách
+  void resetToDefault({bool save = true}) {
     _playerLevel = 1;
     _currentXP = 0;
     _coins = 1200;
@@ -305,8 +329,17 @@ class ProgressionService extends ChangeNotifier {
     _ownedCueLevels['standard_cue'] = 1;
     _unlockedBotStage = 1;
     _completedBotStages.clear();
+    _currentTournamentBracket = 1;
+    _tournamentWins = 0;
+    _completedTrickshots.clear();
     _lastDailyPuzzleDateCompleted = null;
-    _save();
+    _unlockedAchievements.clear();
+    _claimedAchievements.clear();
+    _unlockedMedals.clear();
+    _showcasedMedals.clear();
+    if (save && !isGuestSession) {
+      _save();
+    }
     notifyListeners();
   }
 
@@ -497,7 +530,7 @@ class ProgressionService extends ChangeNotifier {
     final isFirstClear = !_completedBotStages.contains(stage.stageNumber);
     if (isFirstClear) {
       _completedBotStages.add(stage.stageNumber);
-      if (stage.stageNumber == _unlockedBotStage && _unlockedBotStage < 7) {
+      if (stage.stageNumber == _unlockedBotStage && _unlockedBotStage < BotStageCatalog.stages.length) {
         _unlockedBotStage++;
       }
       if (stage.firstClearDiamonds > 0) {
@@ -524,6 +557,30 @@ class ProgressionService extends ChangeNotifier {
         coinsGained: (stage.firstClearCoins * 0.35).round(),
       );
     }
+  }
+
+  /// Trao thưởng khi hoàn thành Thế Đánh Huyền Thoại (Masters Trickshot)
+  MatchRewardResult completeLegendaryTrickshot(LegendaryTrickshotModel shot) {
+    final isFirstClear = !_completedTrickshots.contains(shot.id);
+    _completedTrickshots.add(shot.id);
+    final coins = isFirstClear ? shot.rewardCoins : (shot.rewardCoins * 0.35).round();
+    final xp = isFirstClear ? shot.rewardXP : (shot.rewardXP * 0.4).round();
+    final result = addXPAndCoins(
+      xpGained: xp,
+      coinsGained: coins,
+    );
+    _save();
+    return MatchRewardResult(
+      earnedXP: xp,
+      earnedCoins: coins,
+      didLevelUp: result.didLevelUp,
+      oldLevel: result.oldLevel,
+      newLevel: result.newLevel,
+      bonusDiamonds: result.bonusDiamonds,
+      customMessage: isFirstClear
+          ? 'CHINH PHỤC THẾ ĐÁNH CỦA ${shot.masterName.toUpperCase()}!'
+          : 'HOÀN THÀNH LUYỆN TẬP THẾ ĐÁNH ${shot.masterName.toUpperCase()}!',
+    );
   }
 
   /// Trao thưởng khi hoàn thành Nhiệm Vụ Thế Bi Hàng Ngày
