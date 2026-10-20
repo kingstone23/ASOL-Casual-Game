@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/daily_puzzle_model.dart';
+import '../services/language_service.dart';
 import '../services/progression_service.dart';
 
 class DailyPuzzleDialog extends StatelessWidget {
@@ -25,7 +26,13 @@ class DailyPuzzleDialog extends StatelessWidget {
         horizontal: compact ? 10 : 16,
         vertical: compact ? 6 : 12,
       ),
-      child: Container(
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          ProgressionService.instance,
+          LanguageService.instance,
+        ]),
+        builder: (context, _) {
+          return Container(
         constraints: BoxConstraints(
           maxWidth: isLandscape ? 680 : 440,
           maxHeight: math.min(screenHeight * 0.94, 480.0),
@@ -73,9 +80,9 @@ class DailyPuzzleDialog extends StatelessWidget {
                       size: 20,
                     ),
                     const SizedBox(width: 8),
-                    const Text(
-                      'NHIỆM VỤ THẾ BI HÀNG NGÀY',
-                      style: TextStyle(
+                    Text(
+                      'daily_puzzle_header'.tr,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
@@ -107,6 +114,7 @@ class DailyPuzzleDialog extends StatelessWidget {
                       icon: const Icon(Icons.close, color: Colors.white70, size: 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
+                      tooltip: 'close'.tr,
                     ),
                   ],
                 ),
@@ -143,9 +151,9 @@ class DailyPuzzleDialog extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'PHẦN THƯỞNG HOÀN THÀNH',
-                                    style: TextStyle(
+                                  Text(
+                                    'completion_reward'.tr,
+                                    style: const TextStyle(
                                       color: Color(0xFFFFD54F),
                                       fontSize: 11,
                                       fontWeight: FontWeight.w900,
@@ -162,18 +170,18 @@ class DailyPuzzleDialog extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(color: Colors.white10),
                                     ),
-                                    child: const Row(
+                                    child: Row(
                                       children: [
-                                        Icon(
+                                        const Icon(
                                           Icons.check_circle_outline,
                                           color: Color(0xFF69F0AE),
                                           size: 16,
                                         ),
-                                        SizedBox(width: 6),
+                                        const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
-                                            'Chỉ tính hoàn thành trong ngày • Làm mới vào 0h mỗi ngày.',
-                                            style: TextStyle(
+                                            'daily_reset_note'.tr,
+                                            style: const TextStyle(
                                               color: Colors.white70,
                                               fontSize: 10,
                                             ),
@@ -198,9 +206,9 @@ class DailyPuzzleDialog extends StatelessWidget {
                             const SizedBox(height: 8),
                             _buildHintBox(puzzle),
                             const SizedBox(height: 12),
-                            const Text(
-                              'PHẦN THƯỞNG HOÀN THÀNH',
-                              style: TextStyle(
+                            Text(
+                              'completion_reward'.tr,
+                              style: const TextStyle(
                                 color: Color(0xFFFFD54F),
                                 fontSize: 11,
                                 fontWeight: FontWeight.w900,
@@ -243,19 +251,19 @@ class DailyPuzzleDialog extends StatelessWidget {
                                     color: const Color(0xFF00E676).withValues(alpha: 0.5),
                                   ),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
+                                    const Icon(
                                       Icons.check_circle,
                                       color: Color(0xFF00E676),
                                       size: 16,
                                     ),
-                                    SizedBox(width: 6),
+                                    const SizedBox(width: 6),
                                     Flexible(
                                       child: Text(
-                                        'ĐÃ HOÀN THÀNH HÔM NAY',
-                                        style: TextStyle(
+                                        'completed_today'.tr,
+                                        style: const TextStyle(
                                           color: Color(0xFF00E676),
                                           fontWeight: FontWeight.w900,
                                           fontSize: 11,
@@ -284,9 +292,9 @@ class DailyPuzzleDialog extends StatelessWidget {
                                 ),
                               ),
                               icon: const Icon(Icons.replay, size: 18),
-                              label: const Text(
-                                'LUYỆN TẬP LẠI',
-                                style: TextStyle(
+                              label: Text(
+                                'practice_again'.tr,
+                                style: const TextStyle(
                                   fontWeight: FontWeight.w900,
                                   fontSize: 12,
                                   letterSpacing: 0.5,
@@ -310,9 +318,9 @@ class DailyPuzzleDialog extends StatelessWidget {
                             ),
                           ),
                           icon: const Icon(Icons.play_arrow_rounded, size: 22),
-                          label: const Text(
-                            'BẮT ĐẦU THỬ THÁCH THẾ BI',
-                            style: TextStyle(
+                          label: Text(
+                            'start_daily_puzzle'.tr,
+                            style: const TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 13,
                               letterSpacing: 0.8,
@@ -324,8 +332,10 @@ class DailyPuzzleDialog extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 
   Widget _buildPuzzleTitle(DailyPuzzleModel puzzle) {
@@ -338,9 +348,9 @@ class DailyPuzzleDialog extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: const Color(0xFFAB47BC)),
           ),
-          child: const Text(
-            'THẾ BI MỖI NGÀY',
-            style: TextStyle(
+          child: Text(
+            'daily_puzzle_badge'.tr,
+            style: const TextStyle(
               color: Color(0xFFE1BEE7),
               fontSize: 9,
               fontWeight: FontWeight.bold,
@@ -350,7 +360,7 @@ class DailyPuzzleDialog extends StatelessWidget {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            puzzle.title,
+            LanguageService.instance.localizeStageTitle(puzzle.title),
             style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
@@ -365,7 +375,7 @@ class DailyPuzzleDialog extends StatelessWidget {
 
   Widget _buildDescription(DailyPuzzleModel puzzle) {
     return Text(
-      puzzle.description,
+      LanguageService.instance.localizeDailyPuzzleDescription(puzzle.title, puzzle.description),
       style: const TextStyle(
         color: Colors.white,
         fontSize: 12,
@@ -389,7 +399,7 @@ class DailyPuzzleDialog extends StatelessWidget {
           const Icon(Icons.touch_app, color: Color(0xFFFFD54F), size: 14),
           const SizedBox(width: 5),
           Text(
-            'Giới hạn: Tối đa ${puzzle.maxShotsAllowed} lượt đánh',
+            'puzzle_shot_limit'.tr.replaceAll('{max}', '${puzzle.maxShotsAllowed}'),
             style: const TextStyle(
               color: Color(0xFFFFD54F),
               fontWeight: FontWeight.bold,
@@ -417,7 +427,7 @@ class DailyPuzzleDialog extends StatelessWidget {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              puzzle.hint,
+              LanguageService.instance.localizeDailyPuzzleHint(puzzle.title, puzzle.hint),
               style: const TextStyle(
                 color: Color(0xFFE1BEE7),
                 fontSize: 10.5,

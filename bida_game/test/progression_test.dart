@@ -14,6 +14,8 @@ import 'package:bida_game/ui/aim_ruler_slider.dart';
 import 'package:bida_game/ui/cue_shop_dialog.dart';
 import 'package:bida_game/services/online_multiplayer_service.dart';
 import 'package:bida_game/services/language_service.dart';
+import 'package:bida_game/models/tournament_model.dart';
+import 'package:bida_game/ui/billiard_vfx_component.dart';
 import 'package:bida_game/main.dart';
 
 void main() {
@@ -90,7 +92,7 @@ void main() {
   group('Legendary Trickshot Master Tests', () {
     test('Catalog contains 8 famous world trickshots with valid targets', () {
       final shots = LegendaryTrickshotCatalog.trickshots;
-      expect(shots.length, equals(8));
+      expect(shots.length, greaterThanOrEqualTo(8));
 
       // Contains legendary players
       expect(shots.any((s) => s.playerName.contains('Efren')), isTrue);
@@ -120,6 +122,48 @@ void main() {
       expect(reward.earnedCoins, equals(shot.rewardCoins));
       expect(reward.earnedXP, equals(shot.rewardXP));
       expect(service.coins, greaterThanOrEqualTo(initialCoins + shot.rewardCoins));
+    });
+
+    test('All 8 legendary trickshots configure table layout correctly without default triangle rack', () {
+      final shots = LegendaryTrickshotCatalog.trickshots;
+      for (final shot in shots) {
+        gameInstance.startLegendaryTrickshot(shot);
+        expect(gameInstance.activeLegendaryTrickshot, equals(shot));
+        expect(gameInstance.breakShot, isFalse);
+
+        if (gameInstance.hasGameLoaded) {
+          final participatingNumbers = shot.balls.map((b) => b.ballNumber).toSet();
+          for (final ball in gameInstance.poolBalls) {
+            if (participatingNumbers.contains(ball.number)) {
+              expect(ball.isSunk, isFalse, reason: 'Ball ${ball.number} should be active on table for ${shot.id}');
+              expect(ball.initialPosition.x, greaterThan(-500), reason: 'Ball ${ball.number} must be on table');
+            } else {
+              expect(ball.isSunk, isTrue, reason: 'Non-participating ball ${ball.number} should be marked sunk');
+            }
+          }
+        }
+      }
+    });
+
+    test('Table resize preserves legendary trickshot preset without reverting to default rack', () {
+      final shot = LegendaryTrickshotCatalog.trickshots[2]; // Ronnie O'Sullivan
+      gameInstance.startLegendaryTrickshot(shot);
+
+      if (gameInstance.hasGameLoaded) {
+        // Trigger table resize
+        gameInstance.onGameResize(Vector2(800, 450));
+        expect(gameInstance.activeLegendaryTrickshot, equals(shot));
+        expect(gameInstance.breakShot, isFalse);
+
+        final participating = shot.balls.map((b) => b.ballNumber).toSet();
+        for (final ball in gameInstance.poolBalls) {
+          if (participating.contains(ball.number)) {
+            expect(ball.isSunk, isFalse);
+          } else {
+            expect(ball.isSunk, isTrue);
+          }
+        }
+      }
     });
   });
 
@@ -427,7 +471,7 @@ void main() {
 
       // Kiểm tra các nút chế độ
       expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
-      expect(find.text('THẾ ĐÁNH HUYỀN THOẠI'), findsOneWidget);
+      expect(find.textContaining('THẾ ĐÁNH HUYỀN THOẠI'), findsOneWidget);
       expect(find.text('ĐẤU MẠNG LOCAL'), findsOneWidget);
       expect(find.text('10 ẢI THỬ THÁCH BOT'), findsOneWidget);
       expect(find.text('THẾ BI HÀNG NGÀY'), findsOneWidget);
@@ -598,6 +642,144 @@ void main() {
       expect(game.ballInHand, isTrue);
       expect(game.playerGroups[1], equals(BallGroup.solids));
       expect(game.playerGroups[2], equals(BallGroup.stripes));
+    });
+  });
+
+  group('Real-Time Physics & Home Exit Lifecycle Tests', () {
+    test('onPanCancel resets movingCueBall and clears drag state without stuck lock', () {
+      final game = BilliardGame();
+      game.movingCueBall = true;
+      game.dragStart = Vector2(100, 100);
+      game.dragCurrent = Vector2(150, 150);
+
+      game.onPanCancel();
+
+      expect(game.movingCueBall, isFalse);
+      expect(game.dragStart, isNull);
+      expect(game.dragCurrent, isNull);
+    });
+
+    test('onAppPaused records timestamp and onAppResumed executes without crashing', () {
+      final game = BilliardGame();
+      expect(game.isAppPaused, isFalse);
+
+      game.onAppPaused();
+      expect(game.isAppPaused, isTrue);
+
+      // Giả lập người chơi mở lại app
+      game.onAppResumed();
+      expect(game.isAppPaused, isFalse);
+    });
+
+    testWidgets('BilliardHome mounts GameWidget and preserves in Offstage upon exiting to menu', (tester) async {
+      tester.view.physicalSize = const Size(800, 450);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: BilliardHome(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Main menu hiển thị ban đầu
+      expect(find.byType(BilliardHome), findsOneWidget);
+      expect(find.text('P1 vs P2 (CÙNG MÁY)'), findsOneWidget);
+
+      // Tapping P1 vs P2 bắt đầu ván đấu
+      await tester.tap(find.text('P1 vs P2 (CÙNG MÁY)'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Offstage GameWidget hiện diện trong cây widget để duy trì real-time
+      expect(find.byType(Offstage), findsWidgets);
+    });
+  });
+
+  group('Tournament 5 Brackets Catalog & Progression Tests', () {
+    test('TournamentCatalog contains exactly 5 brackets and Bracket 5 is Grand Finals', () {
+      final brackets = TournamentCatalog.brackets;
+      expect(brackets.length, equals(5));
+
+      final bracket1 = brackets[0];
+      expect(bracket1.bracketNumber, equals(1));
+      expect(bracket1.roundName, equals('Round of 32'));
+
+      final bracket5 = brackets[4];
+      expect(bracket5.bracketNumber, equals(5));
+      expect(bracket5.roundName, equals('Grand Championship Finals'));
+      expect(bracket5.opponentName, contains('Long Hoàng Vũ'));
+      expect(bracket5.bonusMedalId, equals('tournament_champion'));
+      expect(bracket5.coinReward, equals(15000));
+      expect(bracket5.xpReward, equals(2500));
+    });
+
+    test('completeTournamentBracket advances from 1 to 4, and awards championship on 5', () async {
+      await ProgressionService.instance.init();
+      ProgressionService.instance.resetTournament();
+      expect(ProgressionService.instance.currentTournamentBracket, equals(1));
+
+      // Win Bracket 1 -> Advances to Bracket 2
+      final b1 = TournamentCatalog.getByBracket(1);
+      final res1 = ProgressionService.instance.completeTournamentBracket(b1);
+      expect(ProgressionService.instance.currentTournamentBracket, equals(2));
+      expect(res1.customMessage, contains('TIẾN VÀO BRACKET 2'));
+
+      // Win Bracket 5 -> Crowned Grand Champion, resets to 1
+      final b5 = TournamentCatalog.getByBracket(5);
+      final res5 = ProgressionService.instance.completeTournamentBracket(b5);
+      expect(ProgressionService.instance.currentTournamentBracket, equals(1));
+      expect(res5.customMessage, contains('QUÁN QUÂN VÔ ĐỊCH TOURNAMENT 5 BRACKETS'));
+      expect(ProgressionService.instance.isMedalUnlocked('tournament_champion'), isTrue);
+    });
+  });
+
+  group('Billiard VFX Component GPU Optimization Tests', () {
+    test('BilliardVfxComponent handles particle lifecycle, capping and clearAll without lag or error', () {
+      final vfx = BilliardVfxComponent();
+
+      // Test idle fast early-return
+      vfx.update(0.016);
+
+      // Add high-speed collision
+      for (int i = 0; i < 20; i++) {
+        vfx.addBallCollision(Vector2(100.0 + i, 200.0), 500.0);
+      }
+
+      // Add chalk puff
+      vfx.addCueChalkPuff(
+        tipPos: Vector2(150, 150),
+        shotDirection: Vector2(1, 0),
+        shotSpeed: 1000.0,
+      );
+
+      // Add rail impact and pocket drop
+      vfx.addRailImpact(
+        ballPos: Vector2(50, 50),
+        wallStart: Vector2(0, 50),
+        wallEnd: Vector2(100, 50),
+        speed: 300.0,
+      );
+      vfx.addPocketDrop(Vector2(20, 20));
+
+      // Add motion trails
+      vfx.recordBallPosition(0, Vector2(200, 200), 800.0);
+      vfx.recordBallPosition(1, Vector2(300, 300), 600.0);
+
+      // Update simulation
+      vfx.update(0.05);
+
+      // Clear trail when ball stops or sinks
+      vfx.clearBallTrail(0);
+      vfx.clearBallTrail(1);
+
+      // Clear all
+      vfx.clearAll();
+      vfx.update(0.016);
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
 
 class LeaderboardDialog extends StatefulWidget {
   const LeaderboardDialog({super.key});
@@ -55,9 +56,11 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.of(context).size.height;
 
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         constraints: BoxConstraints(
           maxWidth: 620,
@@ -93,9 +96,9 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                   children: [
                     const Icon(Icons.emoji_events, color: Color(0xFFFFD54F), size: 24),
                     const SizedBox(width: 8),
-                    const Text(
-                      'BẢNG XẾP HẠNG REALTIME',
-                      style: TextStyle(
+                    Text(
+                      'leaderboard_header'.tr,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 15,
@@ -104,7 +107,7 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                     ),
                     const Spacer(),
                     IconButton(
-                      tooltip: 'Tải lại danh sách',
+                      tooltip: 'refresh'.tr,
                       icon: const Icon(Icons.refresh, color: Colors.white70, size: 20),
                       onPressed: _isLoading ? null : _loadAllRankings,
                     ),
@@ -125,10 +128,10 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                   labelColor: const Color(0xFFFFD54F),
                   unselectedLabelColor: Colors.white60,
                   labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                  tabs: const [
-                    Tab(icon: Icon(Icons.military_tech, size: 18), text: 'CẤP ĐỘ'),
-                    Tab(icon: Icon(Icons.monetization_on, size: 18), text: 'ĐẠI GIA (TIỀN)'),
-                    Tab(icon: Icon(Icons.workspace_premium, size: 18), text: 'CHIẾN THẦN (THẮNG)'),
+                  tabs: [
+                    Tab(icon: const Icon(Icons.military_tech, size: 18), text: 'level'.tr.toUpperCase()),
+                    Tab(icon: const Icon(Icons.monetization_on, size: 18), text: 'coins'.tr.toUpperCase()),
+                    Tab(icon: const Icon(Icons.workspace_premium, size: 18), text: 'wins'.tr.toUpperCase()),
                   ],
                 ),
               ),
@@ -142,9 +145,9 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                     : TabBarView(
                         controller: _tabController,
                         children: [
-                          _buildRankingList(_levelRankings, 'level', 'Cấp'),
-                          _buildRankingList(_coinsRankings, 'coins', 'Vàng'),
-                          _buildRankingList(_winsRankings, 'wins', 'Trận thắng'),
+                          _buildRankingList(_levelRankings, 'level', 'level'.tr),
+                          _buildRankingList(_coinsRankings, 'coins', 'coins'.tr),
+                          _buildRankingList(_winsRankings, 'wins', 'wins'.tr),
                         ],
                       ),
               ),
@@ -152,6 +155,7 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -167,13 +171,13 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
           children: [
             const Icon(Icons.cloud_off, size: 48, color: Colors.white30),
             const SizedBox(height: 10),
-            const Text(
-              'Chưa có dữ liệu xếp hạng',
-              style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+            Text(
+              'no_leaderboard_data'.tr,
+              style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 4),
             Text(
-              'Hãy đăng nhập và chơi để ghi danh lên bảng vàng!',
+              'leaderboard_empty_hint'.tr,
               style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 12),
             ),
           ],
@@ -190,7 +194,7 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
       itemBuilder: (context, index) {
         final item = items[index];
         final rank = index + 1;
-        final name = (item['displayName'] as String?) ?? 'Cơ Thủ';
+        final name = (item['displayName'] as String?) ?? 'player_default'.tr;
         final role = (item['role'] as String?) ?? 'player';
         final val = (item[keyField] as num?)?.toInt() ?? 0;
         final isMe = (item['uid'] != null && item['uid'] == currentUid) ||
@@ -275,8 +279,8 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                                     color: const Color(0xFF00E676),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
-                                  child: const Text(
-                                    'BẠN',
+                                  child: Text(
+                                    'you'.tr.toUpperCase(),
                                     style: TextStyle(
                                       color: Colors.black87,
                                       fontWeight: FontWeight.w900,
@@ -303,10 +307,10 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
                 ),
                 child: Text(
                   keyField == 'coins'
-                      ? '${_formatNumber(val)} Vàng'
+                      ? '${_formatNumber(val)} ${'coins_unit'.tr}'
                       : keyField == 'level'
-                          ? 'Cấp $val'
-                          : '$val Trận',
+                          ? '${'level_short'.tr} $val'
+                          : '$val ${'wins_unit'.tr}',
                   style: TextStyle(
                     color: keyField == 'coins'
                         ? const Color(0xFFFFD54F)

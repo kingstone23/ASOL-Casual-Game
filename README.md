@@ -1,420 +1,353 @@
-# 🎱 Game Bida 8 Bóng 2D (Billiard 8-Ball)
+# 🎱 BẢN THIẾT KẾ TRÒ CHƠI (GAME DESIGN DOCUMENT - GDD)
+## TỰA GAME: 8-BALL BILLIARDS 2D (BIDA 8 BÓNG ĐỈNH CAO)
 
-Game Bida 8 Bóng (8-Ball Pool) phong cách hiện đại, trực quan, hỗ trợ chơi 2 người trên cùng thiết bị, so tài với máy (CPU Bot), vượt ải chiến dịch, giải thế bi hàng ngày và **Đấu mạng Local WiFi thời gian thực (P2P)**. Trò chơi được xây dựng trên nền tảng **Flutter + Flame + Forge2D**, tối ưu hóa giao diện xoay ngang, tự động thích ứng hoàn hảo trên mọi thiết bị di động (Mobile Responsive).
-
----
-
-## 📑 Mục Lục
-1. [🛠️ Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng)
-2. [🌟 Tính Năng Kỹ Thuật Đã Triển Khai](#-tính-năng-kỹ-thuật-đã-triển-khai)
-3. [🎨 Thiết Kế Giao Diện & Trải Nghiệm Người Dùng (UI/UX Showcase)](#-thiết-kế-giao-diện--trải-nghiệm-người-dùng-uiux-showcase)
-   - [3.1. Bàn Đấu Bida Responsive Chuẩn 16:9](#31-bàn-đấu-bida-responsive-chuẩn-169)
-   - [3.2. Thanh Điều Khiển Người Chơi (Player Status Bar)](#32-thanh-điều-khiển-người-chơi-player-status-bar)
-   - [3.3. Bộ Điều Khiển Kỹ Năng Bắn Đa Chiều](#33-bộ-điều-khiển-kỹ-năng-bắn-đa-chiều)
-   - [3.4. Đồ Họa Động Học & Hiệu Ứng Trực Quan (VFX)](#34-đồ-họa-động-học--hiệu-ứng-trực-quan-vfx)
-   - [3.5. Hệ Thống Dialogs & Menu Chức Năng](#35-hệ-thống-dialogs--menu-chức-năng)
-4. [📖 Luật Chơi Chi Tiết (Chuẩn 8-Ball)](#-luật-chơi-chi-tiết-chuẩn-8-ball)
-5. [🎮 Hướng Dẫn Thao Tác](#-hướng-dẫn-thao-tác)
-6. [📘 Bản Thiết Kế Trò Chơi (Game Design Document - GDD)](#-bản-thiết-kế-trò-chơi-game-design-document---gdd)
-   - [6.1. Định Vị & Tầm Nhìn Dự Án](#61-định-vị--tầm-nhìn-dự-án)
-   - [6.2. Kiến Trúc Vòng Lặp Game (Game Loops)](#62-kiến-trúc-vòng-lặp-game-game-loops)
-   - [6.3. Hệ Thống Chế Độ Chơi (6 Chế Độ Đa Tầng)](#63-hệ-thống-chế-độ-chơi-tạo-tính-chơi-lại-cao-replayability)
-   - [6.4. Kiến Trúc Đấu Mạng Local WiFi (Peer-to-Peer Realtime)](#64-kiến-trúc-đấu-mạng-local-wifi-peer-to-peer-realtime)
-   - [6.5. Tính Năng & Hoạt Động Giữ Chân Người Chơi (Retention & Live-Ops)](#65-tính-năng--hoạt-động-giữ-chân-người-chơi-retention--live-ops)
-   - [6.6. Hệ Thống Shop Cửa Hàng & Nâng Cấp Gậy Cơ (Cue Mastery & Shop RPG)](#66-hệ-thống-shop-cửa-hàng--nâng-cấp-gậy-cơ-cue-mastery--shop-rpg)
-   - [6.7. Kinh Tế Trong Game (In-Game Economy)](#67-kinh-tế-trong-game-in-game-economy)
-7. [🗺️ Lộ Trình Phát Triển (Product Roadmap)](#-lộ-trình-phát-triển-product-roadmap)
+> **Tài Liệu Thiết Kế Trò Chơi Chính Thức (Official Game Design Document)**  
+> **Phiên bản tài liệu:** 2.5 (Production Ready & Live-Ops)  
+> **Nền tảng mục tiêu:** Mobile First (Android / iOS Xoay Ngang - Landscape 16:9), Mở rộng Web (HTML5/Canvas) & Desktop  
+> **Công nghệ lõi:** Flutter Framework • Flame Game Engine • Forge2D (Box2D Physics) • Node.js WebSocket Server • Firebase Cloud  
+> **Hệ thống ngôn ngữ:** 5 Ngôn ngữ phản ứng thời gian thực (**Tiếng Việt, English, 中文, 日本語, 한국어**)
 
 ---
 
-## 🛠️ Công Nghệ Sử Dụng
+## 📑 MỤC LỤC TỔNG QUAN
 
-Dự án được xây dựng trên nền tảng công nghệ đa nền tảng hiện đại, đảm bảo hiệu năng cao và chuyển động 60 FPS mượt mà:
-
-- **Flutter**: Bộ công cụ phát triển giao diện người dùng đa nền tảng hàng đầu của Google, giúp game chạy mượt trên Android, iOS, Web và Desktop.
-- **Flame Game Engine**: Engine game 2D chuyên dụng cho Flutter, quản lý vòng lặp game (game loop), thời gian thực và kết xuất hình ảnh ổn định.
-- **Forge2D (Box2D Physics Engine)**: Động cơ vật lý tiêu chuẩn quốc tế mô phỏng chân thực va chạm cơ học, góc nảy băng, ma sát lăn mặt nỉ và lực quán tính của bi.
-- **Đồ họa Vector Thuần (CustomPaint)**: Cây cơ trên thanh lực, hệ thống tia ngắm laser và bóng đổ 3D được vẽ trực tiếp bằng vector, đảm bảo độ nét tuyệt đối trên mọi độ phân giải màn hình.
-- **Hạ tầng Mạng Nội Bộ (Socket TCP / UDP)**: Giao thức mạng P2P tốc độ cao kết nối hai thiết bị trực tiếp qua cùng mạng WiFi hoặc Điểm phát sóng di động (Hotspot) với độ trễ cực thấp (<15ms).
-- **Firebase Authentication & Cloud Firestore**: Quản lý tài khoản người chơi (Email, Mật khẩu, Khách), đồng bộ hóa tiến trình, gậy cơ sở hữu và Bảng xếp hạng trực tuyến (Leaderboard Realtime).
-- **Audioplayers Engine**: Tích hợp âm thanh đa kênh xử lý tiếng va chạm bi động (Dynamic Impulse Hit Sound), hiệu ứng lọt lỗ và nhạc nền thư giãn (BGM).
-
----
-
-## 🌟 Tính Năng Kỹ Thuật Đã Triển Khai
-
-- 📶 **Đấu Mạng Local WiFi (P2P Realtime Multiplayer)**:
-  - Tự động dò phòng qua **UDP Broadcast** (cổng 8889), kết nối phòng siêu tốc qua **TCP Socket** (cổng 8888).
-  - Đồng bộ hóa 60 FPS góc xoay cơ, mức kéo lực, điểm chạm áp-phê xoáy và tọa độ nhấc/đặt bi (Ball-in-Hand).
-  - **Khóa quyền hành động thông minh**: Khi tới lượt đối thủ, bàn chơi và các nút kéo lực / thước ngắm / áp-phê tự động vô hiệu hóa (`IgnorePointer`) và làm mờ (`opacity: 0.35`), kèm banner chờ trực quan.
-  - Hiển thị Nickname thật, Cấp độ (Lv.X) và Số dư Vàng của cả hai bên theo thời gian thực.
-  - **Kinh tế cược ván đấu**: Người thắng nhận +500 Vàng (+ thưởng gậy) và XP; Người thua bị trừ -500 Vàng trực tiếp từ tài khoản.
-- 🤖 **Chế độ chơi đa dạng**:
-  - **Chơi 2 Người (PvP)**: Thi đấu lần lượt với bạn bè trên cùng màn hình.
-  - **Đấu với Máy (Vs CPU)**: Tùy chọn 2 cấp độ: **Bot Dễ** (dành cho người mới tập chơi) và **Bot Khó** (AI phân tích hình học thông minh, ngắm bóng và căn lực chính xác, biết tự né phạm lỗi).
-  - **Chiến Dịch Vượt Ải Bot (Campaign 7 Ải)**: Chuỗi ải Boss AI tăng dần độ khó với tiền thưởng và kinh nghiệm lớn.
-  - **Thế Bi Hàng Ngày (Daily Trickshot Puzzle)**: Thử thách kỹ năng dọn bàn với số cơ giới hạn, trao thưởng Kim Cương và Vàng mỗi ngày.
-- 🌪️ **Vật lý xoáy bi thực tế**:
-  - Tùy chỉnh điểm chạm đầu cơ trên bi cái để tạo hiệu ứng: **Cu-lê** (tiến tới sau va chạm), **Trô bóng** (giật lùi lại) và **Áp-phê Trái / Phải** (đổi góc nảy khi đập băng).
-  - Tự động hoàn trả vị trí tâm bi sau mỗi cú đánh.
-- ⚡ **Thanh lực tương tác & Thước vi chỉnh góc ngắm**:
-  - Cây cơ trên thanh đo tự động **lún sâu xuống** theo mức kéo lực của ngón tay (kèm vệt hào quang năng lượng đổi màu Xanh $\to$ Vàng $\to$ Đỏ).
-  - **Thước trượt vi chỉnh góc bắn (Aim Ruler Slider)**: Tinh chỉnh góc ngắm chuẩn xác từng góc nhỏ, triệt tiêu hoàn toàn hiện tượng rung tay trên màn hình cảm ứng di động.
-- 🎱 **Hiệu ứng lăn 3D vào lỗ (3D Ball Pocket Roll-in Animation)**:
-  - Bi khi rơi vào lỗ sẽ tự động co nhỏ dần, xoay tròn theo trục lăn và biến mất chìm sâu vào lòng hộc bàn bida theo phối cảnh 3D chân thực thay vì biến mất đột ngột.
-- 🔊 **Hệ thống Âm thanh Bida sống động**:
-  - Tiếng va chạm bi "cạch" giòn tan được tính toán âm lượng và cường độ linh hoạt dựa trên **xung lực va chạm thực tế (Box2D Contact Impulse)**.
-  - Tiếng bi rơi lọt vào lòng lỗ hốc bàn bida trầm ấm.
-  - Nhạc nền thư giãn BGM với công tắc chuyển đổi nhanh và thanh điều chỉnh âm lượng riêng biệt.
-- 🔥 **Hiệu ứng Combo chuỗi ăn bi**:
-  - Tự động nhận diện và tính combo khi người chơi ăn từ 2 bi cùng nhóm hợp lệ trở lên trong cùng 1 lượt đánh.
-  - Banner Combo hiệu ứng phát sáng neon nổi bật giữa bàn đấu.
-- 📱 **Giao diện tự co giãn (Mobile Responsive)**:
-  - Tự động thích ứng hoàn hảo với mọi kích cỡ màn hình điện thoại (kể cả các dòng máy nhỏ như iPhone SE, Android phổ thông hay máy có tai thỏ / camera nốt ruồi), không bao giờ bị tràn viền hay che mất bàn chơi.
-- 🎯 **Tia ngắm thông minh**: Hiển thị đường đi dự kiến của bi cái và hướng chuyển động của bi mục tiêu sau va chạm.
-- 🛍️ **Cửa hàng Gậy Cơ (Cue Shop RPG)**: 7 mẫu gậy cơ độc đáo, phân chia theo phẩm cấp (Common, Rare, Epic, Legendary), mở khóa theo Level người chơi và nâng cấp 10 bậc chỉ số.
+1. [Định Vị Sản Phẩm & Tầm Nhìn Thiết Kế (Vision & Pillars)](#1-định-vị-sản-phẩm--tầm-nhìn-thiết-kế)
+2. [Vòng Lặp Trò Chơi (Core & Meta Loops)](#2-vòng-lặp-trò-chơi)
+3. [Cơ Chế Vật Lý & Điều Khiển Bắn Bi (Core Mechanics & Physics UX)](#3-cơ-chế-vật-lý--điều-khiển-bắn-bi)
+4. [Quy Tắc Luật Chơi Chuẩn Quốc Tế (Ruleset Specifications)](#4-quy-tắc-luật-chơi-chuẩn-quốc-tế)
+5. [Hệ Sinh Thái 8 Chế Độ Chơi (Game Modes Specification)](#5-hệ-sinh-thái-8-chế-độ-chơi)
+6. [Kho Tàng 112 Thế Đánh Huyền Thoại (14 Danh Thủ Thế Giới)](#6-kho-tàng-112-thế-đánh-huyền-thoại)
+7. [Kiến Trúc Đấu Mạng Kép (Local WiFi P2P & Online WebSocket Server)](#7-kiến-trúc-đấu-mạng-kép)
+8. [Hệ Thống RPG Gậy Cơ, Thành Tựu & Tiến Trình (Progression & RPG Systems)](#8-hệ-thống-rpg-gậy-cơ-thành-tựu--tiến-trình)
+9. [Kinh Tế Trong Game (In-Game Economy: Sources & Sinks)](#9-kinh-tế-trong-game)
+10. [Hệ Thống Bản Địa Hóa Đa Ngôn Ngữ Phản Ứng (Localization Engine)](#10-hệ-thống-bản-địa-hóa-đa-ngôn-ngữ-phản-ứng)
+11. [Thiết Kế Giao Diện Người Dùng & Trải Nghiệm Cảm Ứng (UI/UX Design System)](#11-thiết-kế-giao-diện-người-dùng--trải-nghiệm-cảm-ứng)
+12. [Lộ Trình Sản Phẩm & Kế Hoạch Vận Hành (Roadmap & Live-Ops)](#12-lộ-trình-sản-phẩm--kế-hoạch-vận-hành)
 
 ---
 
-## 🎨 THIẾT KẾ GIAO DIỆN & TRẢI NGHIỆM NGƯỜI DÙNG (UI/UX SHOWCASE)
+## 1. ĐỊNH VỊ SẢN PHẨM & TẦM NHÌN THIẾT KẾ
 
-Giao diện (GD) của trò chơi được thiết kế theo ngôn ngữ hiện đại, sang trọng, lấy cảm hứng từ các tựa game bida hàng đầu thế giới (8 Ball Pool, Billiards City) nhưng tối ưu hóa hoàn toàn cho trải nghiệm chạm vuốt trên di động:
+### 1.1. Tuyên Ngôn Dự Án
+**8-Ball Billiards 2D** là tựa game thể thao bida mô phỏng vật lý chân thực kết hợp yếu tố tiến trình RPG nhẹ nhàng, hướng đến việc mang lại cảm giác chạm-bắn chân thực, chuẩn xác từng milimet cho game thủ di động toàn cầu. Game dung hòa hoàn hảo giữa tính giải trí thư giãn (casual) và chiều sâu chiến thuật hình học đối kháng đỉnh cao (mid-core esports).
+
+### 1.2. Trụ Cột Thiết Kế Cốt Lõi (Core Pillars)
+1. **Vật Lý Chuẩn Xác & Cảm Giác Cơ Chân Thực**:
+   - Sử dụng động cơ vật lý Box2D (Forge2D) mô phỏng chính xác va chạm đàn hồi, ma sát nỉ, độ nảy góc băng và hiệu ứng xoáy áp-phê 2D (Cu-lê, Trô bóng, Áp-phê ngang).
+2. **Hạ Tầng Đấu Mạng Kép Đột Phá**:
+   - Không chỉ hỗ trợ Đấu mạng Online WebSocket toàn cầu (Auto-Matchmaking & Mã PIN 6 số), game tích hợp sẵn Đấu mạng Local WiFi P2P tự động dò phòng siêu tốc độ trễ <15ms mà không cần kết nối Internet.
+3. **Bộ Sưu Tập Di Sản 112 Thế Đánh Huyền Thoại**:
+   - Tái hiện trọn vẹn 112 đường cơ kinh điển của 14 danh thủ bida lẫy lừng thế giới, kết hợp hướng dẫn kỹ thuật chi tiết và mô tả lịch sử thực tế.
+4. **Trải Nghiệm Cảm Ứng Công Thái Học Chống Lỗi (Ergonomic Touch UX)**:
+   - Hệ thống thanh kéo lực kết hợp chế độ Khóa lực (Power Lock), thước ngắm vi chỉnh $0.1^\circ$ và bánh răng 1mm triệt tiêu hoàn toàn nhược điểm rung tay hoặc che khuất tầm nhìn trên màn hình cảm ứng.
+5. **Khả Năng Tiếp Cận Toàn Cầu 100% (5 Ngôn Ngữ)**:
+   - Bản địa hóa đồng bộ từ HUD, thông điệp luật chơi, 112 thế đánh, 10 ải bot cho đến lỗi Firebase sang 5 ngôn ngữ lớn (**Tiếng Việt, English, 中文, 日本語, 한국어**) với khả năng đổi ngôn ngữ tức thì trong tích tắc.
+
+---
+
+## 2. VÒNG LẶP TRÒ CHƠI
+
+Kiến trúc trò chơi vận hành theo 3 tầng vòng lặp lồng ghép chặt chẽ, tối ưu hóa tỷ lệ giữ chân người chơi (Retention) từ phiên chơi ngắn trong ngày đến mục tiêu dài hạn hàng tháng:
 
 ```
 +---------------------------------------------------------------------------------------------------+
-|  [P1: Avatar - Lv.5 - Nam (Bạn) - 15,200 $]      [Âm thanh] [Cài đặt]      [P2: Quang Huy - Lv.8 - 42,000 $] |
+|                                  RETENTION LOOP (Tuần / Tháng)                                    |
+|  - Bảng Xếp Hạng Toàn Cầu 3 Bảng (Level, Coins, Wins)   - Sưu tập 10 Huy Chương Danh Dự (Medals)   |
+|  - Chinh phục 112 Thế Đánh Huyền Thoại                  - Vô địch Tournament 5 Brackets Knockout   |
++---------------------------------------------------------------------------------------------------+
+                                                  ^
+                                                  | (Tích lũy XP, Cúp Vàng, Huy Chương, Kim Cương)
++---------------------------------------------------------------------------------------------------+
+|                                    META GAME LOOP (Hàng Ngày)                                     |
+|  [Đấu Online / Local Cược Vàng] ---> [Cày Cấp Độ Mở Shop] ---> [Nâng Cấp Gậy Lv.1-10]             |
+|                ^                                                                 |                |
+|                |------------ [Chiến Dịch 10 Ải Bot] <----------------------------+                |
+|                |                                                                 |                |
+|                +------------ [Giải Đố Thế Bi Hàng Ngày] <------------------------+                |
++---------------------------------------------------------------------------------------------------+
+                                                  ^
+                                                  | (Vàng, XP, Kim Cương, Nâng cấp chỉ số)
++---------------------------------------------------------------------------------------------------+
+|                                    CORE GAME LOOP (Trong Ván)                                     |
+|  [Vào Bàn] -> [Đọc Thế Bi] -> [Căn Áp-phê / Lực / Thước 1mm] -> [Bắn Cơ] -> [VFX & Phân Định]     |
++---------------------------------------------------------------------------------------------------+
+```
+
+- **Core Loop (3 - 5 phút/ván)**: Đọc vị trí bi trên bàn $\to$ Tinh chỉnh hướng bắn & áp-phê $\to$ Kéo lực cơ $\to$ Bi va chạm & rơi vào lỗ $\to$ Nhận thưởng tức thì.
+- **Meta Loop (Hàng ngày)**: Thi đấu PvP cược tiền $\to$ Thu thập Vàng & Kim Cương $\to$ Mở khóa và nâng cấp gậy cơ Lv.1 - 10 $\to$ Vượt Ải Bot & Giải Đố thế bi.
+- **Retention Loop (Hàng tuần / tháng)**: Chinh phục trọn bộ 112 thế đánh huyền thoại $\to$ Săn 14 thành tựu & 10 huy chương $\to$ Leo Top Bảng xếp hạng thế giới.
+
+---
+
+## 3. CƠ CHẾ VẬT LÝ & ĐIỀU KHIỂN BẮN BI
+
+### 3.1. Mô Phỏng Vật Lý Box2D (Forge2D Engine)
+- **Hệ quy chiếu & Tỷ lệ chuẩn hóa**: Mặt bàn bida tỷ lệ thực tế $2:1$, độ co giãn thích ứng theo màn hình 16:9.
+- **Hệ số va chạm đàn hồi (Restitution)**: Đạt mức $0.98$ giữa bi với bi, tạo độ truyền lực bi nổ dứt khoát.
+- **Ma sát nỉ (Linear & Angular Damping)**: Giảm tốc tuyến tính tự nhiên mô phỏng lực cản lăn của thảm nỉ len cao cấp.
+- **Hệ số nảy băng cao su (Cushion Rebound)**: Đảm bảo góc phản xạ ăn khớp góc tới, biến đổi linh hoạt theo lực ép và độ xoáy ngang.
+
+### 3.2. Động Học Xoáy Bi Cái 2D (Cue Ball Spin Dynamics)
+Người chơi chạm vào nút bi cái ở góc phải màn hình để định vị điểm tiếp xúc đầu cơ $(dx, dy)$ trên mặt bi:
+- **Tâm Bi (Center Shot - $dx=0, dy=0$)**: Lực truyền thẳng tâm, bi cái dừng chết (Stun) khi va chạm trực diện.
+- **Cu-lê (Topspin Follow - $dy < 0$)**: Bi cái xoay cuộn tới trước, phóng vụt lên theo đà sau khi va chạm với bi mục tiêu.
+- **Trô Bóng (Backspin Draw - $dy > 0$)**: Bi cái xoay giật lùi, hãm phanh và lùi ngược về sau ngoạn mục.
+- **Áp-phê Ngang (English Side Spin - $dx \neq 0$)**: Đổi góc nảy khi bi cái đập vào thành băng, mở rộng hoặc thu hẹp góc phản xạ.
+
+### 3.3. Bộ Điều Khiển Công Thái Học Đa Chiều (Ergonomic Controls)
+- **Thanh lực bắn (Left Power Slider)**: Bố trí bên trái màn hình cho ngón cái tay trái, kéo lún cơ mượt mà, chuyển dải màu neon từ Xanh $\to$ Vàng $\to$ Đỏ rực.
+- **Chế độ Khóa Lực (Power Lock Mode)**: Chạm nút tròn ở đáy thanh lực để khóa chết mức lực; người chơi có thể thoải mái nhấc tay ngắm lại góc mà không sợ bị trượt bắn nhầm, chạm lại nút tròn để kích hoạt bắn.
+- **Thước ngắm vi chỉnh (Right Aim Ruler)**: Bố trí bên phải cho ngón cái tay phải, tinh chỉnh góc quay từng $0.1^\circ$.
+- **Cặp nút bánh răng 1mm (Fine Tune Gear)**: Nhích nhẹ cây cơ sang trái/phải 1mm, giải quyết triệt để lỗi rung ngón tay trên màn hình cảm ứng.
+
+---
+
+## 4. QUY TẮC LUẬT CHƠI CHUẨN QUỐC TẾ
+
+Trò chơi áp dụng chuẩn luật thi đấu **World Pool-Billiard Association (WPA 8-Ball)**:
+
+### 4.1. Phân Chia Nhóm Bi
+- Bàn đấu gồm 1 Bi Cái (Trắng) và 15 bi mục tiêu chia làm 2 nhóm:
+  - **Nhóm Bi Trơn (Solids)**: Số từ **1 đến 7** (màu đơn sắc).
+  - **Nhóm Bi Sọc (Stripes)**: Số từ **9 đến 15** (sọc trắng ở giữa).
+  - **Bi Đen Số 8**: Bi quyết định số phận ván đấu.
+- Nhóm bi của mỗi cơ thủ chỉ được ấn định sau cú đánh hợp lệ đầu tiên đưa bi vào lỗ sau lượt khai cuộc.
+
+### 4.2. Trình Tự Đánh & Lượt Đánh
+- Cơ thủ phải đánh bi cái chạm nhóm bi của mình đầu tiên.
+- Đưa hợp lệ ít nhất một bi nhóm mình vào lỗ $\to$ **Được tiếp tục đánh**.
+- Không ăn bi hoặc phạm lỗi $\to$ **Chuyển lượt cho đối thủ**.
+
+### 4.3. Các Lỗi Phạm Luật (Foul)
+Người chơi bị xử phạt lỗi nếu:
+1. Đánh bi cái rơi vào lỗ (Scratch).
+2. Bi cái không chạm vào bất kỳ quả bi nào trên bàn.
+3. Bi cái chạm bi đối thủ hoặc chạm bi số 8 đầu tiên (khi chưa dọn sạch nhóm của mình).
+4. Bi cái và bi mục tiêu sau va chạm không có quả nào chạm thành băng hoặc rơi vào lỗ.
+
+### 4.4. Quyền Đặt Bi Tự Do (Ball-in-Hand)
+- Khi đối phương phạm lỗi, người chơi nhận quyền **Ball-in-Hand**: được tự do nhấc và đặt bi cái ở bất kỳ vị trí nào trên mặt bàn. Trong chế độ Đấu mạng, tọa độ đặt bi được đồng bộ hóa tức thì sang máy đối thủ.
+
+### 4.5. Phân Định Thắng / Thua Tuyệt Đối
+- **THẮNG VÁN ĐẤU**: Dọn sạch 7 bi thuộc nhóm của mình và sau đó đánh bi số 8 vào lỗ một cách hợp lệ.
+- **XỬ THUA NGAY LẬP TỨC (Instant Loss)**:
+  - Đánh rơi bi số 8 vào lỗ khi chưa dọn sạch nhóm bi của mình.
+  - Đánh rơi bi số 8 đồng thời làm rơi bi cái vào lỗ.
+  - Làm bi số 8 văng ra khỏi bàn thi đấu.
+
+---
+
+## 5. HỆ SINH THÁI 8 CHẾ ĐỘ CHƠI
+
+| STT | Chế Độ Chơi | Cơ Chế & Mục Tiêu | Yếu Tố Kích Thích | Cơ Chế Phần Thưởng | Trạng Thái |
+| :---: | :--- | :--- | :--- | :--- | :---: |
+| **1** | **Chơi 2 Người (Pass & Play)** | 2 người chơi luân phiên trên 1 màn hình | So tài offline cùng bạn bè gia đình | Ghi nhận tỷ số, rèn luyện kỹ năng | ✅ **Hoàn thành** |
+| **2** | **Đấu Với Máy (Vs CPU)** | Luyện tập với Bot Dễ / Khó | Rèn luyện góc ngắm, thử nghiệm áp-phê | Thưởng EXP cơ bản | ✅ **Hoàn thành** |
+| **3** | **Chiến Dịch Vượt Ải Bot (10 Ải)** | 10 Ải AI phân cấp qua 4 Tầng Hạng (Tiers) | Đối đầu AI biết áp-phê & giấu bi an toàn | Thưởng lớn Vàng, Kim Cương & EXP | ✅ **Hoàn thành** |
+| **4** | **112 Thế Đánh Huyền Thoại** | Tái hiện 112 đường cơ của 14 danh thủ | Chinh phục các cú đánh lịch sử thế giới | Vàng, Kim Cương, Danh hiệu Danh thủ | ✅ **Hoàn thành** |
+| **5** | **Thế Bi Hàng Ngày (Daily Puzzle)** | Giải đố dọn bàn giới hạn số lượt cơ | Thử thách tư duy logic hình học mỗi ngày | Thưởng Kim Cương và Vàng hàng ngày | ✅ **Hoàn thành** |
+| **6** | **Giải Đấu Cúp 5 Vòng (Tournament)** | Đấu loại trực tiếp 5 vòng (R16 $\to$ Chung kết) | Áp lực thi đấu cúp chuyên nghiệp đỉnh cao | 🏆 Cúp Vàng Danh Dự, Vàng lớn & EXP | ✅ **Hoàn thành** |
+| **7** | **Đấu Mạng Local WiFi (P2P)** | Kết nối 2 máy qua cùng WiFi / Hotspot | Đua tài trực tiếp độ trễ <15ms không cần net | Thắng +500 Vàng, Thua -500 Vàng | ✅ **Hoàn thành** |
+| **8** | **Đấu Mạng Online Trực Tuyến 1v1** | Ghép trận tự động hoặc tạo phòng mã PIN | Tranh tài toàn cầu qua Internet | Cược Vàng, Tích lũy Trận thắng (Wins) | ✅ **Hoàn thành** |
+
+---
+
+## 6. KHO TÀNG 112 THẾ ĐÁNH HUYỀN THOẠI
+
+Hệ thống gồm **112 đường cơ đỉnh cao** chia đều cho **14 danh thủ bida huyền thoại thế giới** (mỗi danh thủ sở hữu 8 thế đánh đặc trưng):
+
+```
+                                [112 THẾ ĐÁNH HUYỀN THOẠI - 14 DANH THỦ]
+                                                   │
+  ├── 1. Efren "Bata" Reyes (Phù Thủy Bida): Cú Z-bank, Kick giải snooker, Mỏng mép băng, Trô kẹp băng, Color of Money...
+  ├── 2. Ronnie O'Sullivan (Tên Lửa): Cu-lê 2 băng mở góc, Thuận tay trái tia chớp, Xuyên bàn 3.5m, 147 nhanh nhất 5m08s...
+  ├── 3. Shane Van Boening (Cậu Bé Nam Dakota): Siêu trô xuyên bàn 1.5m, Phá uy lực ăn bi 1, Nhảy bi Mosconi, Cắt góc chết...
+  ├── 4. Florian "Venom" Kohler (Vua Trickshot): Massé bẻ cong quanh bi, Vòng cung cầu vồng 3 bi, Xuyên hầm, Vô cực khép kín...
+  ├── 5. Dương Quốc Hoàng (Hoàng Sao Hỏa): Cắt mỏng cân não World 9-Ball, Đánh bại SVB, Rung chuông lỗ góc, Vô địch Scottish Open...
+  ├── 6. Earl Strickland (Hạt Ngọc Quý): Combo xuyên khe cửa lỗ, Bắn nhảy cực cự ly ngắn, Cắt dọc băng tốc độ, Cú nhảy vô địch lần 9...
+  ├── 7. Francisco Bustamante (Django): Áp-phê ngược bẻ băng, Trô bi dội băng ngược, Cú đánh lòng dũng cảm, Phong vương Django...
+  ├── 8. Jayson Shaw (Mắt Đại Bàng): Cắt mỏng 85 độ xé gió, Tấn công trực diện góc chết, Nhảy bi siêu hạn định, Đăng quang Mosconi...
+  ├── 9. Fedor Gorst (Bóng Ma): Cắt tỉa cự ly xa chuẩn như dao, Điều bi hình học số học, Trô dọc băng sai lệch 0mm, Song vô địch...
+  ├── 10. Torbjörn Blomdahl (Vua 3 Băng Thụy Điển): 3 Băng chữ U, Zigzag 4 băng, Dội băng ngược chiều xoáy, Kiệt tác 44 cúp thế giới...
+  ├── 11. Semih Saygıner (Phù Thủy Thổ Nhĩ Kỳ): Cánh cung ma thuật, Slalom qua 2 khe hẹp, Massé giật lùi 180 độ, Vương giả tái xuất...
+  ├── 12. Raymond Ceulemans (Mr. 100 Huyền Thoại): Hệ thống nút số kim cương chuẩn mực, Dẫn bi xuyên tâm, Di sản 35 lần vô địch...
+  ├── 13. Mike Massey (Bậc Thầy Biểu Diễn): Vòng sau lưng lỗ kép, Búng tay qua hàng bi, Nhảy bi vượt chướng ngại, Cú đánh thế kỷ...
+  └── 14. Jeanette Lee (Góa Phụ Đen): Đòn tấn công sát thủ, Cắt băng sắc lạnh như dao, Nhảy bi dứt khoát, Tuyệt chiêu danh vọng...
+```
+
+- **100% Bản Địa Hóa**: Cả 112 thế đánh đều sở hữu bản dịch đặc thù cho **Tiêu đề**, **Mô tả lịch sử** và **Hướng dẫn thông số kỹ thuật cơ** trên toàn bộ 5 ngôn ngữ (`vi`, `en`, `zh`, `ja`, `ko`).
+
+---
+
+## 7. KIẾN TRÚC ĐẤU MẠNG KÉP
+
+Hệ thống hạ tầng mạng được xây dựng theo mô hình **Đấu Mạng Kép (Dual Networking Architecture)**, đáp ứng xuất sắc mọi môi trường kết nối:
+
+```
+                              [KIẾN TRÚC ĐẤU MẠNG KÉP - DUAL NETWORKING]
+                                                   │
+             ┌─────────────────────────────────────┴─────────────────────────────────────┐
+             ▼                                                                           ▼
+   [NHÁNH 1: LOCAL WIFI P2P]                                                   [NHÁNH 2: ONLINE WEBSOCKET]
+(UDP Broadcast 8889 + TCP 8888)                                                (Node.js ws Server - Cổng 8080)
+             │                                                                           │
+├── Tự động dò tìm phòng trong LAN/Hotspot                                  ├── Auto Matchmaking Queue (Ghép tự động)
+├── Kết nối P2P trực tiếp độ trễ <15ms                                      ├── Private PIN Room (Chia sẻ mã PIN 6 số)
+└── Không phụ thuộc đường truyền Internet                                   └── Reconnect Session (Phục hồi ván dở dang)
+             │                                                                           │
+             └─────────────────────────────────────┬─────────────────────────────────────┘
+                                                   ▼
+                                  [GIAO THỨC ĐỒNG BỘ 60 FPS CHUNG]
+                                  ├── Đồng bộ góc xoay ngọn cơ & độ kéo lực
+                                  ├── Đồng bộ vector áp-phê xoáy 2D (dx, dy)
+                                  ├── Đồng bộ tọa độ nhấc/đặt bi cái (Ball-in-Hand)
+                                  ├── Khóa quyền thao tác theo lượt (Authority Lock)
+                                  └── Phân định thắng/thua & Thanh toán cược tự động
+```
+
+### Quy Tắc Phòng Chống Gian Lận & An Toàn Phiên Đấu
+1. **Khóa quyền hành động theo lượt (Authority Lock)**: Khi chưa tới lượt của mình (`!isMyTurn`), toàn bộ bàn chơi và thanh điều khiển của đối phương bị khóa cứng (`IgnorePointer`) kèm độ mờ `opacity: 0.35` và banner đỏ trực quan.
+2. **Cơ chế Reconnect Session thông minh**: Khi client rớt mạng đột ngột và mở lại game, hệ thống tự động nhận diện ID phòng cũ và cho phép bấm "Quay lại trận đấu ngay" để tiếp tục ván đấu mà không bị xử thua.
+3. **Cơ chế Phạt Thoát Trận (Forfeit Penalty)**: Người chơi chủ động đầu hàng hoặc ngắt kết nối quá thời gian quy định sẽ bị xử thua ngay lập tức và bị trừ tiền cược chuyển cho đối thủ.
+
+---
+
+## 8. HỆ THỐNG RPG GẬY CƠ, THÀNH TỰU & TIẾN TRÌNH
+
+### 8.1. Cửa Hàng & Nâng Cấp Gậy Cơ (7 Mẫu Gậy Độc Quyền)
+Mỗi cây gậy sở hữu 4 thuộc tính cơ bản tăng tiến từ **Cấp 1 đến Cấp 10**: **Lực (Force)**, **Ngắm (Aim)**, **Xoáy (Spin)**, và **Thời gian (Time)**:
+
+| Tên Gậy Cơ | Phẩm Cấp | Cấp Mở Khóa | Giá Mua Shop | Chỉ Số Lv.1<br>`[L/N/X/G]` | Chỉ Số Lv.10<br>`[L/N/X/G]` | Kỹ Năng / Nội Tại Đặc Quyền |
+| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Gậy Gỗ Tân Thủ** *(Standard)* | ⚪ Common | **Lv. 1** | *Miễn phí* | `2 / 2 / 1 / 1` | `4 / 4 / 3 / 2` | Gậy khởi đầu cân bằng cho tân thủ |
+| **Cơ Titan Thép** *(Titan Striker)* | ⚪ Common | **Lv. 5** | 3,000 Vàng | `4 / 3 / 2 / 2` | `7 / 5 / 4 / 4` | **Heavy Break**: Tăng +15% xung lực phá bi khai cuộc |
+| **Cơ Băng Phong** *(Frostbite)* | 🔵 Rare | **Lv. 12** | 18,000 Vàng | `5 / 5 / 4 / 3` | `8 / 8 / 7 / 6` | **Ice Aim**: Giảm 20% độ rung lắc khi kéo cơ ngắm |
+| **Cơ Kim Ngưu** *(Golden Bull)* | 🔵 Rare | **Lv. 22** | 50,000 Vàng | `6 / 5 / 5 / 4` | `9 / 8 / 8 / 6` | **Jackpot Touch**: Thưởng thêm +10% Vàng khi chiến thắng |
+| **Cơ Cyberpunk Neo** *(Neon Vector)*| 🟣 Epic | **Lv. 35** | 150,000 Vàng | `7 / 7 / 6 / 5` | `11 / 11 / 10 / 8` | **Laser Line**: Tia ngắm laser sáng gấp đôi và dài hơn |
+| **Cơ Hỏa Phụng** *(Phoenix Flame)* | 🟣 Epic | **Lv. 48** | 450 Kim Cương | `8 / 8 / 8 / 6` | `12 / 12 / 12 / 9` | **Inferno Spin**: Độ xoáy trô giật lùi bóng tăng thêm +25% |
+| **Cơ Đế Vương Rồng Vàng** *(Dragon)*| 🟡 Legendary| **Lv. 60** | 1,500 Kim Cương| `10 / 10 / 9 / 8` | `15 / 15 / 15 / 12` | **Dragon Heart**: Bảo hiểm hoàn lại 50% tiền cược khi thua |
+
+### 8.2. Hệ Thống 14 Thành Tựu (Achievements) & 10 Huy Chương Danh Dự (Medals)
+- **14 Thành Tựu**: Thưởng lượng lớn EXP giúp thăng cấp tài khoản (Tân thủ nhập môn, Khai cuộc hoàn hảo, Bậc thầy áp-phê, Dọn bàn thần tốc, Vượt ải chiến dịch, Chiến thần đấu mạng, Quán quân Tournament...).
+- **10 Huy Chương Ghim Profile Bar**: Người chơi được ghim tối đa **5 huy chương danh giá** lên thanh hồ sơ cá nhân để biểu dương đẳng cấp trước đối thủ khi thi đấu PvP.
+
+### 8.3. Bảng Xếp Hạng Trực Tuyến 3 Bảng (Leaderboards)
+- **Top Cấp Độ (Level)**: Tôn vinh cơ thủ cày cuốc kinh nghiệm cao nhất.
+- **Top Đại Gia Vàng (Coins)**: Xếp hạng khối lượng tài sản tích lũy.
+- **Top Trận Thắng (Total Wins)**: Bảng vàng thành tích đối kháng thực tế.
+
+---
+
+## 9. KINH TẾ TRONG GAME
+
+Hệ sinh thái kinh tế 2 đơn vị tiền tệ (**Vàng** & **Kim Cương**) duy trì cân bằng hoàn hảo giữa nguồn tạo (Sources) và nguồn tiêu (Sinks), triệt tiêu hoàn toàn lạm phát:
+
+```
+[NGUỒN THU CỦA NGƯỜI CHƠI (SOURCES)]
+├── Thắng trận Đấu Mạng Local / Online (+500 Vàng + Bonus Gậy Kim Ngưu)
+├── Quán quân Giải Đấu Tournament 5 Vòng (+5,000 Vàng & Cúp Vàng)
+├── Vượt 10 Ải Chiến Dịch Bot (Thưởng Vàng & Kim Cương mỗi ải)
+├── Chinh phục 112 Thế Đánh Huyền Thoại (Thưởng Vàng & EXP danh thủ)
+├── Hoàn thành Thế Bi Hàng Ngày (Thưởng Kim Cương & Vàng mỗi ngày)
+├── Nhận thưởng 14 Thành Tựu (+EXP thăng cấp tài khoản)
+└── Thăng Cấp Level Up (Thưởng gói quà Vàng + Kim Cương)
+                 │
+                 ▼
+       [HỆ THỐNG TIỀN TỆ TRONG GAME]
+       ├── Vàng (Gold Coins): Cược trận đấu, mua gậy Shop, nâng cấp gậy Lv.1 - Lv.10
+       └── Kim Cương (Diamonds): Mua gậy phẩm cấp cao (Epic, Legendary), hồi lượt
+                 │
+                 ▼
+[CƠ CHẾ TIÊU THỤ & CHỐNG LẠM PHÁT (SINKS)]
+├── Thua cược trận Đấu Mạng Local / Online (-500 Vàng)
+├── Chi phí mua gậy cơ mới trong Cửa Hàng
+├── Chi phí vàng tăng lũy tiến khi nâng cấp gậy lên Cấp 2 ➔ Cấp 10
+└── Phí tham gia các giải đấu cúp đặc biệt
+```
+
+---
+
+## 10. HỆ THỐNG BẢN ĐỊA HÓA ĐA NGÔN NGỮ PHẢN ỨNG
+
+Hệ thống bản địa hóa thời gian thực hỗ trợ **5 ngôn ngữ chính thức**:
+1. 🇻🇳 **Tiếng Việt (`vi`)**: Bản địa hóa nguyên bản phong phú.
+2. 🇬🇧 **English (`en`)**: Tiêu chuẩn quốc tế chuẩn hóa thuật ngữ bida.
+3. 🇨🇳 **中文 (`zh`)**: Tiếng Trung giản thể chuẩn xác cho thị trường châu Á.
+4. 🇯🇵 **日本語 (`ja`)**: Tiếng Nhật tinh tế cho cộng đồng game thủ Nhật Bản.
+5. 🇰🇷 **한국어 (`ko`)**: Tiếng Hàn hiện đại, chuẩn thể thao chuyên nghiệp.
+
+### Kiến Trúc 3 Tầng Bảo Vệ Dự Phòng (Triple-Layer Fallback Architecture)
+```
+[Yêu cầu hiển thị chuỗi]
+       │
+       ├── (1) Tra cứu theo ID chính xác trong Từ Điển Bản Địa Hóa
+       │            ├── Tìm thấy ➔ Trả về chuỗi dịch theo ngôn ngữ đích (en/zh/ja/ko)
+       │            └── Không tìm thấy ➔ Chuyển tiếp sang tầng 2
+       │
+       ├── (2) Tra cứu ngược theo Chuỗi Tiếng Việt Gốc (titlesByVietnamese, descriptionsByVietnamese, hintsByVietnamese)
+       │            ├── Tìm thấy ➔ Trả về chuỗi dịch tương ứng
+       │            └── Không tìm thấy ➔ Chuyển tiếp sang tầng 3
+       │
+       └── (3) Fallback an toàn sang Tiếng Anh chuẩn (en) hoặc Chuỗi mặc định (defaultText)
+```
+
+- **Cơ chế cập nhật UI tức thì**: Toàn bộ widget gốc được quản lý qua `LanguageService.instance` kết hợp `ListenableBuilder`. Nút chuyển đổi 5 ngôn ngữ được bố trí độc quyền tại **Main Menu** với huy hiệu quốc kỳ và tên bản địa rõ nét; trong trận đấu được tinh giản hoàn toàn nút ngôn ngữ để giữ sự tập trung tối đa và tối ưu không gian cho màn hình cảm ứng di động.
+
+---
+
+## 11. THIẾT KẾ GIAO DIỆN NGƯỜI DÙNG & TRẢI NGHIỆM CẢM ỨNG
+
+```
++---------------------------------------------------------------------------------------------------+
+|  [P1: Avatar - Lv.5 - Nam (Bạn) - 15,200 $]          [Âm thanh] [Cài đặt]    [P2: Quang Huy - Lv.8] |
 +---------------------------------------------------------------------------------------------------+
 | [LỰC] |                                                                                   | [THƯỚC] |
 |       |                                  BÀN BIDA 16:9                                    |         |
 | [100%]|             (Mặt nỉ xanh ngọc lục bảo - Viền gỗ bo góc kim loại)                  | [ÁP-PHÊ]|
 |   |   |                                                                                   |   |     |
-|  CƠ   |               [🔒 LƯỢT CỦA QUANG HUY (ĐANG CHỜ...)] (Khi đấu WiFi)                |   |     |
+|  CƠ   |               [🔒 LƯỢT CỦA QUANG HUY (ĐANG CHỜ...)] (Khi đấu mạng)                | [⚙️ 1mm] |
 |  KÉO  |                                                                                   | VI CHỈNH|
 |  LÚN  |                  (Combo Banner: 🔥 COMBO X2 - TUYỆT VỜI!)                         | GÓC     |
 |   |   |                                                                                   | NGẮM    |
-|  [0%] |                     [Tia laser ngắm bắn & Quả bi lăn 3D]                          |   |     |
+| [🔒/⚡]|                     [Tia laser ngắm bắn & Quả bi lăn 3D]                          |   |     |
 +---------------------------------------------------------------------------------------------------+
 ```
 
-### 3.1. Bàn Đấu Bida Responsive Chuẩn 16:9
+### 11.1. Bàn Đấu Bida Responsive Chuẩn 16:9
 - **Mặt bàn nỉ cao cấp**: Tông màu xanh ngọc lục bảo (Emerald Green) kết hợp viền gỗ mun và ốp kim loại vàng đồng sang trọng ở 6 miệng lỗ.
-- **Hệ thống đổ bóng động**: Các quả bi và thành băng đổ bóng mềm mượt (Soft Drop Shadow), tạo cảm giác nổi 2.5D chân thực.
-- **Tự động co giãn (Adaptive Layout)**:
-  - Tự động đo kích thước khung nhìn thực tế của màn hình thiết bị.
-  - Phân tách 3 mức hiển thị: **Chuẩn (Standard)**, **Nhỏ gọn (Compact)** và **Siêu nhỏ gọn (Ultra-Compact)** cho các máy màn hình ngắn (chiều cao < 360px), đảm bảo bàn bida và các thanh điều khiển luôn nằm trọn vẹn trong màn hình mà không bao giờ phát sinh lỗi RenderFlex Overflow.
+- **Tự động co giãn thích ứng (Adaptive Layout)**: 3 cấp độ giao diện (**Standard**, **Compact**, **Ultra-Compact**) đảm bảo bàn chơi hiển thị trọn vẹn trên các thiết bị màn hình ngắn (chiều cao < 360px) mà không bao giờ bị lỗi tràn viền (RenderFlex Overflow).
 
-### 3.2. Thanh Điều Khiển Người Chơi (Player Status Bar)
-Nằm ở cạnh trên cùng của màn hình, được bo tròn góc với hiệu ứng đổ bóng mờ nền tối:
-- **Thẻ người chơi P1 & P2**:
-  - **Huy hiệu Level**: Huy hiệu gradient cam - vàng nổi bật (ví dụ: `Lv.1`, `Lv.12`).
-  - **Tên người chơi (Nickname)**: Hiển thị tên tài khoản thật kèm chỉ dẫn `(Bạn)` hoặc `(Chủ phòng)` / `(Khách)`.
-  - **Số dư Vàng ($)**: Hiển thị số tiền hiện có kèm icon đồng tiền vàng lấp lánh.
-  - **Đèn báo lượt (Turn Indicator)**: Khi đến lượt cơ thủ nào, thẻ của cơ thủ đó sẽ sáng viền xanh neon cùng mũi tên chỉ báo động học.
-  - **Nhóm bi mục tiêu**: Hiển thị cụm bi mục tiêu thu nhỏ tương ứng (Nhóm Bi Trơn 1-7 hoặc Nhóm Bi Sọc 9-15) cùng trạng thái các bi đã vào lỗ hoặc còn trên bàn.
-- **Cụm phím chức năng trung tâm**:
-  - **Phím Âm thanh nhanh**: Biểu tượng loa bật/tắt tức thì âm thanh hoặc mở bảng chỉnh âm lượng.
-  - **Phím Cài đặt**: Mở cửa sổ tùy chỉnh chế độ chơi, nhạc nền, SFX và thoát trận.
-
-### 3.3. Bộ Điều Khiển Kỹ Năng Bắn Đa Chiều
-Hệ thống điều khiển được phân bổ khoa học sang hai cạnh mép màn hình, phù hợp hoàn hảo với ngón tay cái của cả hai tay khi cầm máy xoay ngang:
-- **Thanh lực bắn bên trái (Left Power Control)**:
-  - Thiết kế cây cơ thẳng đứng đặt trong rãnh đo độ sâu.
-  - Khi người chơi chạm và kéo ngón tay cái xuống, cây cơ sẽ lùi dần về phía sau theo độ sâu vật lý.
-  - Cột đèn LED năng lượng neon hiển thị phần trăm lực từ `0%` đến `100%`, tự đổi màu từ **Xanh lá $\to$ Hổ phách $\to$ Đỏ rực**.
-- **Thước ngắm vi chỉnh bên phải (Right Aim Ruler)**:
-  - Thanh trượt chia vạch micromet giúp xoay cây cơ từng độ cực nhỏ ($0.1^\circ$).
-  - Giải quyết triệt để vấn đề "ngón tay to che khuất góc bắn" trên màn hình di động.
-- **Nút điều khiển Áp-phê xoáy (Cue Spin Button)**:
-  - Nằm ngay dưới thước ngắm, hiển thị hình quả bi cái thu nhỏ cùng chấm đỏ đánh dấu điểm tiếp xúc đầu cơ.
-  - Chạm vào nút sẽ mở ra hộp thoại căn chỉnh xoáy 2D phóng to, cho phép chọn nhanh các kỹ thuật đỉnh cao: **Tâm bi (Đánh thường)**, **Cu-lê (Đẩy tới)**, **Trô bóng (Giật lùi)**, **Áp-phê Trái / Phải**.
-
-### 3.4. Đồ Họa Động Học & Hiệu Ứng Trực Quan (VFX)
-- **Hiệu ứng Bi Lăn Vào Lỗ 3D (3D Pocket Roll-in Animation)**:
-  - Khi quả bi lăn chạm miệng lỗ, nó không bị xóa tức thì mà kích hoạt chuỗi diễn hoạt 3D: Bi tự động xoay tròn quanh tâm, thu nhỏ tỷ lệ từ `1.0` xuống `0.35` và mờ dần trong 240ms, tạo cảm giác bi rơi thật sự xuống hộc dưới đáy bàn.
-- **Banner Combo Ăn Bi**:
-  - Xuất hiện rực rỡ với hiệu ứng hào quang neon tím - vàng giữa bàn khi ăn liên tiếp các bi cùng loại: `🔥 COMBO X2 - TUYỆT VỜI!` hoặc `⚡ COMBO X3 - BẬC THẦY!`.
-- **Khóa lượt & Banner chờ trong Đấu Mạng Local WiFi**:
-  - Khi chưa tới lượt của mình, toàn bộ bàn bida và các thanh điều khiển tự động giảm độ mờ xuống `0.35` và chặn mọi thao tác chạm (`IgnorePointer`).
-  - Phía trên bàn xuất hiện banner đỏ cảnh báo sang trọng:  
-    `🔒 LƯỢT CỦA [TÊN ĐỐI THỦ] (ĐANG CHỜ...)` kèm vòng tròn xoay chờ tín hiệu đồng bộ.
-- **Bảng Tổng Kết Ván Đấu (Victory / Defeat Rack Overlay)**:
-  - Khung thông báo gradient xanh thẫm viền vàng hổ phách nổi bật.
-  - Biểu tượng Cúp vàng danh dự (`🎉 BẠN ĐÃ CHIẾN THẮNG!`) hoặc Biểu tượng chia buồn (`😢 [ĐỐI THỦ] ĐÃ CHIẾN THẮNG!`).
-  - Huy hiệu cộng thưởng vàng màu vàng hổ phách (`+500 Vàng`) hoặc huy hiệu trừ tiền phạt màu đỏ cảnh báo (`-500 Vàng`).
-
-### 3.5. Hệ Thống Dialogs & Menu Chức Năng
-- **Cửa Sổ Đấu Mạng Local WiFi**:
-  - Giao diện chia 2 tab: **Tạo Phòng (Host)** và **Tìm Phòng (Join)**.
-  - Hiển thị địa chỉ IP nội bộ của máy chủ, danh sách các phòng đang mở trong cùng mạng WiFi được tự động phát hiện qua UDP Broadcast.
-  - Ô nhập địa chỉ IP thủ công bàn phím ảo tùy biến, kết nối nhanh với 1 chạm.
-- **Cửa Hàng Gậy Cơ (Cue Shop Dialog)**:
-  - Hiển thị danh mục các mẫu gậy cơ theo thứ tự cấp độ mở khóa.
-  - Thẻ gậy với hình ảnh vector sắc nét, nhãn phẩm cấp (Common, Rare, Epic, Legendary), thanh đo 4 chỉ số cơ bản (Lực, Ngắm, Xoáy, Thời gian) và nút Mua / Trang bị / Nâng cấp Lv.1 - Lv.10.
-- **Bảng Xếp Hạng Trực Tuyến (Leaderboard Dialog)**:
-  - Kết nối Cloud Firestore realtime, hiển thị danh sách Top cơ thủ toàn cầu với Avatar, Cúp, Level, Tỷ lệ thắng và Huy chương Top 1-2-3 (Vàng, Bạc, Đồng).
-- **Hồ Sơ & Xác Thực Tài Khoản (Profile & Auth Dialog)**:
-  - Cho phép người chơi đổi tên hiển thị (Nickname), đổi Avatar, cập nhật mật khẩu hoặc chuyển đổi linh hoạt giữa tài khoản Khách (Guest) và tài khoản Email đã đăng ký.
+### 11.2. Hiệu Ứng Trực Quan Động Học & GPU VFX
+- **Hiệu ứng Bi Lăn Vào Lỗ 3D (3D Pocket Roll-in Animation)**: Bi tự động xoay tròn, thu nhỏ tỷ lệ từ $1.0$ về $0.35$ và mờ dần trong 240ms khi rơi vào lỗ.
+- **Hệ thống hạt GPU (BilliardVfxComponent)**: Tối ưu hóa bộ nhớ và vòng đời hạt (Sparks va chạm, Pocket Dust miệng lỗ, Combo Flash neon, Victory Confetti ăn mừng).
 
 ---
 
-## 📖 Luật Chơi Chi Tiết (Chuẩn 8-Ball)
-
-### 1. Phân chia nhóm bi
-Bàn bida gồm 1 bi cái (bi trắng) và 15 bi mục tiêu được chia làm 2 nhóm:
-- **Bi Trơn (Solids)**: Đánh số từ **1 đến 7** (màu đơn sắc).
-- **Bi Sọc (Stripes)**: Đánh số từ **9 đến 15** (có dải sọc trắng ở giữa).
-- **Bi Đen Số 8**: Bi quyết định ván đấu.
-
-> *Nhóm bi của mỗi người chơi chỉ được xác định sau cú đánh khai cuộc khi có người đưa thành công quả bi đầu tiên vào lỗ một cách hợp lệ.*
-
-### 2. Quy tắc đánh theo lượt
-- Mỗi người chơi chỉ được ngắm và chạm cơ vào **nhóm bi của mình** đầu tiên.
-- Nếu đưa được ít nhất một bi thuộc nhóm của mình vào lỗ hợp lệ, người chơi sẽ **được đánh tiếp**.
-- Nếu không có bi nào vào lỗ hoặc phạm luật, lượt chơi sẽ **chuyển sang đối thủ**.
-
-### 3. Các lỗi phạm luật (Foul)
-Người chơi sẽ bị tính là phạm lỗi nếu:
-1. Đánh bi cái rơi vào lỗ.
-2. Đánh bi cái không chạm trúng bất kỳ quả bi nào trên bàn.
-3. Đánh bi cái chạm bi của đối thủ hoặc chạm bi số 8 đầu tiên (khi chưa dọn hết nhóm của mình).
-4. Bi cái và bi mục tiêu sau va chạm không có quả nào chạm băng hoặc rơi vào lỗ.
-
-### 4. Quyền đặt bi tự do (Ball-in-Hand)
-- Khi một bên phạm lỗi (Foul), người chơi kế tiếp sẽ nhận quyền **Ball-in-Hand**.
-- Người chơi có quyền dùng tay chạm và đặt bi cái ở **bất kỳ vị trí nào** trên mặt bàn để thực hiện cú đánh tiếp theo. Trong chế độ Local WiFi, vị trí bi cái được đồng bộ hóa tức thì sang máy đối thủ.
-
-### 5. Điều kiện Thắng / Thua
-- **Chiến Thắng**: Người chơi dọn sạch toàn bộ các bi thuộc nhóm của mình và sau đó đánh bi số 8 vào lỗ một cách hợp lệ.
-- **Thua Ngay Lập Tức**:
-  - Đánh rơi bi số 8 vào lỗ khi chưa ăn hết nhóm bi của mình.
-  - Đánh bi số 8 vào lỗ đồng thời làm bi cái rơi vào lỗ.
-  - Làm bi số 8 văng ra khỏi bàn thi đấu.
-
----
-
-## 🎮 Hướng Dẫn Thao Tác
-
-1. **Ngắm hướng**: Chạm và rê ngón tay trên mặt bàn để xoay hướng ngắm của cây cơ. Dùng **Thước ngắm vi chỉnh bên phải** để tinh chỉnh góc bắn nhỏ.
-2. **Chỉnh xoáy Áp-phê**: Bấm vào biểu tượng bi cái ở góc dưới bên phải để chọn điểm tiếp xúc cơ (Cu-lê, Trô bóng hoặc Áp-phê).
-3. **Kéo lực & Bắn**:
-   - Chạm vào thanh đo bên trái và vuốt ngón tay cái xuống dưới. Cây cơ sẽ lún dần theo tay bạn.
-   - Thả tay ra để thực hiện cú đánh với lực tương ứng.
-4. **Di chuyển bi cái (khi có Ball-in-Hand)**: Chạm giữ trực tiếp vào bi cái, kéo đến vị trí mong muốn trên bàn và thả tay.
-5. **Đấu Mạng Local WiFi**:
-   - Máy 1: Bấm icon Mạng $\to$ Chọn tab "Tạo phòng" $\to$ Bấm "Bắt đầu tạo phòng".
-   - Máy 2: Cùng kết nối vào WiFi/Hotspot của máy 1 $\to$ Bấm icon Mạng $\to$ Bấm vào tên phòng máy 1 xuất hiện tự động để tham gia ngay!
-
----
-
-## 📘 BẢN THIẾT KẾ TRÒ CHƠI (GAME DESIGN DOCUMENT - GDD)
-
-### 6.1. Định Vị & Tầm Nhìn Dự Án
-
-- **Thể loại**: Casual Sports / Mid-core Billiards Simulator kết hợp yếu tố RPG nhẹ (Gậy cơ, Thuộc tính, Cửa hàng, Đấu mạng Local WiFi).
-- **Nền tảng mục tiêu**: Mobile (Android / iOS), mở rộng Web (HTML5/Canvas) & PC.
-- **Target Audience**: 
-  - Game thủ yêu thích thể thao bida, thi đấu kỹ năng logic hình học (16 - 45 tuổi).
-  - Người chơi casual tìm kiếm game giải trí ngắn (vòng lặp 3 - 5 phút/ván).
-  - Nhóm bạn bè, đồng nghiệp so tài trực tiếp cùng phòng qua mạng WiFi / Hotspot.
-- **USP (Unique Selling Proposition)**:
-  - Cảm giác vật lý bi lăn, áp-phê và nảy băng chân thực chuẩn Box2D kết hợp âm thanh va chạm sinh động.
-  - Khả năng **Đấu mạng Local WiFi P2P thời gian thực mượt mà** không cần internet cáp quang hay server trung gian đắt đỏ.
-  - Điều khiển cảm ứng trực quan, tích hợp thước ngắm vi chỉnh giải quyết triệt để nhược điểm màn hình cảm ứng di động.
-
----
-
-### 6.2. Kiến Trúc Vòng Lặp Game (Game Loops)
-
-```
-+-------------------------------------------------------------------------------+
-|                       RETENTION LOOP (Tuần / Tháng)                          |
-|  - Bảng Xếp Hạng Tuần (Weekly Leagues)  - Sưu tập Gậy Huyền Thoại             |
-|  - Chiến Dịch Ải Boss AI                - Hoạt Động Bang Hội & Giao Hữu       |
-+-------------------------------------------------------------------------------+
-                                        ^
-                                        | (Tích lũy Điểm / Cup / Huy Chương)
-+-------------------------------------------------------------------------------+
-|                         META GAME LOOP (Hàng Ngày)                            |
-|  [Đấu WiFi Cược Vàng] ---> [Cày Cấp Độ Mở Shop] ---> [Nâng Cấp Gậy Lv.1-10]   |
-|          ^                                                   |                |
-|          |----------- [Giải Đố Thế Bi Hàng Ngày] <-----------+                |
-+-------------------------------------------------------------------------------+
-                                        ^
-                                        | (Vàng, XP, Kim Cương)
-+-------------------------------------------------------------------------------+
-|                         CORE GAME LOOP (Trong Ván)                            |
-|  [Vào Bàn] -> [Đọc Thế Bi] -> [Căn Áp-phê / Lực / Thước] -> [Bắn] -> [Kết Quả] |
-+-------------------------------------------------------------------------------+
-```
-
----
-
-### 6.3. Hệ Thống Chế Độ Chơi Tạo Tính Chơi Lại Cao (Replayability)
-
-| Chế Độ Chơi | Mục Tiêu Chính | Yếu Tố Kích Thích Người Chơi | Cơ Chế Phần Thưởng | Trạng Thái |
-| :--- | :--- | :--- | :--- | :---: |
-| **1. Đấu Mạng Local WiFi (P2P)** | So tài trực tiếp 2 máy qua mạng WiFi/Hotspot | Cạnh tranh kỹ năng người với người, cược tiền kịch tính | Thắng +500 Vàng & XP, Thua trừ -500 Vàng | ✅ **Hoàn thành** |
-| **2. Chơi 2 Người (Pass & Play)** | 2 người chơi lần lượt trên 1 màn hình | Giải trí nhanh cùng bạn bè người thân | Rèn luyện kỹ năng, tính điểm số | ✅ **Hoàn thành** |
-| **3. Đấu Với Máy (Vs CPU)** | Tập luyện với Bot Dễ hoặc Bot Khó | Thử nghiệm các góc bắn hiểm hóc | Thưởng XP cơ bản | ✅ **Hoàn thành** |
-| **4. Chiến Dịch Ải Bot (Campaign)** | Vượt 7 ải Boss AI với độ khó tăng dần | Chinh phục thử thách, hạ gục cao thủ máy | Thưởng lớn Vàng, Kim Cương & XP lần đầu | ✅ **Hoàn thành** |
-| **5. Thế Bi Hàng Ngày (Daily Puzzle)**| Dọn sạch các bi mục tiêu với số cơ giới hạn | Kích thích tư duy logic, áp-phê trô giật bóng | Thưởng Kim Cương và Vàng mỗi ngày | ✅ **Hoàn thành** |
-| **6. Đấu Xếp Hạng Online (Cloud Server)**| Đua top toàn cầu, ghép cặp tự động qua Server | Thăng hạng Elo, vinh danh Leaderboard | Cúp Danh Dự, Rương quà mùa giải | 🚀 *Giai đoạn tiếp theo* |
-
----
-
-### 6.4. Kiến Trúc Đấu Mạng Local WiFi (Peer-to-Peer Realtime)
-
-Chế độ Đấu Mạng Local WiFi cho phép hai thiết bị di động trong cùng mạng LAN/WLAN hoặc qua Điểm phát sóng di động (Hotspot) thi đấu đối kháng trực tiếp mà không cần cấu hình Router hay mở cổng mạng (Port Forwarding):
-
-```
-+-----------------------------------------------------------------------------------+
-|               KIẾN TRÚC MẠNG ĐỐI KHÁNG LOCAL WIFI (SOCKET P2P)                     |
-+-----------------------------------------------------------------------------------+
-|                                                                                   |
-|   [THIẾT BỊ 1: HOST (CHỦ PHÒNG)]             [THIẾT BỊ 2: CLIENT (KHÁCH)]        |
-|   - Tự động dò IP LAN (192.168.x.x)          - Lắng nghe UDP Broadcast (Cổng 8889)|
-|   - Mở Socket Server TCP (Cổng 8888)         - Tự động phát hiện Host xuất hiện   |
-|   - Phát UDP Broadcast chu kỳ 1.2s    ===>   - Bấm tham gia phòng 1 chạm          |
-|                                                                                   |
-|                                  KẾT NỐI TCP THÀNH CÔNG                           |
-|                                       <=========>                                 |
-|                                                                                   |
-|   [ĐỒNG BỘ DỮ LIỆU THỜI GIAN THỰC]:                                               |
-|   1. Trao đổi thông tin: Nickname, Level, Số dư Vàng                              |
-|   2. Đồng bộ góc ngắm (Aim Angle) & Lực kéo cơ (Shot Power) theo thời gian thực    |
-|   3. Đồng bộ điểm áp-phê xoáy (Cue Spin dx, dy)                                   |
-|   4. Đồng bộ nhấc / đặt bi cái (Ball-in-Hand) kèm cờ "placed: true"              |
-|   5. Khóa quyền điều khiển khi đối thủ đang đánh (Turn-based Authority Lock)       |
-|   6. Kết thúc ván: Phân định thắng/thua, cộng/trừ tiền cược ví tự động            |
-|                                                                                   |
-+-----------------------------------------------------------------------------------+
-```
-
-- **Quy tắc khóa quyền hành động (Turn-based Authority Lock)**:
-  - Máy chủ (Host) luôn là Player 1 (đánh khai cuộc Break shot). Máy khách (Client) là Player 2.
-  - Khi chưa tới lượt của mình (`!isMyTurn`), toàn bộ bàn đấu và bảng điều khiển bị phong tỏa bằng `IgnorePointer` và giảm độ mờ sang `0.35`. Chỉ thiết bị của người đang tới lượt mới có quyền thao tác.
-  - Khi có Foul (phạm luật), quyền đặt bi tự do (Ball-in-Hand) được trao cho đối phương và tọa độ được truyền qua mạng để cả hai máy hiển thị bi di chuyển mượt mà.
-- **Kinh tế cược ván đấu (Betting Match Economy)**:
-  - Mức cược mặc định: **500 Vàng**.
-  - Người chiến thắng: Nhận `+500 Vàng` cược (+10% nếu trang bị Gậy Kim Ngưu) cùng `+150 XP`.
-  - Người thua cuộc: Bị trừ `-500 Vàng` từ tài khoản (giảm 50% tiền cược mất nếu trang bị Gậy Long Thần).
-
----
-
-### 6.5. Tính Năng & Hoạt Động Giữ Chân Người Chơi (Retention & Live-Ops)
-
-1. **Chuỗi Nhiệm Vụ Thế Bi Hàng Ngày (Daily Puzzle)**:
-   - Mỗi ngày một bàn cờ thế bi mới với chướng ngại vật đòi hỏi kỹ thuật băng hoặc nhảy bi.
-   - Thưởng nóng Kim Cương để tích lũy mua các gậy cơ cao cấp.
-2. **Bảng Xếp Hạng Cơ Thủ (Realtime Leaderboards)**:
-   - Cập nhật tự động qua Firebase Firestore.
-   - Hiển thị danh hiệu Top 10 cơ thủ có Cúp cao nhất, Level cao nhất và tỷ lệ thắng tốt nhất.
-3. **Hiệu Ứng Combo Tăng Động Lực**:
-   - Thưởng Combo ăn liên tiếp tạo cảm giác thỏa mãn (Juiciness) trong từng đường cơ xuất sắc.
-
----
-
-### 6.6. Hệ Thống Shop Cửa Hàng & Nâng Cấp Gậy Cơ (Cue Mastery & Shop RPG)
-
-Gậy cơ trong game sở hữu 4 chỉ số cơ bản và tăng tiến sức mạnh vượt bậc khi nâng cấp từ **Cấp 1 lên Cấp 10**:
-
-| Tên Gậy Cơ | Phẩm Cấp | Cấp Mở Khóa | Giá Mua Shop | Chỉ Số Ban Đầu (Lv.1)<br>`[Lực / Ngắm / Xoáy / Giờ]` | Chỉ Số Tối Đa (Lv.10)<br>`[Lực / Ngắm / Xoáy / Giờ]` | Kỹ Năng / Nội Tại Đặc Quyền |
-| :--- | :---: | :---: | :---: | :---: | :---: | :--- |
-| **Gậy Gỗ Tân Thủ** *(Standard)* | ⚪ Common | **Lv. 1** | *Miễn phí* | `2 / 2 / 1 / 1` | `4 / 4 / 3 / 2` | Dành cho người mới làm quen |
-| **Cơ Titan Thép** *(Titan Striker)* | ⚪ Common | **Lv. 5** | 3,000 Vàng | `4 / 3 / 2 / 2` | `7 / 5 / 4 / 4` | **Heavy Break**: Tăng +15% lực phá bi khai cuộc |
-| **Cơ Băng Phong** *(Frostbite)* | 🔵 Rare | **Lv. 12** | 18,000 Vàng | `5 / 5 / 4 / 3` | `8 / 8 / 7 / 6` | **Ice Aim**: Làm chậm 20% tốc độ dao động thanh đo lực |
-| **Cơ Kim Ngưu** *(Golden Bull)* | 🔵 Rare | **Lv. 22** | 50,000 Vàng | `6 / 5 / 5 / 4` | `9 / 8 / 8 / 6` | **Jackpot Touch**: Thưởng thêm +10% Vàng khi thắng trận |
-| **Cơ Cyberpunk Neo** *(Neon Vector)*| 🟣 Epic | **Lv. 35** | 150,000 Vàng | `7 / 7 / 6 / 5` | `11 / 11 / 10 / 8` | **Laser Line**: Tia ngắm bi cái và bi mục tiêu sáng gấp đôi |
-| **Cơ Hỏa Phụng** *(Phoenix Flame)* | 🟣 Epic | **Lv. 48** | 450 Kim Cương | `8 / 8 / 8 / 6` | `12 / 12 / 12 / 9` | **Inferno Spin**: Độ giật trô bóng tăng vọt +25% khoảng cách |
-| **Cơ Đế Vương Rồng Vàng** *(Dragon)*| 🟡 Legendary| **Lv. 60** | 1,500 Kim Cương| `10 / 10 / 9 / 8` | `15 / 15 / 15 / 12` | **Dragon Heart**: Hoàn lại 50% tiền cược nếu thua ván |
-
----
-
-### 6.7. Kinh Tế Trong Game (In-Game Economy)
-
-```
-[NGUỒN THU CỦA NGƯỜI CHƠI (SOURCES)]
-├── Thắng trận Đấu Mạng Local WiFi (+500 Vàng + Bonus Gậy)
-├── Vượt Ải Chiến Dịch Bot (Vàng & Kim Cương lần đầu)
-├── Hoàn thành Thế Bi Hàng Ngày (Kim Cương & Vàng)
-└── Thăng Cấp Tài Khoản Level Up (Thưởng Vàng + Kim Cương)
-                 │
-                 ▼
-       [HỆ THỐNG TIỀN TỆ]
-       ├── Vàng (Gold Coins): Dùng để cược trận đấu, mua gậy Shop, nâng cấp gậy
-       └── Kim Cương (Diamonds): Dùng để mua gậy cao cấp (Epic, Legendary)
-                 │
-                 ▼
-[CƠ CHẾ TIÊU THỤ & CHỐNG LẠM PHÁT (SINKS)]
-├── Mất tiền khi thua cược trận Đấu Mạng (-500 Vàng)
-├── Chi phí mua gậy cơ mới trong Cửa Hàng
-└── Chi phí nâng cấp gậy lên Lv. 2 ➔ Lv. 10
-```
-
----
-
-## 🗺️ LỘ TRÌNH PHÁT TRIỂN (PRODUCT ROADMAP)
-
-Lộ trình phát triển được cập nhật theo tiến độ thực tế của dự án:
+## 12. LỘ TRÌNH SẢN PHẨM & KẾ HOẠCH VẬN HÀNH
 
 ```
 [Giai Đoạn 1: Core Engine]  ===>  [Giai Đoạn 2: Meta & RPG]  ===>  [Giai Đoạn 3: Local WiFi P2P]
       (HOÀN THIỆN 100%)                (HOÀN THIỆN 100%)                 (HOÀN THIỆN 100%)
   - Vật lý Box2D chuẩn xác        - Hệ thống Gậy Cơ & Stats           - UDP Discovery tự động dò
   - Áp-phê, Cu-lê, Trô bóng       - Nâng cấp Gậy Lv. 1-10             - Socket TCP P2P thời gian thực
-  - Bot AI Dễ & Khó               - Chế độ Chiến Dịch Ải Bot          - Khóa quyền hành động theo lượt
-  - Responsive Mọi Màn Hình       - Chế độ Thế Bi Hàng Ngày           - Đồng bộ ngắm/lực/xoáy/ball-in-hand
-  - Thước vi chỉnh góc ngắm       - Âm thanh SFX & BGM chân thực      - Cược tiền thắng/thua trực tiếp
-  - Hiệu ứng Lăn Lỗ 3D            - Firebase Auth & Leaderboard       - Hiển thị Nickname & Level thật
+  - Bot AI Dễ & Khó               - Chiến Dịch 10 Ải Bot (4 Tiers)    - Khóa quyền hành động theo lượt
+  - Responsive Mọi Màn Hình       - 112 Thế Đánh Huyền Thoại          - Đồng bộ ngắm/lực/xoáy/ball-in-hand
+  - Thước vi chỉnh & Nút 1mm      - Thế Bi Hàng Ngày (Daily Puzzle)   - Cược tiền thắng/thua trực tiếp
+  - Hiệu ứng Lăn Lỗ 3D            - 14 Thành Tựu & 10 Huy Chương      - Hiển thị Nickname & Level thật
 
                                         ||
                                         \/
-[Giai Đoạn 5: Esports & Đa Nền Tảng] <=== [Giai Đoạn 4: Online Global Server]
-            (QUÝ 1/2027)                                (QUÝ 4/2026)
-  - Chế độ 9-Ball & Bida 3 Băng         - Server Matchmaking tự động qua Cloud
-  - Pro Mode (Tắt hoàn toàn tia ngắm)   - Bàn Cược theo Thành Phố (Hà Nội, Vegas)
-  - Xuất bản bản build Web & Desktop    - Chat Emoji hoạt hình trong bàn đấu
-  - Giải Đấu Cúp 8 Người Knockout       - Hệ thống Bang Hội / Club Wars
+[Giai Đoạn 5: Esports & Đa Nền Tảng] <=== [Giai Đoạn 4: Online Server & Đa Ngôn Ngữ]
+            (QUÝ 1/2027)                                (HOÀN THIỆN 100%)
+  - Chế độ 9-Ball & Bida 3 Băng         - WebSocket Server Matchmaking 1v1 qua Internet
+  - Pro Mode (Tắt hoàn toàn tia ngắm)   - Tạo phòng thi đấu riêng chia sẻ Mã PIN 6 số
+  - Xuất bản bản build Web & Desktop    - Khôi phục ván đấu dở dang (Reconnect Session)
+  - Giải Đấu Cúp 8 Người Knockout       - Bản địa hóa 100% 5 Ngôn Ngữ (VI, EN, ZH, JA, KO)
+                                        - Tournament 5 Brackets Knockout với Cúp Vàng
 ```
 
-### Chi Tiết Kế Hoạch Từng Giai Đoạn:
-
-#### 📍 Giai Đoạn 1: Nền Tảng Cốt Lõi (Core Engine & Polish) — *[Đã Hoàn Thành]*
-- [x] Tích hợp engine vật lý Forge2D / Box2D: Va chạm bi - bi, bi - băng bàn chuẩn xác.
-- [x] Cơ chế Áp-phê (Spin Control): Cu-lê đẩy tới, Trô giật lùi, xoáy nảy góc băng.
-- [x] Hệ thống thanh kéo lực tương tác mượt mà, chuyển màu năng lượng neon.
-- [x] Bộ luật 8-Ball hoàn chỉnh: Chia bi Trơn/Sọc, Foul, Quyền đặt bi tự do (Ball-in-Hand), Điều kiện thắng/thua với Bi số 8.
-- [x] AI Bot 2 cấp độ: Dễ (giải trí) và Khó (tính toán hình học, tự né phạm lỗi).
-- [x] UI Responsive tự động co giãn theo tỷ lệ màn hình điện thoại, chống tràn màn hình.
-- [x] Thước vi chỉnh góc ngắm (Aim Ruler Slider) tinh chỉnh micromet.
-- [x] Hiệu ứng lăn 3D vào lỗ (3D Ball Pocket Roll-in Animation).
-
-#### 📍 Giai Đoạn 2: Meta-Game, Hệ Thống Gậy & Tiến Trình RPG — *[Đã Hoàn Thành]*
-- [x] **Cửa Hàng Gậy Cơ Đa Phẩm Cấp**: 7 mẫu gậy từ Common đến Legendary, mở khóa theo Level người chơi.
-- [x] **Hệ Thống Nâng Cấp Gậy (Level 1 $\to$ Level 10)**: Tăng tiến 4 chỉ số (Lực, Ngắm, Xoáy, Thời gian) và nội tại đặc quyền.
-- [x] **Chế Độ Chiến Dịch Ải Bot (7 Ải Boss AI)**: Tăng dần độ khó với phần thưởng hấp dẫn.
-- [x] **Chế Độ Thế Bi Hàng Ngày (Daily Trickshot Puzzle)**: Giới hạn lượt cơ, tích lũy Kim Cương và Vàng.
-- [x] **Hệ Thống Âm Thanh Động**: Tiếng va chạm bi "cạch" chân thực theo xung lực Box2D, tiếng bi lọt lỗ và BGM.
-- [x] **Hệ Thống Combo**: Banner vinh danh chuỗi ăn liên tiếp các bi cùng loại.
-- [x] **Firebase Auth & Realtime Leaderboard**: Đăng nhập, lưu trữ đám mây và Bảng xếp hạng trực tuyến.
-
-#### 📍 Giai Đoạn 3: Đấu Mạng Local WiFi P2P Thời Gian Thực — *[Đã Hoàn Thành]*
-- [x] Dò tìm phòng tự động qua UDP Broadcast không cần cấu hình Router.
-- [x] Kết nối P2P trực tiếp qua Socket TCP độ trễ cực thấp.
-- [x] Đồng bộ thời gian thực 60 FPS: Hướng ngắm, mức kéo lực, áp-phê xoáy, nhấc và đặt bi cái.
-- [x] Khóa toàn diện quyền hành động khi đang tới lượt của đối thủ (bàn đấu, thước ngắm, thanh lực, áp-phê).
-- [x] Banner thông báo trạng thái lượt đối thủ trực quan kèm hiệu ứng chờ.
-- [x] Hiển thị chính xác Nickname thật, Cấp độ và Số dư Vàng của cả hai bên.
-- [x] Cơ chế kinh tế cược tiền ván đấu: Thắng nhận tiền (+500 Vàng), Thua mất tiền (-500 Vàng).
-
-#### 📍 Giai Đoạn 4: Server Đấu Mạng Trực Tuyến Toàn Cầu (Cloud Matchmaking & Social) — *[Kế hoạch tiếp theo]*
-- [ ] Xây dựng Server Matchmaking tự động ghép cặp 1v1 theo điểm kỹ năng Elo qua Internet.
-- [ ] Hệ thống Bàn Cược theo Thành Phố (Hà Nội, Sài Gòn, Tokyo, Las Vegas...).
-- [ ] Tích hợp hệ thống Chat nhanh, Emoji hoạt hình chọc tức đối thủ.
-- [ ] Bida Pass Mùa Giải (Battle Pass 30 ngày).
-- [ ] Giải đấu Cúp 8 Người Knockout trực tiếp.
-
-#### 📍 Giai Đoạn 5: Đa Nền Tảng & Esports Mở Rộng
-- [ ] Hỗ trợ thêm các thể thức thi đấu mới: **9-Ball Pool** và **Bida Carom / 3 Băng mini**.
-- [ ] Xuất bản bản build tối ưu trên trình duyệt Web (HTML5 Canvas) và Windows/macOS.
-- [ ] Chế độ Khán Giả (Spectator Mode) phục vụ livestream và các giải đấu eSports cộng đồng.
+### Kế Hoạch Tiếp Theo (Giai Đoạn 5):
+- [ ] Bổ sung thể thức thi đấu mới: **9-Ball Pool** và **Bida Carom / 3 Băng**.
+- [ ] Chế độ Thi Đấu Chuyên Nghiệp (Pro Mode: Tắt toàn bộ tia hỗ trợ ngắm).
+- [ ] Xuất bản bản build tối ưu cho Trình duyệt Web (Canvas Kit) và Desktop (Windows/macOS).
+- [ ] Bida Pass Mùa Giải (Battle Pass 30 ngày) và Hệ thống Bang Hội / Club Wars.

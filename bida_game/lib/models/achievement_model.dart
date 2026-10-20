@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 
 enum AchievementDifficulty {
   easy,
@@ -10,19 +11,15 @@ enum AchievementDifficulty {
 
 extension AchievementDifficultyExt on AchievementDifficulty {
   String get label {
-    switch (this) {
-      case AchievementDifficulty.easy:
-        return 'Dễ';
-      case AchievementDifficulty.medium:
-        return 'Trung Bình';
-      case AchievementDifficulty.hard:
-        return 'Khó';
-      case AchievementDifficulty.expert:
-        return 'Siêu Khó';
-      case AchievementDifficulty.legendary:
-        return 'Huyền Thoại';
-    }
+    return LanguageService.instance.localizeAchievementDifficulty(name, switch (this) {
+      AchievementDifficulty.easy => 'Dễ',
+      AchievementDifficulty.medium => 'Trung Bình',
+      AchievementDifficulty.hard => 'Khó',
+      AchievementDifficulty.expert => 'Siêu Khó',
+      AchievementDifficulty.legendary => 'Huyền Thoại',
+    });
   }
+
 
   int get defaultRewardXP {
     switch (this) {
@@ -73,7 +70,11 @@ class AchievementModel {
     required this.rewardXP,
     this.targetValue = 1,
   });
+
+  String get localizedTitle => LanguageService.instance.localizeAchievementTitle(id, title);
+  String get localizedDescription => LanguageService.instance.localizeAchievementDescription(id, description);
 }
+
 
 class AchievementCatalog {
   static const List<AchievementModel> allAchievements = [

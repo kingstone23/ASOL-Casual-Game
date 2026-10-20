@@ -52,7 +52,7 @@ class LanguageSelectorDialog extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '5 Languages • 5 Ngôn ngữ',
+                      '5_languages_subtitle'.tr,
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 11,

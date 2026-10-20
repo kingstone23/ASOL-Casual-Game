@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 
 enum MedalRarity {
   bronze,
@@ -10,19 +11,15 @@ enum MedalRarity {
 
 extension MedalRarityExt on MedalRarity {
   String get label {
-    switch (this) {
-      case MedalRarity.bronze:
-        return 'Đồng';
-      case MedalRarity.silver:
-        return 'Bạc';
-      case MedalRarity.gold:
-        return 'Vàng';
-      case MedalRarity.diamond:
-        return 'Kim Cương';
-      case MedalRarity.mythic:
-        return 'Thần Thoại';
-    }
+    return LanguageService.instance.localizeMedalRarity(name, switch (this) {
+      MedalRarity.bronze => 'Đồng',
+      MedalRarity.silver => 'Bạc',
+      MedalRarity.gold => 'Vàng',
+      MedalRarity.diamond => 'Kim Cương',
+      MedalRarity.mythic => 'Thần Thoại',
+    });
   }
+
 
   List<Color> get gradientColors {
     switch (this) {
@@ -71,7 +68,12 @@ class MedalModel {
     required this.rarity,
     required this.unlockRequirement,
   });
+
+  String get localizedName => LanguageService.instance.localizeMedalName(id, name);
+  String get localizedDescription => LanguageService.instance.localizeMedalDescription(id, description);
+  String get localizedRequirement => LanguageService.instance.localizeMedalRequirement(id, unlockRequirement);
 }
+
 
 class MedalCatalog {
   static const List<MedalModel> allMedals = [

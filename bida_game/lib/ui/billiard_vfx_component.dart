@@ -2,9 +2,11 @@ import 'dart:math' as math;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-/// Hiệu ứng va chạm sóng kích (Shockwave Ring) giữa 2 quả bi
+/// Hiệu ứng va chạm sóng kích (Shockwave Ring) giữa 2 quả bi - GPU Accelerated
 class _BallCollisionShockwave {
-  final Vector2 position;
+  final double cx;
+  final double cy;
+  final Offset center;
   final double maxRadius;
   final double maxLife;
   final double intensity;
@@ -12,22 +14,24 @@ class _BallCollisionShockwave {
   double age = 0.0;
 
   _BallCollisionShockwave({
-    required this.position,
+    required Vector2 position,
     required this.maxRadius,
     required this.maxLife,
     required this.intensity,
     required this.sparks,
-  });
+  })  : cx = position.x,
+        cy = position.y,
+        center = Offset(position.x, position.y);
 
   bool update(double dt) {
     age += dt;
-    for (final s in sparks) {
-      s.update(dt);
+    for (int i = 0; i < sparks.length; i++) {
+      sparks[i].update(dt);
     }
     return age < maxLife;
   }
 
-  void render(Canvas canvas) {
+  void render(Canvas canvas, Paint ringPaint, Paint glowPaint, Paint corePaint, Paint sparkPaint) {
     final t = (age / maxLife).clamp(0.0, 1.0);
     // Ease out quartic cho sóng kích nảy bung tức thì
     final ease = 1.0 - math.pow(1.0 - t, 3.5).toDouble();
@@ -36,148 +40,202 @@ class _BallCollisionShockwave {
 
     if (alpha <= 0.001) return;
 
-    // Vòng sóng kích va chạm phát quang trắng xanh tinh tế
-    final ringPaint = Paint()
-      ..color = Color.fromRGBO(240, 250, 255, 0.85 * alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = (1.8 * (1.0 - t * 0.65)).clamp(0.4, 2.0);
+    // 1. Lớp quầng sáng nở mờ bên ngoài (Glow Halo) - 100% GPU, không dùng MaskFilter.blur
+    final strokeW = (1.8 * (1.0 - t * 0.65)).clamp(0.4, 2.0);
+    glowPaint
+      ..color = Color.fromRGBO(200, 240, 255, (0.35 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW * 2.2;
+    canvas.drawCircle(center, r, glowPaint);
 
-    canvas.drawCircle(position.toOffset(), r, ringPaint);
+    // 2. Vòng sóng kích lõi phát quang trắng xanh tinh tế
+    ringPaint
+      ..color = Color.fromRGBO(240, 250, 255, (0.85 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW;
+    canvas.drawCircle(center, r, ringPaint);
 
-    // Điểm chớp sáng tâm va chạm (Core Flash) siêu ngắn (chỉ trong 30% đầu thời gian)
+    // 3. Điểm chớp sáng tâm va chạm (Core Flash) siêu ngắn (trong 35% đầu thời gian)
     if (t < 0.35) {
       final coreFlashT = 1.0 - (t / 0.35);
-      final corePaint = Paint()
-        ..color = Color.fromRGBO(255, 255, 255, 0.95 * coreFlashT * intensity);
-      canvas.drawCircle(position.toOffset(), maxRadius * 0.28 * coreFlashT, corePaint);
+      corePaint.color = Color.fromRGBO(255, 255, 255, (0.95 * coreFlashT * intensity).clamp(0.0, 1.0));
+      canvas.drawCircle(center, maxRadius * 0.28 * coreFlashT, corePaint);
     }
 
-    // Các tia hạt vi lượng văng ra dọc theo tiếp tuyến va chạm
-    for (final s in sparks) {
-      s.render(canvas, alpha);
+    // 4. Các tia hạt vi lượng văng ra dọc theo tiếp tuyến va chạm
+    for (int i = 0; i < sparks.length; i++) {
+      sparks[i].render(canvas, alpha, sparkPaint);
     }
   }
 }
 
-/// Tia hạt vi lượng tiếp xúc (Micro Spark)
+/// Tia hạt vi lượng tiếp xúc (Micro Spark) - Zero heap allocations
 class _SparkSpeck {
-  Vector2 pos;
-  Vector2 vel;
+  double px;
+  double py;
+  double vx;
+  double vy;
   final double length;
   final Color color;
 
   _SparkSpeck({
-    required this.pos,
-    required this.vel,
+    required double startX,
+    required double startY,
+    required double velX,
+    required double velY,
     required this.length,
     required this.color,
-  });
+  })  : px = startX,
+        py = startY,
+        vx = velX,
+        vy = velY;
 
   void update(double dt) {
-    pos += vel * dt;
-    vel *= math.pow(0.2, dt).toDouble(); // Giảm tốc nhanh do ma sát nỉ
+    px += vx * dt;
+    py += vy * dt;
+    final friction = math.pow(0.2, dt).toDouble();
+    vx *= friction;
+    vy *= friction;
   }
 
-  void render(Canvas canvas, double parentAlpha) {
+  void render(Canvas canvas, double parentAlpha, Paint sparkPaint) {
     if (parentAlpha <= 0.01) return;
-    final sparkPaint = Paint()
-      ..color = color.withValues(alpha: (parentAlpha * 0.85).clamp(0.0, 1.0))
-      ..strokeWidth = 1.0
-      ..strokeCap = StrokeCap.round;
+    final speed2 = vx * vx + vy * vy;
+    if (speed2 < 0.0001) return;
 
-    final tail = pos - vel.normalized() * (length * 0.5);
-    canvas.drawLine(pos.toOffset(), tail.toOffset(), sparkPaint);
+    final invSpeed = 1.0 / math.sqrt(speed2);
+    final nx = vx * invSpeed;
+    final ny = vy * invSpeed;
+    final halfLen = length * 0.5;
+
+    sparkPaint
+      ..color = color.withValues(alpha: (parentAlpha * 0.85).clamp(0.0, 1.0))
+      ..strokeWidth = 1.0;
+
+    canvas.drawLine(
+      Offset(px, py),
+      Offset(px - nx * halfLen, py - ny * halfLen),
+      sparkPaint,
+    );
   }
 }
 
-/// Bụi lơ gậy (Chalk Dust Puff) khi đầu cơ tiếp xúc bi cái
+/// Bụi lơ gậy (Chalk Dust Puff) khi đầu cơ tiếp xúc bi cái - GPU Accelerated Dual-Circle Halo
 class _ChalkDustParticle {
-  Vector2 pos;
-  Vector2 vel;
+  double px;
+  double py;
+  double vx;
+  double vy;
   final double radius;
   final double maxLife;
   final Color color;
   double age = 0.0;
 
   _ChalkDustParticle({
-    required this.pos,
-    required this.vel,
+    required double startX,
+    required double startY,
+    required double velX,
+    required double velY,
     required this.radius,
     required this.maxLife,
     required this.color,
-  });
+  })  : px = startX,
+        py = startY,
+        vx = velX,
+        vy = velY;
 
   bool update(double dt) {
     age += dt;
-    pos += vel * dt;
-    // Lực cản không khí làm giảm tốc bụi lơ
-    vel *= math.pow(0.15, dt).toDouble();
+    px += vx * dt;
+    py += vy * dt;
+    final drag = math.pow(0.15, dt).toDouble();
+    vx *= drag;
+    vy *= drag;
     return age < maxLife;
   }
 
-  void render(Canvas canvas) {
+  void render(Canvas canvas, Paint fillPaint) {
     final t = (age / maxLife).clamp(0.0, 1.0);
     final alpha = (1.0 - t * t).clamp(0.0, 1.0);
     if (alpha <= 0.005) return;
 
     final curRadius = radius * (1.0 + 0.8 * t);
-    final paint = Paint()
-      ..color = color.withValues(alpha: alpha * 0.75)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.2);
+    final offset = Offset(px, py);
 
-    canvas.drawCircle(pos.toOffset(), curRadius, paint);
+    // Lớp quầng bụi tỏa rộng mờ ảo
+    fillPaint.color = color.withValues(alpha: (alpha * 0.28).clamp(0.0, 1.0));
+    canvas.drawCircle(offset, curRadius * 1.5, fillPaint);
+
+    // Lớp lõi bụi phấn đậm đà
+    fillPaint.color = color.withValues(alpha: (alpha * 0.70).clamp(0.0, 1.0));
+    canvas.drawCircle(offset, curRadius * 0.75, fillPaint);
   }
 }
 
-/// Gợn ép đàn hồi băng cao su (Cushion Impact Ripple) khi bi đập vào băng
+/// Gợn ép đàn hồi băng cao su (Cushion Impact Ripple) khi bi đập vào băng - GPU Accelerated
 class _RailImpactRipple {
-  final Vector2 position;
-  final Vector2 tangent;
+  final double cx;
+  final double cy;
+  final double tx;
+  final double ty;
   final double maxHalfLength;
   final double maxLife;
   final double intensity;
   double age = 0.0;
 
   _RailImpactRipple({
-    required this.position,
-    required this.tangent,
+    required Vector2 position,
+    required Vector2 tangent,
     required this.maxHalfLength,
     required this.maxLife,
     required this.intensity,
-  });
+  })  : cx = position.x,
+        cy = position.y,
+        tx = tangent.x,
+        ty = tangent.y;
 
   bool update(double dt) {
     age += dt;
     return age < maxLife;
   }
 
-  void render(Canvas canvas) {
+  void render(Canvas canvas, Paint ripplePaint, Paint glowPaint) {
     final t = (age / maxLife).clamp(0.0, 1.0);
     final ease = 1.0 - math.pow(1.0 - t, 2.5).toDouble();
     final halfLen = maxHalfLength * (0.3 + 0.7 * ease);
     final alpha = (1.0 - t) * intensity;
     if (alpha <= 0.01) return;
 
-    final p1 = position - tangent * halfLen;
-    final p2 = position + tangent * halfLen;
+    final x1 = cx - tx * halfLen;
+    final y1 = cy - ty * halfLen;
+    final x2 = cx + tx * halfLen;
+    final y2 = cy + ty * halfLen;
+    final p1 = Offset(x1, y1);
+    final p2 = Offset(x2, y2);
 
-    final ripplePaint = Paint()
-      ..color = Color.fromRGBO(200, 255, 230, 0.70 * alpha)
-      ..strokeWidth = (2.2 * (1.0 - t)).clamp(0.6, 2.5)
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+    final strokeW = (2.2 * (1.0 - t)).clamp(0.6, 2.5);
 
-    canvas.drawLine(p1.toOffset(), p2.toOffset(), ripplePaint);
+    // 1. Quầng nảy mờ lan tỏa đàn hồi cao su
+    glowPaint
+      ..color = Color.fromRGBO(180, 255, 220, (0.28 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW * 2.4;
+    canvas.drawLine(p1, p2, glowPaint);
+
+    // 2. Đường tiếp xúc nảy băng sắc nét
+    ripplePaint
+      ..color = Color.fromRGBO(220, 255, 240, (0.80 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW;
+    canvas.drawLine(p1, p2, ripplePaint);
   }
 }
 
-/// Điểm vệt chuyển động có thời gian sống tự tiêu hủy
+/// Điểm vệt chuyển động có thời gian sống tự tiêu hủy - Pre-cached Offset
 class _TrailPoint {
-  final Vector2 position;
+  final double x;
+  final double y;
+  final Offset offset;
   double age = 0.0;
-  static const double maxAge = 0.11; // 110ms: vệt mờ sắc nét, biến mất tức thì không để lại cặn/đọng
+  static const double maxAge = 0.11; // 110ms: vệt mờ sắc nét, biến mất tức thì không để lại cặn
 
-  _TrailPoint(this.position);
+  _TrailPoint(this.x, this.y) : offset = Offset(x, y);
 
   bool update(double dt) {
     age += dt;
@@ -192,16 +250,17 @@ class _BallMotionTrailHistory {
   final List<_TrailPoint> points = [];
   double idleTime = 0.0;
 
-  void addPosition(Vector2 pos) {
+  void addPosition(double x, double y) {
     idleTime = 0.0;
     if (points.isNotEmpty) {
-      final diff = points.first.position - pos;
-      if (diff.length2 < 4.0) {
-        return; // Không thêm điểm trùng khi bi di chuyển cực nhỏ
+      final dx = points.first.x - x;
+      final dy = points.first.y - y;
+      if (dx * dx + dy * dy < 9.0) {
+        return; // Không thêm điểm trùng khi bi di chuyển cực nhỏ (< 3px)
       }
     }
-    points.insert(0, _TrailPoint(pos.clone()));
-    if (points.length > 5) {
+    points.insert(0, _TrailPoint(x, y));
+    if (points.length > 4) {
       points.removeLast();
     }
   }
@@ -209,14 +268,9 @@ class _BallMotionTrailHistory {
   bool update(double dt) {
     idleTime += dt;
     // Nếu bi không cập nhật điểm mới (chậm lại, rơi vào lỗ hoặc đứng yên) -> làm mờ cực nhanh
-    if (idleTime > 0.03) {
-      for (final p in points) {
-        p.age += dt * 3.5;
-      }
-    } else {
-      for (final p in points) {
-        p.age += dt;
-      }
+    final factor = idleTime > 0.03 ? 4.0 : 1.0;
+    for (int i = 0; i < points.length; i++) {
+      points[i].age += dt * factor;
     }
     points.removeWhere((p) => p.age >= _TrailPoint.maxAge);
     return points.isNotEmpty;
@@ -228,24 +282,24 @@ class _BallMotionTrailHistory {
   }
 }
 
-/// Hiệu ứng xoáy tụ hút vào lỗ (Pocket Drop Vortex) khi bi lọt lỗ
+/// Hiệu ứng xoáy tụ hút vào lỗ (Pocket Drop Vortex) khi bi lọt lỗ - Dual Ring GPU
 class _PocketDropVortex {
   static const double maxLife = 0.38;
-  final Vector2 position;
+  final Offset center;
   final double radius;
   double age = 0.0;
 
   _PocketDropVortex({
-    required this.position,
+    required Vector2 position,
     required this.radius,
-  });
+  }) : center = Offset(position.x, position.y);
 
   bool update(double dt) {
     age += dt;
     return age < maxLife;
   }
 
-  void render(Canvas canvas) {
+  void render(Canvas canvas, Paint strokePaint, Paint glowPaint, Paint fillPaint) {
     final t = (age / maxLife).clamp(0.0, 1.0);
     final alpha = (1.0 - t * t).clamp(0.0, 1.0);
     if (alpha <= 0.01) return;
@@ -253,59 +307,70 @@ class _PocketDropVortex {
     // Vòng tụ sáng xoáy vào tâm lỗ mượt mà
     final shrink = 1.0 - math.pow(t, 1.8).toDouble() * 0.52;
     final curR = radius * shrink;
+    final strokeW = (2.2 * (1.0 - t * 0.7)).clamp(0.5, 2.5);
 
-    final rimPaint = Paint()
-      ..color = Color.fromRGBO(255, 225, 120, 0.65 * alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = (2.2 * (1.0 - t * 0.7)).clamp(0.5, 2.5)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5);
+    // 1. Quầng sáng xoáy vàng ánh kim (Glow Halo)
+    glowPaint
+      ..color = Color.fromRGBO(255, 230, 140, (0.28 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW * 2.2;
+    canvas.drawCircle(center, curR, glowPaint);
 
-    canvas.drawCircle(position.toOffset(), curR, rimPaint);
+    // 2. Vành tụ xoáy vàng kim sắc nét
+    strokePaint
+      ..color = Color.fromRGBO(255, 225, 120, (0.75 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW;
+    canvas.drawCircle(center, curR, strokePaint);
 
-    // Vùng bóng sâu lòng lỗ tạo cảm giác bi rơi chìm vào họng lỗ
-    final depthShadowPaint = Paint()
-      ..color = Color.fromRGBO(5, 5, 5, 0.55 * alpha)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0);
-    canvas.drawCircle(position.toOffset(), radius * 0.65 * (1.0 - t * 0.3), depthShadowPaint);
+    // 3. Vùng bóng sâu lòng lỗ tạo cảm giác bi rơi chìm vào họng lỗ
+    fillPaint.color = Color.fromRGBO(5, 5, 5, (0.55 * alpha).clamp(0.0, 1.0));
+    canvas.drawCircle(center, radius * 0.65 * (1.0 - t * 0.3), fillPaint);
   }
 }
 
 /// Xung chấn tiếp xúc đầu gậy cơ (Cue Tip Strike Pulse)
 class _CueTipHitPulse {
   static const double maxLife = 0.14;
-  final Vector2 position;
+  final Offset center;
   final double maxRadius;
   final double intensity;
   double age = 0.0;
 
   _CueTipHitPulse({
-    required this.position,
+    required Vector2 position,
     required this.maxRadius,
     required this.intensity,
-  });
+  }) : center = Offset(position.x, position.y);
 
   bool update(double dt) {
     age += dt;
     return age < maxLife;
   }
 
-  void render(Canvas canvas) {
+  void render(Canvas canvas, Paint strokePaint, Paint glowPaint, Paint fillPaint) {
     final t = (age / maxLife).clamp(0.0, 1.0);
     final alpha = (1.0 - t) * intensity;
     if (alpha <= 0.01) return;
 
     final r = maxRadius * math.sqrt(t);
-    final pulsePaint = Paint()
-      ..color = Color.fromRGBO(255, 255, 255, 0.90 * alpha)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = (1.8 * (1.0 - t)).clamp(0.5, 2.0);
+    final strokeW = (1.8 * (1.0 - t)).clamp(0.5, 2.0);
 
-    canvas.drawCircle(position.toOffset(), r, pulsePaint);
+    // 1. Quầng chấn động đầu cơ
+    glowPaint
+      ..color = Color.fromRGBO(220, 245, 255, (0.35 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW * 2.0;
+    canvas.drawCircle(center, r, glowPaint);
 
+    // 2. Sóng tròn sắc nét
+    strokePaint
+      ..color = Color.fromRGBO(255, 255, 255, (0.90 * alpha).clamp(0.0, 1.0))
+      ..strokeWidth = strokeW;
+    canvas.drawCircle(center, r, strokePaint);
+
+    // 3. Chớp tâm phát lực
     if (t < 0.4) {
       final coreAlpha = (1.0 - t / 0.4) * intensity;
-      final flashPaint = Paint()..color = Color.fromRGBO(255, 255, 255, coreAlpha);
-      canvas.drawCircle(position.toOffset(), maxRadius * 0.3 * (1.0 - t / 0.4), flashPaint);
+      fillPaint.color = Color.fromRGBO(255, 255, 255, coreAlpha.clamp(0.0, 1.0));
+      canvas.drawCircle(center, maxRadius * 0.3 * (1.0 - t / 0.4), fillPaint);
     }
   }
 }
@@ -317,6 +382,11 @@ class _CueTipHitPulse {
 /// 4. Gợn sóng đàn hồi băng cao su
 /// 5. Vệt mờ tốc độ cao chân thực
 /// 6. Xoáy hút chìm bi vào lỗ
+///
+/// Tối ưu hóa 100% phần cứng GPU:
+/// - Loại bỏ hoàn toàn CPU Skia MaskFilter.blur gây khựng giật khung hình
+/// - Tái sử dụng các Paint tĩnh dùng chung, triệt tiêu cấp phát heap và Garbage Collection
+/// - Cắt giảm sớm (Fast Early Return) khi bàn đứng yên
 class BilliardVfxComponent extends Component {
   final List<_BallCollisionShockwave> _shockwaves = [];
   final List<_ChalkDustParticle> _chalkPuffs = [];
@@ -327,13 +397,48 @@ class BilliardVfxComponent extends Component {
 
   final math.Random _random = math.Random();
 
+  // Reusable static Paint instances - Triệt tiêu GC churn trong render loop
+  static final Paint _sharedStrokePaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  static final Paint _sharedGlowPaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  static final Paint _sharedFillPaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.fill;
+
+  static final Paint _sharedSparkPaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  static final Paint _sharedTrailCorePaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  static final Paint _sharedTrailGlowPaint = Paint()
+    ..isAntiAlias = true
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
   BilliardVfxComponent() {
     priority = 5; // Hiển thị phía trên mặt bàn và bi
   }
 
   /// Kích hoạt hiệu ứng va chạm giữa 2 bi bida
   void addBallCollision(Vector2 contactPoint, double relativeSpeed, {double ballRadius = 12.0}) {
-    if (relativeSpeed < 30.0) return;
+    if (relativeSpeed < 32.0) return;
+
+    // Giới hạn số lượng sóng kích cùng lúc tối đa 8 để giữ khung hình ổn định khi phá bi mạnh
+    if (_shockwaves.length >= 8) {
+      _shockwaves.removeAt(0);
+    }
 
     // Chuẩn hóa cường độ theo vận tốc va chạm
     final intensity = (relativeSpeed / 480.0).clamp(0.25, 1.0);
@@ -343,15 +448,17 @@ class BilliardVfxComponent extends Component {
     // Sinh các tia hạt tiếp xúc nếu va chạm mạnh
     final sparks = <_SparkSpeck>[];
     if (relativeSpeed > 220.0) {
-      final count = (3 + (intensity * 5).round()).clamp(3, 8);
+      final count = (2 + (intensity * 4).round()).clamp(2, 6);
       for (int i = 0; i < count; i++) {
         final angle = _random.nextDouble() * 2 * math.pi;
-        final speed = 40.0 + _random.nextDouble() * 120.0 * intensity;
+        final speed = 40.0 + _random.nextDouble() * 110.0 * intensity;
         sparks.add(
           _SparkSpeck(
-            pos: contactPoint.clone(),
-            vel: Vector2(math.cos(angle) * speed, math.sin(angle) * speed),
-            length: 4.0 + 4.0 * intensity,
+            startX: contactPoint.x,
+            startY: contactPoint.y,
+            velX: math.cos(angle) * speed,
+            velY: math.sin(angle) * speed,
+            length: 3.5 + 3.5 * intensity,
             color: _random.nextBool()
                 ? const Color(0xFFE0F7FA)
                 : const Color(0xFFFFF9C4),
@@ -362,7 +469,7 @@ class BilliardVfxComponent extends Component {
 
     _shockwaves.add(
       _BallCollisionShockwave(
-        position: contactPoint.clone(),
+        position: contactPoint,
         maxRadius: maxRadius,
         maxLife: maxLife,
         intensity: intensity,
@@ -379,12 +486,16 @@ class BilliardVfxComponent extends Component {
     double ballRadius = 12.0,
   }) {
     final speedRatio = (shotSpeed / 1200.0).clamp(0.25, 1.0);
-    final particleCount = (6 + (speedRatio * 8).round()).clamp(6, 14);
+    final particleCount = (5 + (speedRatio * 6).round()).clamp(5, 11);
+
+    if (_cueHitPulses.length >= 4) {
+      _cueHitPulses.removeAt(0);
+    }
 
     // Xung chấn đầu cơ tiếp xúc bi cái
     _cueHitPulses.add(
       _CueTipHitPulse(
-        position: tipPos.clone(),
+        position: tipPos,
         maxRadius: ballRadius * 0.95,
         intensity: speedRatio,
       ),
@@ -394,26 +505,39 @@ class BilliardVfxComponent extends Component {
     final baseDir = -shotDirection.normalized();
     final baseAngle = math.atan2(baseDir.y, baseDir.x);
 
+    // Dọn dẹp bụi cũ nếu đã tích lũy nhiều
+    if (_chalkPuffs.length > 14) {
+      _chalkPuffs.removeRange(0, _chalkPuffs.length - 14);
+    }
+
+    const chalkColors = [
+      Color(0xFF80DEEA), // Màu phấn Master Chalk xanh ngọc
+      Color(0xFFB2EBF2),
+      Color(0xFFE0F7FA),
+      Color(0xFFFFFFFF),
+    ];
+
     for (int i = 0; i < particleCount; i++) {
       final spread = (_random.nextDouble() - 0.5) * 1.3;
       final angle = baseAngle + spread;
       final pSpeed = (35.0 + _random.nextDouble() * 85.0) * speedRatio;
-      final vel = Vector2(math.cos(angle) * pSpeed, math.sin(angle) * pSpeed);
-
-      final chalkColors = [
-        const Color(0xFF80DEEA), // Màu phấn Master Chalk xanh ngọc
-        const Color(0xFFB2EBF2),
-        const Color(0xFFE0F7FA),
-        const Color(0xFFFFFFFF),
-      ];
+      final vx = math.cos(angle) * pSpeed;
+      final vy = math.sin(angle) * pSpeed;
       final color = chalkColors[_random.nextInt(chalkColors.length)];
+
+      final offsetDist = 1.5 + _random.nextDouble() * 2.5;
+      final dirNorm = math.sqrt(vx * vx + vy * vy);
+      final offX = dirNorm > 0 ? (vx / dirNorm) * offsetDist : 0.0;
+      final offY = dirNorm > 0 ? (vy / dirNorm) * offsetDist : 0.0;
 
       _chalkPuffs.add(
         _ChalkDustParticle(
-          pos: tipPos.clone() + (vel.normalized() * (1.5 + _random.nextDouble() * 2.5)),
-          vel: vel,
+          startX: tipPos.x + offX,
+          startY: tipPos.y + offY,
+          velX: vx,
+          velY: vy,
           radius: 1.0 + _random.nextDouble() * 1.8 * speedRatio,
-          maxLife: 0.22 + _random.nextDouble() * 0.16,
+          maxLife: 0.20 + _random.nextDouble() * 0.14,
           color: color,
         ),
       );
@@ -439,13 +563,17 @@ class BilliardVfxComponent extends Component {
     final proj = toBall.dot(tangent).clamp(0.0, wallLen);
     final contactPos = wallStart + tangent * proj;
 
+    if (_railRipples.length >= 6) {
+      _railRipples.removeAt(0);
+    }
+
     final intensity = (speed / 450.0).clamp(0.2, 1.0);
     _railRipples.add(
       _RailImpactRipple(
         position: contactPos,
         tangent: tangent,
         maxHalfLength: ballRadius * (1.2 + 1.0 * intensity),
-        maxLife: 0.16 + 0.06 * intensity,
+        maxLife: 0.15 + 0.06 * intensity,
         intensity: intensity,
       ),
     );
@@ -454,14 +582,20 @@ class BilliardVfxComponent extends Component {
   /// Kích hoạt hiệu ứng hút rơi vào miệng lỗ
   void addPocketDrop(Vector2 pocketPos, [double pocketRadius = 24.0]) {
     // Chống kích hoạt đè liên tiếp nhiều xoáy trên cùng 1 lỗ trong thời gian ngắn (< 0.25s)
-    for (final pv in _pocketVortices) {
-      if ((pv.position - pocketPos).length < pocketRadius * 0.6 && pv.age < 0.25) {
+    for (int i = 0; i < _pocketVortices.length; i++) {
+      final pv = _pocketVortices[i];
+      final dx = pv.center.dx - pocketPos.x;
+      final dy = pv.center.dy - pocketPos.y;
+      if (dx * dx + dy * dy < (pocketRadius * 0.6) * (pocketRadius * 0.6) && pv.age < 0.25) {
         return;
       }
     }
+    if (_pocketVortices.length >= 6) {
+      _pocketVortices.removeAt(0);
+    }
     _pocketVortices.add(
       _PocketDropVortex(
-        position: pocketPos.clone(),
+        position: pocketPos,
         radius: pocketRadius,
       ),
     );
@@ -475,12 +609,12 @@ class BilliardVfxComponent extends Component {
 
   /// Cập nhật vệt chuyển động của quả bi
   void recordBallPosition(int ballId, Vector2 pos, double speed) {
-    if (speed < 320.0) {
+    if (speed < 340.0) {
       clearBallTrail(ballId);
       return;
     }
     final history = _motionTrails.putIfAbsent(ballId, () => _BallMotionTrailHistory());
-    history.addPosition(pos);
+    history.addPosition(pos.x, pos.y);
   }
 
   /// Xóa toàn bộ hiệu ứng khi reset rack hoặc đổi bàn
@@ -496,6 +630,17 @@ class BilliardVfxComponent extends Component {
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Fast early return: nếu không có bất kỳ hiệu ứng nào đang hoạt động
+    if (_shockwaves.isEmpty &&
+        _chalkPuffs.isEmpty &&
+        _railRipples.isEmpty &&
+        _pocketVortices.isEmpty &&
+        _cueHitPulses.isEmpty &&
+        _motionTrails.isEmpty) {
+      return;
+    }
+
     // Cập nhật các danh sách hiệu ứng và lọc bỏ các hiệu ứng hết hạn
     _shockwaves.removeWhere((sw) => !sw.update(dt));
     _chalkPuffs.removeWhere((cp) => !cp.update(dt));
@@ -511,32 +656,44 @@ class BilliardVfxComponent extends Component {
   void render(Canvas canvas) {
     super.render(canvas);
 
-    // 1. Vẽ gợn xoáy tụ hút vào lỗ (dưới các hiệu ứng nảy trên mặt bàn)
-    for (final pv in _pocketVortices) {
-      pv.render(canvas);
+    // Fast early return: tránh gọi vòng lặp render khi không có VFX
+    if (_pocketVortices.isEmpty &&
+        _railRipples.isEmpty &&
+        _motionTrails.isEmpty &&
+        _shockwaves.isEmpty &&
+        _cueHitPulses.isEmpty &&
+        _chalkPuffs.isEmpty) {
+      return;
+    }
+
+    // 1. Vẽ gợn xoáy tụ hút vào lỗ
+    for (int i = 0; i < _pocketVortices.length; i++) {
+      _pocketVortices[i].render(canvas, _sharedStrokePaint, _sharedGlowPaint, _sharedFillPaint);
     }
 
     // 2. Vẽ gợn đàn hồi băng cao su
-    for (final rr in _railRipples) {
-      rr.render(canvas);
+    for (int i = 0; i < _railRipples.length; i++) {
+      _railRipples[i].render(canvas, _sharedStrokePaint, _sharedGlowPaint);
     }
 
-    // 3. Vẽ vệt mờ tốc độ cao của các bi
-    _renderMotionTrails(canvas);
+    // 3. Vẽ vệt mờ tốc độ cao của các bi (GPU Accelerated Dual-pass halo)
+    if (_motionTrails.isNotEmpty) {
+      _renderMotionTrails(canvas);
+    }
 
     // 4. Vẽ sóng kích va chạm nảy bi
-    for (final sw in _shockwaves) {
-      sw.render(canvas);
+    for (int i = 0; i < _shockwaves.length; i++) {
+      _shockwaves[i].render(canvas, _sharedStrokePaint, _sharedGlowPaint, _sharedFillPaint, _sharedSparkPaint);
     }
 
     // 5. Vẽ xung chấn tiếp xúc đầu gậy cơ
-    for (final chp in _cueHitPulses) {
-      chp.render(canvas);
+    for (int i = 0; i < _cueHitPulses.length; i++) {
+      _cueHitPulses[i].render(canvas, _sharedStrokePaint, _sharedGlowPaint, _sharedFillPaint);
     }
 
     // 6. Vẽ bụi lơ gậy cơ
-    for (final cp in _chalkPuffs) {
-      cp.render(canvas);
+    for (int i = 0; i < _chalkPuffs.length; i++) {
+      _chalkPuffs[i].render(canvas, _sharedFillPaint);
     }
   }
 
@@ -547,7 +704,7 @@ class BilliardVfxComponent extends Component {
       if (history.points.length < 2) continue;
 
       final isCueBall = ballId == 0;
-      final trailBaseColor = isCueBall
+      final baseColor = isCueBall
           ? const Color(0xFF00E5FF)
           : const Color(0xFFFFD54F);
 
@@ -560,13 +717,19 @@ class BilliardVfxComponent extends Component {
 
         if (finalAlpha <= 0.01) continue;
 
-        final trailPaint = Paint()
-          ..color = trailBaseColor.withValues(alpha: finalAlpha)
-          ..strokeWidth = (14.0 - i * 3.0).clamp(4.0, 16.0)
-          ..strokeCap = StrokeCap.round
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5);
+        final coreW = (10.0 - i * 2.2).clamp(3.0, 11.0);
 
-        canvas.drawLine(p0.position.toOffset(), p1.position.toOffset(), trailPaint);
+        // Pass 1: Quầng sáng mờ halo bên ngoài (100% GPU)
+        _sharedTrailGlowPaint
+          ..color = baseColor.withValues(alpha: (finalAlpha * 0.35).clamp(0.0, 1.0))
+          ..strokeWidth = coreW * 2.2;
+        canvas.drawLine(p0.offset, p1.offset, _sharedTrailGlowPaint);
+
+        // Pass 2: Vệt tia sáng lõi sắc sảo
+        _sharedTrailCorePaint
+          ..color = baseColor.withValues(alpha: (finalAlpha * 0.85).clamp(0.0, 1.0))
+          ..strokeWidth = coreW;
+        canvas.drawLine(p0.offset, p1.offset, _sharedTrailCorePaint);
       }
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/achievement_model.dart';
 import '../models/medal_model.dart';
 import '../services/progression_service.dart';
+import '../services/language_service.dart';
 
 class AchievementsDialog extends StatefulWidget {
   final int initialTab; // 0: Achievements, 1: Medals
@@ -33,10 +34,13 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
 
   @override
   Widget build(BuildContext context) {
-    final screenSize = MediaQuery.of(context).size;
-    final isMobile = screenSize.width < 700;
+    return ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) {
+        final screenSize = MediaQuery.of(context).size;
+        final isMobile = screenSize.width < 700;
 
-    return Dialog(
+        return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.symmetric(
         horizontal: isMobile ? 12 : 32,
@@ -84,11 +88,11 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                 tabs: [
                   Tab(
                     icon: const Icon(Icons.military_tech, size: 20),
-                    text: isMobile ? 'THÀNH TỰU (+XP)' : 'DANH SÁCH THÀNH TỰU (+XP)',
+                    text: 'achievements_tab'.tr,
                   ),
                   Tab(
                     icon: const Icon(Icons.workspace_premium, size: 20),
-                    text: isMobile ? 'HUY CHƯƠNG' : 'KHO HUY CHƯƠNG (MAX 5 TRÊN PROFILE)',
+                    text: 'medals_tab'.tr,
                   ),
                 ],
               ),
@@ -113,6 +117,8 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
         ),
       ),
     );
+      },
+    );
   }
 
   Widget _buildHeader(BuildContext context) {
@@ -136,13 +142,13 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
             child: const Icon(Icons.emoji_events, color: Colors.black87, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'DANH HIỆU & VINH QUANG',
-                  style: TextStyle(
+                  'achievements_header'.tr,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -150,8 +156,8 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                   ),
                 ),
                 Text(
-                  'Hoàn thành thành tựu nhận EXP • Ghim tối đa 5 huy chương lên Profile',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  'achievements_sub'.tr,
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 ),
               ],
             ),
@@ -159,7 +165,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close, color: Colors.white70),
-            tooltip: 'Đóng',
+            tooltip: 'close'.tr,
           ),
         ],
       ),
@@ -190,7 +196,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Tiến Trình Thành Tựu: $completedCount / ${allAch.length}',
+                      '${'achievements_progress'.tr}: $completedCount / ${allAch.length}',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -219,7 +225,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                   border: Border.all(color: Colors.amber),
                 ),
                 child: Text(
-                  '+XP Theo Độ Khó',
+                  '+XP ${'by_difficulty'.tr}',
                   style: TextStyle(
                     color: Colors.amber.shade300,
                     fontSize: 11,
@@ -287,7 +293,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           Row(
                             children: [
                               Text(
-                                ach.title,
+                                ach.localizedTitle,
                                 style: TextStyle(
                                   color: isUnlocked ? Colors.white : Colors.white60,
                                   fontWeight: FontWeight.bold,
@@ -303,7 +309,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                                   border: Border.all(color: ach.difficulty.color, width: 0.8),
                                 ),
                                 child: Text(
-                                  'Độ khó: ${ach.difficulty.label}',
+                                  '${'difficulty'.tr}: ${ach.difficulty.label}',
                                   style: TextStyle(
                                     color: ach.difficulty.color,
                                     fontSize: 9.5,
@@ -315,7 +321,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            ach.description,
+                            ach.localizedDescription,
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
@@ -334,14 +340,14 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           color: Colors.white12,
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle, color: Color(0xFF00E676), size: 14),
-                            SizedBox(width: 4),
+                            const Icon(Icons.check_circle, color: Color(0xFF00E676), size: 14),
+                            const SizedBox(width: 4),
                             Text(
-                              'Đã nhận',
-                              style: TextStyle(color: Colors.white70, fontSize: 11),
+                              'claimed'.tr,
+                              style: const TextStyle(color: Colors.white70, fontSize: 11),
                             ),
                           ],
                         ),
@@ -353,7 +359,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           if (reward != null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('🎉 Nhận thành công +${ach.rewardXP} EXP!'),
+                                content: Text('achievement_claimed_toast'.tr.replaceAll('{xp}', '${ach.rewardXP}')),
                                 backgroundColor: const Color(0xFF00897B),
                                 duration: const Duration(seconds: 2),
                               ),
@@ -446,13 +452,13 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
-                        Icon(Icons.stars, color: Color(0xFFFFD54F), size: 18),
-                        SizedBox(width: 6),
+                        const Icon(Icons.stars, color: Color(0xFFFFD54F), size: 18),
+                        const SizedBox(width: 6),
                         Text(
-                          'HUY CHƯƠNG GHIM TRÊN PROFILE (TỐI ĐA 5)',
-                          style: TextStyle(
+                          'medals_pinned_title'.tr,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
@@ -462,7 +468,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                       ],
                     ),
                     Text(
-                      '${showcased.length}/5 Đã Chọn',
+                      '${showcased.length}/5 ${'selected'.tr}',
                       style: const TextStyle(
                         color: Color(0xFFFFD54F),
                         fontWeight: FontWeight.bold,
@@ -513,7 +519,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 2),
                                       child: Text(
-                                        medal.name,
+                                        medal.localizedName,
                                         style: const TextStyle(
                                           color: Colors.white,
                                           fontSize: 9,
@@ -524,9 +530,10 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                     ),
-                                    const Text(
-                                      '(Chạm để gỡ)',
-                                      style: TextStyle(color: Colors.white54, fontSize: 7.5),
+                                    Text(
+
+                                      'tap_to_remove'.tr,
+                                      style: const TextStyle(color: Colors.white54, fontSize: 7.5),
                                     ),
                                   ],
                                 ),
@@ -534,10 +541,10 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                             : Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.add, color: Colors.white38, size: 22),
+                                  const Icon(Icons.add, color: Colors.white38, size: 22),
                                   const SizedBox(height: 2),
                                   Text(
-                                    'Ô ${index + 1}',
+                                    '${'slot'.tr} ${index + 1}',
                                     style: const TextStyle(color: Colors.white38, fontSize: 9),
                                   ),
                                 ],
@@ -551,9 +558,9 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
           ),
           const SizedBox(height: 16),
 
-          const Text(
-            'TẤT CẢ HUY CHƯƠNG TRONG GAME',
-            style: TextStyle(
+          Text(
+            'all_medals_title'.tr,
+            style: const TextStyle(
               color: Colors.white70,
               fontSize: 12,
               fontWeight: FontWeight.bold,
@@ -619,7 +626,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           Row(
                             children: [
                               Text(
-                                medal.name,
+                                medal.localizedName,
                                 style: TextStyle(
                                   color: isUnlocked ? Colors.white : Colors.white60,
                                   fontWeight: FontWeight.bold,
@@ -647,12 +654,12 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           ),
                           const SizedBox(height: 3),
                           Text(
-                            medal.description,
+                            medal.localizedDescription,
                             style: const TextStyle(color: Colors.white70, fontSize: 11),
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Cách đạt: ${medal.unlockRequirement}',
+                            '${'requirement'.tr}: ${medal.localizedRequirement}',
                             style: TextStyle(
                               color: isUnlocked ? const Color(0xFF00E676) : Colors.white38,
                               fontSize: 10,
@@ -671,10 +678,10 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           final success = service.toggleShowcaseMedal(medal.id);
                           if (!success) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('⚠️ Profile đã đủ tối đa 5 huy chương! Vui lòng gỡ bớt 1 huy chương trước.'),
-                                backgroundColor: Color(0xFFC62828),
-                                duration: Duration(seconds: 2),
+                              SnackBar(
+                                content: Text('medals_max_toast'.tr),
+                                backgroundColor: const Color(0xFFC62828),
+                                duration: const Duration(seconds: 2),
                               ),
                             );
                           }
@@ -690,7 +697,7 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           ),
                         ),
                         child: Text(
-                          isShowcased ? 'Gỡ Khỏi Profile' : 'Ghim Lên Profile',
+                          isShowcased ? 'unpin_from_profile'.tr : 'pin_to_profile'.tr,
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                       ),
@@ -701,14 +708,14 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                           color: Colors.white12,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.lock, color: Colors.white38, size: 13),
-                            SizedBox(width: 4),
+                            const Icon(Icons.lock, color: Colors.white38, size: 13),
+                            const SizedBox(width: 4),
                             Text(
-                              'Đang Khóa',
-                              style: TextStyle(color: Colors.white38, fontSize: 10),
+                              'locked'.tr,
+                              style: const TextStyle(color: Colors.white38, fontSize: 10),
                             ),
                           ],
                         ),

@@ -565,6 +565,14 @@ class ProgressionService extends ChangeNotifier {
     _completedTrickshots.add(shot.id);
     final coins = isFirstClear ? shot.rewardCoins : (shot.rewardCoins * 0.35).round();
     final xp = isFirstClear ? shot.rewardXP : (shot.rewardXP * 0.4).round();
+    final diamonds = isFirstClear
+        ? shot.rewardDiamonds
+        : (shot.rewardDiamonds > 2 ? (shot.rewardDiamonds * 0.25).round() : 0);
+
+    if (diamonds > 0) {
+      _diamonds += diamonds;
+    }
+
     final result = addXPAndCoins(
       xpGained: xp,
       coinsGained: coins,
@@ -576,7 +584,7 @@ class ProgressionService extends ChangeNotifier {
       didLevelUp: result.didLevelUp,
       oldLevel: result.oldLevel,
       newLevel: result.newLevel,
-      bonusDiamonds: result.bonusDiamonds,
+      bonusDiamonds: diamonds + result.bonusDiamonds,
       customMessage: isFirstClear
           ? 'CHINH PHỤC THẾ ĐÁNH CỦA ${shot.masterName.toUpperCase()}!'
           : 'HOÀN THÀNH LUYỆN TẬP THẾ ĐÁNH ${shot.masterName.toUpperCase()}!',
@@ -799,10 +807,10 @@ class ProgressionService extends ChangeNotifier {
     }
   }
 
-  // --- QUẢN LÝ GIẢI ĐẤU TOURNAMENT 6 BRACKETS ---
+  // --- QUẢN LÝ GIẢI ĐẤU TOURNAMENT 5 BRACKETS ---
   /// Trao thưởng sau khi người chơi thắng 1 Bracket Tournament
   MatchRewardResult completeTournamentBracket(TournamentBracketStage stage) {
-    final isChampion = stage.bracketNumber == 6;
+    final isChampion = stage.bracketNumber == 5;
 
     final result = addXPAndCoins(
       xpGained: stage.xpReward,
@@ -834,7 +842,7 @@ class ProgressionService extends ChangeNotifier {
         oldLevel: result.oldLevel,
         newLevel: result.newLevel,
         bonusDiamonds: 50 + result.bonusDiamonds,
-        customMessage: '🏆 QUÁN QUÂN VÔ ĐỊCH TOURNAMENT 6 BRACKETS (+${stage.coinReward} VÀNG, CÚP VÀNG & THÀNH TỰU)!',
+        customMessage: '🏆 QUÁN QUÂN VÔ ĐỊCH TOURNAMENT 5 BRACKETS (+${stage.coinReward} VÀNG, CÚP VÀNG & THÀNH TỰU)!',
       );
     } else {
       _currentTournamentBracket = stage.bracketNumber + 1;

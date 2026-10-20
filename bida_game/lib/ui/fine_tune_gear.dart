@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../main.dart';
+import '../services/language_service.dart';
 
 /// Widget Bánh Răng Xoay Vi Chỉnh Hướng Bắn (Fine-Tune Aim Gear Wheel)
 /// Cho phép người chơi điều chỉnh góc ngắm gậy cơ từng milimet siêu chuẩn xác
@@ -161,7 +162,7 @@ class _FineTuneGearControlState extends State<FineTuneGearControl> {
                 ),
                 const SizedBox(width: 2),
                 Text(
-                  'VI CHỈNH',
+                  'fine_tune'.tr,
                   style: TextStyle(
                     color: Colors.white70,
                     fontSize: widget.ultraCompact ? 7.5 : 8.5,
@@ -178,7 +179,7 @@ class _FineTuneGearControlState extends State<FineTuneGearControl> {
               icon: Icons.arrow_drop_up,
               iconSize: iconSize,
               delta: -_microStepRad,
-              tooltip: 'Nhích trái 1mm',
+              tooltip: 'fine_tune_left'.tr,
             ),
             const SizedBox(height: 1),
 
@@ -216,7 +217,7 @@ class _FineTuneGearControlState extends State<FineTuneGearControl> {
               icon: Icons.arrow_drop_down,
               iconSize: iconSize,
               delta: _microStepRad,
-              tooltip: 'Nhích phải 1mm',
+              tooltip: 'fine_tune_right'.tr,
             ),
             const SizedBox(height: 2),
 

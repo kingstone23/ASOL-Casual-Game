@@ -27,7 +27,6 @@ import 'services/audio_manager.dart';
 import 'ui/combo_banner_overlay.dart';
 import 'models/tournament_model.dart';
 import 'services/online_multiplayer_service.dart';
-import 'ui/tournament_dialog.dart';
 // import 'ui/online_multiplayer_dialog.dart';
 import 'models/legendary_trickshot_model.dart';
 import 'ui/legendary_trickshot_dialog.dart';
@@ -70,29 +69,37 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
   runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      builder: (context, child) {
-        return Listener(
-          behavior: HitTestBehavior.translucent,
-          onPointerDown: (_) => AudioManager.instance.onUserInteraction(),
-          child: child ?? const SizedBox.shrink(),
+    ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          key: ValueKey(LanguageService.instance.currentCode),
+          locale: Locale(LanguageService.instance.currentCode),
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            return Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) => AudioManager.instance.onUserInteraction(),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          theme: ThemeData(
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: const Color(0xFF0E1217),
+            colorScheme: const ColorScheme.dark(
+              primary: Color(0xFF00E676),
+              secondary: Color(0xFF00B0FF),
+              surface: Color(0xFF161B22),
+              onSurface: Colors.white,
+            ),
+          ),
+          home: const AuthGate(),
         );
       },
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0E1217),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF00E676),
-          secondary: Color(0xFF00B0FF),
-          surface: Color(0xFF161B22),
-          onSurface: Colors.white,
-        ),
-      ),
-      home: const AuthGate(),
     ),
   );
 }
+
 
 /// Cổng kiểm tra đăng nhập: Phải đăng nhập mới được vào Main Menu
 /// Khi không có wifi hay mạng, tự động vào account guest
@@ -133,49 +140,13 @@ class BilliardHome extends StatefulWidget {
 
 class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver {
   bool showGame = false;
+  bool hasStartedGameOnce = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-
-    // OnlineMultiplayerService.instance.onReconnected = (roomId, isHost, state) {
-    //   if (mounted) {
-    //     gameInstance.resumeOnlineMultiplayer(
-    //       roomId: roomId,
-    //       isHost: isHost,
-    //       state: state,
-    //     );
-    //     setState(() => showGame = true);
-    //   }
-    // };
-
-    // _checkActiveOnlineMatch();
   }
-
-  // void _checkActiveOnlineMatch() async {
-  //   final activeRoom = await OnlineMultiplayerService.instance.getSavedActiveRoomId();
-  //   if (activeRoom != null && activeRoom.isNotEmpty) {
-  //     await OnlineMultiplayerService.instance.connect();
-  //   }
-  // }
-
-  // void _resumeActiveOnlineMatch() async {
-  //   final service = OnlineMultiplayerService.instance;
-  //   if (!service.isConnected) {
-  //     await service.connect();
-  //   } else if (service.currentRoomId != null) {
-  //     service.reconnectMatch(
-  //       roomId: service.currentRoomId!,
-  //       isHost: service.isHost,
-  //     );
-  //   }
-  //   gameInstance.resumeOnlineMultiplayer(
-  //     roomId: service.currentRoomId ?? '',
-  //     isHost: service.isHost,
-  //   );
-  //   setState(() => showGame = true);
-  // }
 
   @override
   void dispose() {
@@ -187,53 +158,42 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       gameInstance.onAppPaused();
       AudioManager.instance.pauseBgm();
     } else if (state == AppLifecycleState.resumed) {
       gameInstance.onAppResumed();
       AudioManager.instance.resumeBgm();
-      // if (gameInstance.isOnlineMultiplayer.value && !gameInstance.rackOver) {
-      //   if (!OnlineMultiplayerService.instance.isConnected) {
-      //     OnlineMultiplayerService.instance.connect();
-      //   } else if (OnlineMultiplayerService.instance.currentRoomId != null) {
-      //     OnlineMultiplayerService.instance.reconnectMatch(
-      //       roomId: OnlineMultiplayerService.instance.currentRoomId!,
-      //       isHost: OnlineMultiplayerService.instance.isHost,
-      //     );
-      //   }
-      // }
     }
   }
 
   void _startPlayerMatch() {
+    hasStartedGameOnce = true;
     gameInstance.startPlayerMatch();
     setState(() => showGame = true);
   }
 
   void _startBotStage(BotStageModel stage) {
+    hasStartedGameOnce = true;
     gameInstance.startBotStage(stage);
     setState(() => showGame = true);
   }
 
   void _startDailyPuzzle(DailyPuzzleModel puzzle) {
+    hasStartedGameOnce = true;
     gameInstance.startDailyPuzzle(puzzle);
     setState(() => showGame = true);
   }
 
   void _startLegendaryTrickshot(LegendaryTrickshotModel shot) {
+    hasStartedGameOnce = true;
     gameInstance.startLegendaryTrickshot(shot);
     setState(() => showGame = true);
   }
 
   void _startLocalMultiplayerMatch() {
+    hasStartedGameOnce = true;
     gameInstance.startLocalMultiplayer();
-    setState(() => showGame = true);
-  }
-
-  void _startTournamentStage(TournamentBracketStage stage) {
-    gameInstance.startTournamentStage(stage);
     setState(() => showGame = true);
   }
 
@@ -258,228 +218,217 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
   //       !gameInstance.rackOver) {
   //     _resumeActiveOnlineMatch();
   //     return;
-  //   }
-  //   gameInstance.startOnlineMultiplayer(roomId: roomId, isHost: isHost);
-  //   setState(() => showGame = true);
-  // }
+  void _confirmExitAndForfeitMatch() {
+    if (!gameInstance.rackOver) {
+      if (gameInstance.isOnlineMultiplayer.value) {
+        OnlineMultiplayerService.instance.forfeitMatch();
+        final myIdx = OnlineMultiplayerService.instance.isHost ? 1 : 2;
+        gameInstance.declareLoss(myIdx);
+      } else if (gameInstance.activeDailyPuzzle != null || gameInstance.activeLegendaryTrickshot != null) {
+        gameInstance.winningPlayer = 2;
+        gameInstance.rackOver = true;
+        gameInstance.ruleMessage.value = 'forfeit_trickshot_exit'.tr;
+        gameInstance.matchVersion.value++;
+      } else {
+        final myIdx = (gameInstance.isLocalMultiplayer.value && !LocalMultiplayerService.instance.isHost) ? 2 : 1;
+        gameInstance.declareLoss(myIdx);
+      }
+    }
+    setState(() => showGame = false);
+  }
+
+  void _requestExitToMenu(BuildContext context) {
+    if (gameInstance.rackOver) {
+      setState(() => showGame = false);
+    } else {
+      _showConfirmExitMatch(
+        context,
+        onHome: _confirmExitAndForfeitMatch,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: LanguageService.instance,
       builder: (context, _) {
-        if (showGame) {
-          return PopScope(
-            canPop: false,
-            onPopInvokedWithResult: (didPop, result) {
-              if (didPop) return;
-              setState(() => showGame = false);
-            },
-            child: _buildGameScreen(
-              context,
-              onHome: () => setState(() => showGame = false),
-            ),
-          );
-        }
-        return Scaffold(
-          body: DecoratedBox(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF0F1318), Color(0xFF161C24), Color(0xFF0A0D12)],
-              ),
-            ),
-            child: SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isLandscape = constraints.maxWidth >= 540;
-                  final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) {
+            if (didPop) return;
+            if (showGame) {
+              _requestExitToMenu(context);
+            }
+          },
+          child: Stack(
+            children: [
+              // 1. GAME SCREEN: Luôn duy trì trong cây Widget bằng Offstage sau khi ván đấu được kích hoạt
+              // Nhờ đó, Flame GameLoop và Box2D tiếp tục chạy theo thời gian thực (real-time)
+              // không bao giờ bị unmount, không bao giờ bị đứng game khi thoát ra menu chính.
+              if (hasStartedGameOnce)
+                Positioned.fill(
+                  child: Offstage(
+                    offstage: !showGame,
+                    child: _buildGameScreen(
+                      context,
+                      onHome: () => _requestExitToMenu(context),
+                    ),
+                  ),
+                ),
 
-                  return Column(
-                    children: [
-                      // --- THANH TRẠNG THÁI TRÊN CÙNG (KHÔNG ĐÈ NỘI DUNG THẺ) ---
-                      Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: compact ? 12 : 20,
-                          vertical: compact ? 4 : 8,
+              // 2. MAIN MENU SCREEN: Hiển thị khi showGame == false
+              if (!showGame)
+                Positioned.fill(
+                  child: Scaffold(
+                    body: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF0F1318), Color(0xFF161C24), Color(0xFF0A0D12)],
                         ),
-                        child: Row(
-                          children: [
-                            if (isLandscape) ...[
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: Colors.black45,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: const Color(0xFFB77A35).withValues(alpha: 0.5),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 18,
-                                      height: 18,
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.black,
-                                      ),
-                                      child: Image.asset('assets/images/ball_8.png'),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    const Text(
-                                      '8 POOL CASUAL',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 11,
-                                        letterSpacing: 1.0,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Nút chọn ngôn ngữ nhanh (5 loại ngôn ngữ: Việt, Anh, Trung, Nhật, Hàn)
-                              InkWell(
-                                onTap: () => LanguageSelectorDialog.show(context),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black45,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
-                                      width: 1,
-                                    ),
+                      ),
+                      child: SafeArea(
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final isLandscape = constraints.maxWidth >= 540;
+                            final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
+
+                            return Column(
+                              children: [
+                                // --- THANH TRẠNG THÁI TRÊN CÙNG (KHÔNG ĐÈ NỘI DUNG THẺ) ---
+                                Padding(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: compact ? 12 : 20,
+                                    vertical: compact ? 4 : 8,
                                   ),
                                   child: Row(
-                                    mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Text(
-                                        LanguageService.instance.currentLanguage.flag,
-                                        style: const TextStyle(fontSize: 14),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        LanguageService.instance.currentLanguage.code.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF00E5FF),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 11,
+                                      // Nút chọn ngôn ngữ nổi bật độc quyền ở Main Menu
+                                      ListenableBuilder(
+                                        listenable: LanguageService.instance,
+                                        builder: (context, _) => InkWell(
+                                          onTap: () => LanguageSelectorDialog.show(context),
+                                          borderRadius: BorderRadius.circular(18),
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal: isLandscape ? 10 : 8,
+                                              vertical: isLandscape ? 6 : 4,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0D1E18).withValues(alpha: 0.95),
+                                              borderRadius: BorderRadius.circular(18),
+                                              border: Border.all(
+                                                color: const Color(0xFF00E5FF).withValues(alpha: 0.7),
+                                                width: 1.5,
+                                              ),
+                                              boxShadow: const [
+                                                BoxShadow(
+                                                  color: Colors.black45,
+                                                  blurRadius: 6,
+                                                  offset: Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  LanguageService.instance.currentLanguage.flag,
+                                                  style: TextStyle(fontSize: isLandscape ? 16 : 14),
+                                                ),
+                                                const SizedBox(width: 5),
+                                                Text(
+                                                  LanguageService.instance.currentLanguage.nativeName,
+                                                  style: TextStyle(
+                                                    color: const Color(0xFF00E5FF),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: isLandscape ? 12 : 11,
+                                                    letterSpacing: 0.5,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 3),
+                                                const Icon(Icons.arrow_drop_down, color: Color(0xFF00E5FF), size: 16),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                      const SizedBox(width: 2),
-                                      const Icon(Icons.arrow_drop_down, color: Color(0xFF00E5FF), size: 14),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const Spacer(),
-                            ] else ...[
-                              // Nút chọn ngôn ngữ chế độ dọc
-                              InkWell(
-                                onTap: () => LanguageSelectorDialog.show(context),
-                                borderRadius: BorderRadius.circular(16),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black45,
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: const Color(0xFF00E5FF).withValues(alpha: 0.6),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        LanguageService.instance.currentLanguage.flag,
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        LanguageService.instance.currentLanguage.code.toUpperCase(),
-                                        style: const TextStyle(
-                                          color: Color(0xFF00E5FF),
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 10,
+                                      const SizedBox(width: 8),
+                                      // Thanh thông tin người chơi LỚN, RÕ RÀNG, PHÙ HỢP MỌI LOẠI ĐIỆN THOẠI
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerRight,
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerRight,
+                                            child: PlayerProfileBar(
+                                              compact: !isLandscape,
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                            ],
-                            // Thanh thông tin người chơi (Cấp, Vàng, Kim Cương, Nút Shop)
-                            Expanded(
-                              child: Align(
-                                alignment: isLandscape ? Alignment.centerRight : Alignment.center,
-                                child: const FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: PlayerProfileBar(compact: true),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
 
-                      // --- THẺ BIDA NỈ XANH VIỀN GỖ VÀNG CỔ ĐIỂN (CHUẨN MOBILE, KHÔNG TRÀN MÀN HÌNH) ---
-                      Expanded(
-                        child: Center(
-                          child: SingleChildScrollView(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: compact ? 10 : 20,
-                              vertical: compact ? 4 : 10,
-                            ),
-                            child: Container(
-                              constraints: BoxConstraints(
-                                maxWidth: isLandscape ? 720 : 440,
-                              ),
-                              padding: EdgeInsets.symmetric(
-                                horizontal: compact ? 14 : 24,
-                                vertical: compact ? 12 : 22,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF11633F),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(
-                                  color: const Color(0xFFB77A35),
-                                  width: compact ? 4.0 : 6.0,
-                                ),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Colors.black54,
-                                    blurRadius: 20,
-                                    offset: Offset(0, 8),
+
+
+                                // --- THẺ BIDA NỈ XANH VIỀN GỖ VÀNG CỔ ĐIỂN (CHUẨN MOBILE, KHÔNG TRÀN MÀN HÌNH) ---
+                                Expanded(
+                                  child: Center(
+                                    child: SingleChildScrollView(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: compact ? 10 : 20,
+                                        vertical: compact ? 4 : 10,
+                                      ),
+                                      child: Container(
+                                        constraints: BoxConstraints(
+                                          maxWidth: isLandscape ? 720 : 440,
+                                        ),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: compact ? 14 : 24,
+                                          vertical: compact ? 12 : 22,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF11633F),
+                                          borderRadius: BorderRadius.circular(18),
+                                          border: Border.all(
+                                            color: const Color(0xFFB77A35),
+                                            width: compact ? 4.0 : 6.0,
+                                          ),
+                                          boxShadow: const [
+                                            BoxShadow(
+                                              color: Colors.black54,
+                                              blurRadius: 20,
+                                              offset: Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: isLandscape
+                                            ? _buildLandscapeMenuContent(compact)
+                                            : _buildPortraitMenuContent(compact),
+                                      ),
+                                    ),
                                   ),
-                                ],
-                              ),
-                              child: isLandscape
-                                  ? _buildLandscapeMenuContent(compact)
-                                  : _buildPortraitMenuContent(compact),
-                            ),
-                          ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  );
-                },
-              ),
-            ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         );
       },
     );
   }
+
+
 
   // /// BANNER THÔNG BÁO TRẬN ĐẤU ONLINE ĐANG CHẠY REAL-TIME
   // Widget _buildActiveOnlineMatchBanner({required bool compact}) {
@@ -681,7 +630,7 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Hàng 1: P1 vs P2 & Thế Đánh Huyền Thoại
+              // Hàng 1: P1 vs P2 & Đấu Mạng Local
               Row(
                 children: [
                   Expanded(
@@ -691,48 +640,6 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                       detail: 'p1_vs_p2_desc'.tr,
                       background: const Color(0xFF1D4ED8),
                       onPressed: _startPlayerMatch,
-                      compact: compact,
-                    ),
-                  ),
-                  SizedBox(width: compact ? 8 : 12),
-                  Expanded(
-                    child: _buildMenuButton(
-                      icon: Icons.star_rounded,
-                      label: 'legendary_trickshot'.tr,
-                      detail: 'legendary_trickshot_desc'.tr,
-                      background: const Color(0xFFB71C1C),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => LegendaryTrickshotDialog(
-                            onSelectTrickshot: _startLegendaryTrickshot,
-                          ),
-                        );
-                      },
-                      compact: compact,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: compact ? 6 : 8),
-              // Hàng 2: Giải Đấu Tournament 6 Brackets & Đấu Mạng Local
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildMenuButton(
-                      icon: Icons.emoji_events,
-                      label: 'tournament'.tr,
-                      detail: 'tournament_desc'.tr,
-                      background: const Color(0xFFC77700),
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => TournamentDialog(
-                            onStartBracketMatch: _startTournamentStage,
-                            // onStartBracketOnlineMatch: _startOnlineTournamentMatch,
-                          ),
-                        );
-                      },
                       compact: compact,
                     ),
                   ),
@@ -757,7 +664,7 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                 ],
               ),
               SizedBox(height: compact ? 6 : 8),
-              // Hàng 3: 10 Ải Thử Thách Bot & Thế Bi Hàng Ngày
+              // Hàng 2: 10 Ải Thử Thách Bot & Thế Bi Hàng Ngày
               Row(
                 children: [
                   Expanded(
@@ -796,6 +703,23 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                     ),
                   ),
                 ],
+              ),
+              SizedBox(height: compact ? 6 : 8),
+              // Hàng 3: Thế Đánh Huyền Thoại (Nổi Bật Toàn Chiều Ngang)
+              _buildMenuButton(
+                icon: Icons.auto_awesome,
+                label: '⭐ ${'legendary_trickshot'.tr.toUpperCase()} ${'legendary_trickshot_count_badge'.tr}',
+                detail: 'legendary_trickshot_desc'.tr,
+                background: const Color(0xFFB71C1C),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => LegendaryTrickshotDialog(
+                      onSelectTrickshot: _startLegendaryTrickshot,
+                    ),
+                  );
+                },
+                compact: compact,
               ),
             ],
           ),
@@ -848,34 +772,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         ),
         const SizedBox(height: 12),
         _buildMenuButton(
-          icon: Icons.emoji_events,
-          label: 'tournament'.tr,
-          detail: 'tournament_desc'.tr,
-          background: const Color(0xFFC77700),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) => TournamentDialog(
-                onStartBracketMatch: _startTournamentStage,
-                // onStartBracketOnlineMatch: _startOnlineTournamentMatch,
-              ),
-            );
-          },
-          compact: compact,
-        ),
-        const SizedBox(height: 8),
-        _buildMenuButton(
-          icon: Icons.people,
-          label: 'p1_vs_p2'.tr,
-          detail: 'p1_vs_p2_desc'.tr,
-          background: const Color(0xFF1D4ED8),
-          onPressed: _startPlayerMatch,
-          compact: compact,
-        ),
-        const SizedBox(height: 8),
-        _buildMenuButton(
-          icon: Icons.star_rounded,
-          label: 'legendary_trickshot'.tr,
+          icon: Icons.auto_awesome,
+          label: '⭐ ${'legendary_trickshot'.tr.toUpperCase()} ${'legendary_trickshot_count_badge'.tr}',
           detail: 'legendary_trickshot_desc'.tr,
           background: const Color(0xFFB71C1C),
           onPressed: () {
@@ -890,18 +788,11 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
         ),
         const SizedBox(height: 8),
         _buildMenuButton(
-          icon: Icons.wifi_tethering,
-          label: 'local_wifi'.tr,
-          detail: 'local_wifi_desc'.tr,
-          background: const Color(0xFF00897B),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (context) => LocalMultiplayerDialog(
-                onConnected: _startLocalMultiplayerMatch,
-              ),
-            );
-          },
+          icon: Icons.people,
+          label: 'p1_vs_p2'.tr,
+          detail: 'p1_vs_p2_desc'.tr,
+          background: const Color(0xFF1D4ED8),
+          onPressed: _startPlayerMatch,
           compact: compact,
         ),
         const SizedBox(height: 8),
@@ -931,6 +822,22 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
               context: context,
               builder: (context) => DailyPuzzleDialog(
                 onStartPuzzle: _startDailyPuzzle,
+              ),
+            );
+          },
+          compact: compact,
+        ),
+        const SizedBox(height: 8),
+        _buildMenuButton(
+          icon: Icons.wifi_tethering,
+          label: 'local_wifi'.tr,
+          detail: 'local_wifi_desc'.tr,
+          background: const Color(0xFF00897B),
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => LocalMultiplayerDialog(
+                onConnected: _startLocalMultiplayerMatch,
               ),
             );
           },
@@ -1122,6 +1029,7 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                           gameInstance.isOnlineMultiplayer,
                                           LocalMultiplayerService.instance,
                                           OnlineMultiplayerService.instance,
+                                           LanguageService.instance,
                                         ]),
                                         builder: (context, _) {
                                           final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
@@ -1134,7 +1042,8 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                               ? OnlineMultiplayerService.instance.opponentName
                                               : (LocalMultiplayerService.instance.opponentName.isNotEmpty
                                                   ? LocalMultiplayerService.instance.opponentName
-                                                  : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)'));
+                                                  : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr));
+
                                           final isBallInHand = gameInstance.ballInHand;
                                           return Positioned(
                                             top: ultraCompact ? 8 : 14,
@@ -1178,9 +1087,21 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                                     const Icon(Icons.lock, color: Colors.white, size: 14),
                                                     const SizedBox(width: 4),
                                                     Text(
-                                                      isBallInHand
-                                                          ? 'ĐỐI THỦ $oppName ĐANG ĐẶT BI...'
-                                                          : 'LƯỢT CỦA $oppName (ĐANG CHỜ...)',
+                                                       isBallInHand
+                                                           ? (switch (LanguageService.instance.currentCode) {
+                                                               'zh' => '对手 $oppName 正在自由摆球...',
+                                                               'ja' => '相手 $oppName がボールを配置中...',
+                                                               'ko' => '상대 $oppName 님이 공을 배치 중...',
+                                                               'en' => 'OPPONENT $oppName IS PLACING BALL...',
+                                                               _ => 'ĐỐI THỦ $oppName ĐANG ĐẶT BI...',
+                                                             })
+                                                           : (switch (LanguageService.instance.currentCode) {
+                                                               'zh' => '轮到 $oppName（等待中...）',
+                                                               'ja' => '$oppName のターン（待機中...）',
+                                                               'ko' => '$oppName 님의 턴 (대기 중...)',
+                                                               'en' => "$oppName'S TURN (WAITING...)",
+                                                               _ => 'LƯỢT CỦA $oppName (ĐANG CHỜ...)',
+                                                             }),
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontWeight: FontWeight.bold,
@@ -1206,36 +1127,42 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                                             if (gameInstance.rackOver) {
                                               return const SizedBox.shrink();
                                             }
-                                            return ValueListenableBuilder<String>(
-                                              valueListenable:
-                                                  gameInstance.ruleMessage,
-                                              builder: (context, message, child) =>
-                                                  Center(
-                                                    child: DecoratedBox(
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.black
-                                                            .withValues(alpha: 0.72),
-                                                        borderRadius:
-                                                            BorderRadius.circular(6),
-                                                      ),
-                                                      child: Padding(
-                                                        padding:
-                                                            EdgeInsets.symmetric(
-                                                              horizontal: ultraCompact ? 8 : 12,
-                                                              vertical: ultraCompact ? 3 : 6,
-                                                            ),
-                                                        child: Text(
-                                                          message,
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: ultraCompact ? 10.5 : 12.5,
-                                                            fontWeight:
-                                                                FontWeight.w600,
+                                            return ListenableBuilder(
+                                              listenable: Listenable.merge([
+                                                gameInstance.ruleMessage,
+                                                LanguageService.instance,
+                                              ]),
+                                              builder: (context, child) {
+                                                final rawMessage = gameInstance.ruleMessage.value;
+                                                final message = LanguageService.instance.localizeRuleMessage(rawMessage);
+                                                if (message.isEmpty) return const SizedBox.shrink();
+                                                return Center(
+                                                  child: DecoratedBox(
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black
+                                                          .withValues(alpha: 0.72),
+                                                      borderRadius:
+                                                          BorderRadius.circular(6),
+                                                    ),
+                                                    child: Padding(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                            horizontal: ultraCompact ? 8 : 12,
+                                                            vertical: ultraCompact ? 3 : 6,
                                                           ),
+                                                      child: Text(
+                                                        message,
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: ultraCompact ? 10.5 : 12.5,
+                                                          fontWeight:
+                                                              FontWeight.w600,
                                                         ),
                                                       ),
                                                     ),
                                                   ),
+                                                );
+                                              },
                                             );
                                           },
                                         ),
@@ -1522,28 +1449,6 @@ Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
                   ],
                 ),
               ),
-              SizedBox(height: ultraCompact ? 3 : 5),
-              // Chữ LỰC xoay xuôi chuẩn ngang
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ultraCompact ? 3 : 5,
-                  vertical: 1.5,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xDD15191E),
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(color: Colors.white24, width: 0.7),
-                ),
-                child: Text(
-                  'LỰC',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.0),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.6,
-                  ),
-                ),
-              ),
             ],
           );
         },
@@ -1756,9 +1661,9 @@ void _showCueSpinDialog(BuildContext context) {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Điểm tác động bi cái (Xoáy)',
-                    style: TextStyle(
+                  Text(
+                    'spin_control_title'.tr,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
@@ -1773,11 +1678,12 @@ void _showCueSpinDialog(BuildContext context) {
                 ],
               ),
               const SizedBox(height: 4),
-              const Text(
-                'Kéo chấm đỏ để chỉnh Cu-lê (tiến), Trô bóng (lùi) hoặc Áp-phê (ngang)',
-                style: TextStyle(color: Colors.white60, fontSize: 12),
+              Text(
+                'spin_control_instruction'.tr,
+                style: const TextStyle(color: Colors.white60, fontSize: 12),
                 textAlign: TextAlign.center,
               ),
+
               const SizedBox(height: 14),
               // Khung hiển thị quả bi cái tương tác
               SizedBox(
@@ -1897,11 +1803,11 @@ void _showCueSpinDialog(BuildContext context) {
                 runSpacing: 6,
                 alignment: WrapAlignment.center,
                 children: [
-                  _spinPresetChip('Tâm bi (Chuẩn)', Offset.zero),
-                  _spinPresetChip('Cu-lê (Tiến)', const Offset(0.0, -0.75)),
-                  _spinPresetChip('Trô bóng (Lùi)', const Offset(0.0, 0.75)),
-                  _spinPresetChip('Áp-phê Trái', const Offset(-0.75, 0.0)),
-                  _spinPresetChip('Áp-phê Phải', const Offset(0.75, 0.0)),
+                  _spinPresetChip('preset_center'.tr, Offset.zero),
+                  _spinPresetChip('preset_top'.tr, const Offset(0.0, -0.75)),
+                  _spinPresetChip('preset_bottom'.tr, const Offset(0.0, 0.75)),
+                  _spinPresetChip('preset_left'.tr, const Offset(-0.75, 0.0)),
+                  _spinPresetChip('preset_right'.tr, const Offset(0.75, 0.0)),
                 ],
               ),
               const SizedBox(height: 14),
@@ -1910,7 +1816,7 @@ void _showCueSpinDialog(BuildContext context) {
                 child: FilledButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.check, size: 18),
-                  label: const Text('Xong'),
+                  label: Text('done'.tr),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0E5B3A),
                     padding: const EdgeInsets.symmetric(vertical: 11),
@@ -1929,22 +1835,9 @@ void _showCueSpinDialog(BuildContext context) {
 }
 
 String _describeSpin(Offset spin) {
-  if (spin.distance < 0.08) {
-    return 'Tâm bi (Đánh thường, không xoáy)';
-  }
-  final parts = <String>[];
-  if (spin.dy < -0.15) {
-    parts.add('Cu-lê ${(-spin.dy * 100).round()}%');
-  } else if (spin.dy > 0.15) {
-    parts.add('Trô bóng ${(spin.dy * 100).round()}%');
-  }
-  if (spin.dx < -0.15) {
-    parts.add('Áp-phê Trái ${(-spin.dx * 100).round()}%');
-  } else if (spin.dx > 0.15) {
-    parts.add('Áp-phê Phải ${(spin.dx * 100).round()}%');
-  }
-  return parts.isEmpty ? 'Gần tâm bi' : parts.join(' • ');
+  return LanguageService.instance.describeSpin(spin);
 }
+
 
 Widget _spinPresetChip(String label, Offset presetSpin) {
   return ActionChip(
@@ -2010,9 +1903,12 @@ void _updateSpinFromTouch(Offset localPosition, double controlSize) {
 MatchRewardResult? _lastMatchReward;
 
 Widget _buildRackOverlay({VoidCallback? onHome}) {
-  return ValueListenableBuilder<int>(
-    valueListenable: gameInstance.matchVersion,
-    builder: (context, matchVersion, child) {
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.matchVersion,
+      LanguageService.instance,
+    ]),
+    builder: (context, child) {
       if (!gameInstance.rackOver) {
         return const SizedBox.shrink();
       }
@@ -2034,43 +1930,51 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
 
       if (gameInstance.activeDailyPuzzle != null) {
         titleText = gameInstance.winningPlayer == 1
-            ? '🎉 PHÁ GIẢI THẾ BI THÀNH CÔNG!'
-            : '😢 THẾ BI CHƯA HOÀN THÀNH';
+            ? 'daily_puzzle_win'.tr
+            : 'daily_puzzle_fail'.tr;
+      } else if (gameInstance.activeLegendaryTrickshot != null) {
+        final shot = gameInstance.activeLegendaryTrickshot!;
+        titleText = gameInstance.winningPlayer == 1
+            ? 'trickshot_win'.tr.replaceAll('{player}', shot.playerName.toUpperCase())
+            : 'trickshot_fail'.tr;
       } else if (gameInstance.activeTournamentStage != null) {
         final stage = gameInstance.activeTournamentStage!;
+        final stageTitle = LanguageService.instance.localizeStageTitle(stage.title);
         titleText = gameInstance.winningPlayer == 1
-            ? (stage.bracketNumber == 6
-                ? '🏆 BẠN ĐÃ VÔ ĐỊCH TOURNAMENT GRAND CHAMPION!'
-                : '🎉 VƯỢT QUA ${stage.title} (BRACKET ${stage.bracketNumber})!')
-            : '😢 BẠN ĐÃ BỊ LOẠI TẠI BRACKET ${stage.bracketNumber}!';
+            ? (stage.bracketNumber == 5
+                ? 'tournament_champion_title'.tr
+                : 'bracket_passed'.tr.replaceAll('{stage}', stageTitle).replaceAll('{num}', '${stage.bracketNumber}'))
+            : 'bracket_failed'.tr.replaceAll('{num}', '${stage.bracketNumber}');
       } else if (gameInstance.activeBotStage != null) {
         titleText = gameInstance.winningPlayer == 1
-            ? '🎉 VƯỢT ẢI ${gameInstance.activeBotStage!.stageNumber} THÀNH CÔNG!'
-            : '😢 ${gameInstance.activeBotStage!.botName.toUpperCase()} ĐÃ CHIẾN THẮNG!';
+            ? 'stage_passed_title'.tr.replaceAll('{num}', '${gameInstance.activeBotStage!.stageNumber}')
+            : 'bot_won_title'.tr.replaceAll('{bot}', gameInstance.activeBotStage!.botName.toUpperCase());
       } else if (isMultiplayer) {
         final oppName = isOnlineMulti
             ? OnlineMultiplayerService.instance.opponentName
             : (LocalMultiplayerService.instance.opponentName.isNotEmpty
                 ? LocalMultiplayerService.instance.opponentName
-                : (isHost ? 'Khách (P2)' : 'Chủ phòng (P1)'));
+                : (isHost ? 'guest'.tr : 'host'.tr));
         titleText = gameInstance.winningPlayer == null
-            ? 'Ván đấu kết thúc'
+            ? 'match_over'.tr
             : (isLocalWinner
-                ? '🎉 BẠN ĐÃ CHIẾN THẮNG $oppName!'
-                : '😢 $oppName ĐÃ CHIẾN THẮNG!');
+                ? 'match_win_opp'.tr.replaceAll('{opp}', oppName)
+                : 'match_lose_opp'.tr.replaceAll('{opp}', oppName));
       } else {
         titleText = gameInstance.winningPlayer == null
-            ? 'Ván đấu kết thúc'
+            ? 'match_over'.tr
             : (gameInstance.winningPlayer == 1
-                ? '🎉 BẠN ĐÃ CHIẾN THẮNG!'
+                ? 'victory'.tr
                 : (gameInstance.isBotMode.value
-                    ? '🤖 BOT ĐÃ CHIẾN THẮNG!'
-                    : 'ĐỐI THỦ CHIẾN THẮNG'));
+                    ? 'bot_won'.tr
+                    : 'defeat'.tr));
       }
 
       final subtitleText = gameInstance.activeDailyPuzzle != null
-          ? 'Đã dùng: ${gameInstance.dailyPuzzleShotsTaken} / ${gameInstance.activeDailyPuzzle!.maxShotsAllowed} cơ'
-          : 'Tỷ số  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}';
+          ? 'shots_taken'.tr.replaceAll('{current}', '${gameInstance.dailyPuzzleShotsTaken}').replaceAll('{max}', '${gameInstance.activeDailyPuzzle!.maxShotsAllowed}')
+          : (gameInstance.activeLegendaryTrickshot != null
+              ? '🎯 ${LanguageService.instance.localizeTrickshotTitle(gameInstance.activeLegendaryTrickshot!.id, gameInstance.activeLegendaryTrickshot!.title)}'
+              : '${'score'.tr}  ${gameInstance.playerScores[1] ?? 0} - ${gameInstance.playerScores[2] ?? 0}');
 
       final screenHeight = MediaQuery.of(context).size.height;
       final isShort = screenHeight < 520;
@@ -2162,7 +2066,7 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    reward.customMessage!,
+                                    LanguageService.instance.localizeCustomRewardMessage(reward.customMessage!),
                                     style: TextStyle(
                                       color: const Color(0xFFFFD54F),
                                       fontWeight: FontWeight.bold,
@@ -2172,7 +2076,7 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                                 ),
                               ] else ...[
                                 Text(
-                                  'PHẦN THƯỞNG',
+                                  'rewards'.tr,
                                   style: TextStyle(
                                     color: const Color(0xFFFFD54F),
                                     fontSize: isVeryShort ? 8.5 : (isShort ? 9 : 10),
@@ -2232,8 +2136,8 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                                               : '${reward.earnedCoins}',
                                           style: TextStyle(
                                             color: reward.earnedCoins >= 0
-                                               ? const Color(0xFFFFD54F)
-                                               : const Color(0xFFFF5252),
+                                                ? const Color(0xFFFFD54F)
+                                                : const Color(0xFFFF5252),
                                             fontWeight: FontWeight.bold,
                                             fontSize: isVeryShort ? 10 : (isShort ? 11 : 12.5),
                                           ),
@@ -2288,7 +2192,7 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Text(
-                                    '🎉 LÊN CẤP ${reward.newLevel}! (+${reward.bonusDiamonds} Kim Cương)',
+                                    '🎉 ${'level'.tr.toUpperCase()} ${reward.newLevel}! (+${reward.bonusDiamonds} ${'diamonds'.tr})',
                                     style: TextStyle(
                                       color: Colors.black,
                                       fontWeight: FontWeight.w900,
@@ -2303,8 +2207,10 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                       ],
 
                       SizedBox(height: isVeryShort ? 6 : (isShort ? 8 : 12)),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: isShort ? 8 : 10,
+                        runSpacing: isShort ? 6 : 8,
                         children: [
                           if (onHome != null) ...[
                             OutlinedButton.icon(
@@ -2327,14 +2233,13 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                               ),
                               icon: Icon(Icons.home, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
                               label: Text(
-                                'Menu Chính',
+                                'main_menu'.tr,
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
                                 ),
                               ),
                             ),
-                            SizedBox(width: isShort ? 8 : 12),
                           ],
                           FilledButton.icon(
                             onPressed: () {
@@ -2358,13 +2263,118 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                             ),
                             icon: Icon(Icons.replay, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
                             label: Text(
-                              'Chơi lại',
+                              'play_again'.tr,
                               style: TextStyle(
                                 fontWeight: FontWeight.w900,
                                 fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
                               ),
                             ),
                           ),
+                          // Nút chuyển Ải / Bracket tiếp theo cho các chế độ chơi Offline
+                          if (isLocalWinner) ...[
+                            if (gameInstance.activeBotStage != null &&
+                                gameInstance.activeBotStage!.stageNumber < BotStageCatalog.stages.length) ...[
+                              Builder(
+                                builder: (context) {
+                                  final nextStageNum = gameInstance.activeBotStage!.stageNumber + 1;
+                                  final nextStage = BotStageCatalog.stages.firstWhere(
+                                    (s) => s.stageNumber == nextStageNum,
+                                    orElse: () => BotStageCatalog.stages.first,
+                                  );
+                                  return FilledButton.icon(
+                                    onPressed: () => gameInstance.startBotStage(nextStage),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFFB300),
+                                      foregroundColor: Colors.black87,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isShort ? 14 : 18,
+                                        vertical: isVeryShort ? 4 : (isShort ? 6 : 9),
+                                      ),
+                                      minimumSize: Size(0, isVeryShort ? 28 : (isShort ? 32 : 40)),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: Icon(Icons.arrow_forward, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
+                                    label: Text(
+                                      'next_stage'.tr.replaceAll('{num}', '$nextStageNum'),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ] else if (gameInstance.activeTournamentStage != null &&
+                                gameInstance.activeTournamentStage!.bracketNumber < 5) ...[
+                              Builder(
+                                builder: (context) {
+                                  final nextBracketNum = gameInstance.activeTournamentStage!.bracketNumber + 1;
+                                  final nextStage = TournamentCatalog.getByBracket(nextBracketNum);
+                                  return FilledButton.icon(
+                                    onPressed: () => gameInstance.startTournamentStage(nextStage),
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: const Color(0xFFFFD54F),
+                                      foregroundColor: Colors.black87,
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: isShort ? 14 : 18,
+                                        vertical: isVeryShort ? 4 : (isShort ? 6 : 9),
+                                      ),
+                                      minimumSize: Size(0, isVeryShort ? 28 : (isShort ? 32 : 40)),
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                    ),
+                                    icon: Icon(
+                                      nextBracketNum == 5 ? Icons.emoji_events : Icons.arrow_forward,
+                                      size: isVeryShort ? 14 : (isShort ? 15 : 18),
+                                    ),
+                                    label: Text(
+                                      nextBracketNum == 5
+                                          ? 'finals'.tr
+                                          : 'next_bracket'.tr.replaceAll('{num}', '$nextBracketNum'),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ] else if (gameInstance.activeLegendaryTrickshot != null) ...[
+                              Builder(
+                                builder: (context) {
+                                  final list = LegendaryTrickshotCatalog.trickshots;
+                                  final curIdx = list.indexWhere((s) => s.id == gameInstance.activeLegendaryTrickshot!.id);
+                                  if (curIdx >= 0 && curIdx < list.length - 1) {
+                                    final nextShot = list[curIdx + 1];
+                                    return FilledButton.icon(
+                                      onPressed: () => gameInstance.startLegendaryTrickshot(nextShot),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: const Color(0xFFFF80AB),
+                                        foregroundColor: Colors.black87,
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: isShort ? 14 : 18,
+                                          vertical: isVeryShort ? 4 : (isShort ? 6 : 9),
+                                        ),
+                                        minimumSize: Size(0, isVeryShort ? 28 : (isShort ? 32 : 40)),
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                      icon: Icon(Icons.arrow_forward, size: isVeryShort ? 14 : (isShort ? 15 : 18)),
+                                      label: Text(
+                                        'next_trickshot'.tr,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: isVeryShort ? 10.5 : (isShort ? 11.5 : 13),
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                  return const SizedBox.shrink();
+                                },
+                              ),
+                            ],
+                          ],
                         ],
                       ),
                     ],
@@ -2411,7 +2421,7 @@ Widget _buildControlBar(
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Thoát về menu',
+                    tooltip: 'main_menu'.tr,
                     icon: const Icon(Icons.arrow_back, color: Colors.white70),
                     iconSize: ultraCompact ? 18 : 22,
                     padding: EdgeInsets.zero,
@@ -2444,7 +2454,7 @@ Widget _buildControlBar(
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                puzzle.title,
+                                LanguageService.instance.localizeStageTitle(puzzle.title),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -2482,7 +2492,7 @@ Widget _buildControlBar(
                         const Icon(Icons.sports_baseball, color: Color(0xFFFFD54F), size: 14),
                         const SizedBox(width: 4),
                         Text(
-                          'Cơ: ${gameInstance.dailyPuzzleShotsTaken} / ${puzzle.maxShotsAllowed}',
+                          '${'turn'.tr}: ${gameInstance.dailyPuzzleShotsTaken} / ${puzzle.maxShotsAllowed}',
                           style: const TextStyle(
                             color: Color(0xFFFFD54F),
                             fontWeight: FontWeight.w900,
@@ -2494,7 +2504,7 @@ Widget _buildControlBar(
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    tooltip: 'Xếp lại thế bi',
+                    tooltip: 'restart'.tr,
                     icon: const Icon(Icons.refresh, color: Color(0xFF69F0AE)),
                     iconSize: ultraCompact ? 18 : 22,
                     padding: EdgeInsets.zero,
@@ -2505,7 +2515,7 @@ Widget _buildControlBar(
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    tooltip: 'Gợi ý: ${puzzle.hint}',
+                    tooltip: '${'hint'.tr}: ${puzzle.hint}',
                     icon: const Icon(Icons.lightbulb, color: Color(0xFFFFEB3B)),
                     iconSize: ultraCompact ? 18 : 22,
                     padding: EdgeInsets.zero,
@@ -2513,7 +2523,7 @@ Widget _buildControlBar(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('💡 Gợi ý: ${puzzle.hint}'),
+                          content: Text('💡 ${'hint'.tr}: ${puzzle.hint}'),
                           backgroundColor: const Color(0xFF4A148C),
                           duration: const Duration(seconds: 4),
                         ),
@@ -2522,7 +2532,7 @@ Widget _buildControlBar(
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    tooltip: 'Cài đặt',
+                    tooltip: 'settings_title'.tr,
                     icon: const Icon(Icons.settings),
                     color: Colors.white,
                     iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
@@ -2542,6 +2552,7 @@ Widget _buildControlBar(
           // Giao diện thanh trạng thái riêng cho Chế Độ Thế Đánh Huyền Thoại
           if (gameInstance.activeLegendaryTrickshot != null) {
             final shot = gameInstance.activeLegendaryTrickshot!;
+            final locPocket = LanguageService.instance.localizePocketName(shot.targetPocketName);
             return Container(
               height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -2558,7 +2569,7 @@ Widget _buildControlBar(
               child: Row(
                 children: [
                   IconButton(
-                    tooltip: 'Thoát về menu',
+                    tooltip: 'main_menu'.tr,
                     icon: const Icon(Icons.arrow_back, color: Colors.white70),
                     iconSize: ultraCompact ? 18 : 22,
                     padding: EdgeInsets.zero,
@@ -2585,7 +2596,7 @@ Widget _buildControlBar(
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                shot.playerName.toUpperCase(),
+                                LanguageService.instance.localizeMasterName(shot.masterName).toUpperCase(),
                                 style: const TextStyle(
                                   color: Color(0xFF3E1200),
                                   fontSize: 8.5,
@@ -2596,7 +2607,7 @@ Widget _buildControlBar(
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
-                                shot.title,
+                                LanguageService.instance.localizeTrickshotTitle(shot.id, shot.title),
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -2606,11 +2617,45 @@ Widget _buildControlBar(
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00E676),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                '🎯 ${'pot_ball'.tr} #${shot.targetBallNumber}',
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            if (shot.obstacleBallNumbers.isNotEmpty) ...[
+                              const SizedBox(width: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFF5252),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  '🚫 ${'avoid_ball'.tr} #${shot.obstacleBallNumbers.join(',')}',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 8.5,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          shot.techniqueNotes,
+                          '${LanguageService.instance.localizeTrickshotHint(shot.id, shot.techniqueNotes)} • ${'pot_ball'.tr} #${shot.targetBallNumber} -> $locPocket',
                           style: TextStyle(
                             color: const Color(0xFFFFE082),
                             fontSize: ultraCompact ? 8.5 : 10,
@@ -2638,7 +2683,7 @@ Widget _buildControlBar(
                     ),
                     icon: Icon(Icons.refresh, size: ultraCompact ? 12 : 15),
                     label: Text(
-                      'ĐẶT LẠI',
+                      'reset_shot'.tr,
                       style: TextStyle(
                         fontSize: ultraCompact ? 9 : 11,
                         fontWeight: FontWeight.w900,
@@ -2647,7 +2692,7 @@ Widget _buildControlBar(
                   ),
                   const SizedBox(width: 6),
                   IconButton(
-                    tooltip: 'Hướng dẫn: ${shot.techniqueNotes}',
+                    tooltip: '${'hint'.tr}: ${LanguageService.instance.localizeTrickshotHint(shot.id, shot.techniqueNotes)}',
                     icon: const Icon(Icons.lightbulb, color: Color(0xFFFFD700)),
                     iconSize: ultraCompact ? 18 : 22,
                     padding: EdgeInsets.zero,
@@ -2655,7 +2700,7 @@ Widget _buildControlBar(
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('🎯 ${shot.playerName}: ${shot.techniqueNotes}'),
+                          content: Text('🎯 ${LanguageService.instance.localizeMasterName(shot.masterName)}: ${LanguageService.instance.localizeTrickshotHint(shot.id, shot.techniqueNotes)}'),
                           backgroundColor: const Color(0xFF5D1010),
                           duration: const Duration(seconds: 4),
                         ),
@@ -2664,7 +2709,7 @@ Widget _buildControlBar(
                   ),
                   const SizedBox(width: 4),
                   IconButton(
-                    tooltip: 'Cài đặt',
+                    tooltip: 'settings_title'.tr,
                     icon: const Icon(Icons.settings),
                     color: Colors.white,
                     iconSize: ultraCompact ? 16 : (compact ? 19 : 22),
@@ -2750,7 +2795,7 @@ Widget _buildControlBar(
                 final oppCue = CueCatalog.getById(oppCueId);
                 final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
                     ? LocalMultiplayerService.instance.opponentName
-                    : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+                    : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr);
                 if (LocalMultiplayerService.instance.isHost) {
                   p1Cue = ProgressionService.instance.equippedCue;
                   p1CueLevel = ProgressionService.instance.equippedCueLevel;
@@ -2811,7 +2856,7 @@ Widget _buildControlBar(
                           builder: (context, sfxOn, _) {
                             final anyOn = musicOn || sfxOn;
                             return IconButton(
-                              tooltip: anyOn ? 'Âm thanh: Bật' : 'Âm thanh: Tắt',
+                              tooltip: anyOn ? 'audio_on'.tr : 'audio_off'.tr,
                               icon: Icon(
                                 anyOn ? Icons.volume_up : Icons.volume_off,
                                 color: anyOn ? const Color(0xFFFFD54F) : Colors.white38,
@@ -2843,22 +2888,6 @@ Widget _buildControlBar(
                       ),
                       style: IconButton.styleFrom(backgroundColor: Colors.black54),
                       onPressed: () => _showSettings(context, onHome: onHome),
-                    ),
-                    SizedBox(width: ultraCompact ? 2 : 4),
-                    // Nút chuyển đổi nhanh Ngôn ngữ trực tiếp trên bàn
-                    IconButton(
-                      tooltip: 'language'.tr,
-                      icon: Text(
-                        LanguageService.instance.currentLanguage.flag,
-                        style: TextStyle(fontSize: ultraCompact ? 12 : (compact ? 14 : 16)),
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tightFor(
-                        width: ultraCompact ? 28 : (compact ? 32 : 38),
-                        height: ultraCompact ? 28 : (compact ? 32 : 38),
-                      ),
-                      style: IconButton.styleFrom(backgroundColor: Colors.black54),
-                      onPressed: () => LanguageSelectorDialog.show(context),
                     ),
                     SizedBox(width: ultraCompact ? 2 : 6),
                     Expanded(
@@ -2921,9 +2950,6 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 0. Mục chuyển đổi 5 loại ngôn ngữ (Việt, Anh, Trung, Nhật, Hàn)
-              const LanguageSettingsTile(),
-              const Divider(color: Colors.white24, height: 20),
               // 1. Nhạc nền (BGM)
               ValueListenableBuilder<bool>(
                 valueListenable: AudioManager.instance.isMusicEnabled,
@@ -3071,15 +3097,8 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
                   // 2. Nút "Menu chính":
                   OutlinedButton.icon(
                     onPressed: () {
-                      if (gameInstance.isLocalMultiplayer.value && !gameInstance.rackOver) {
-                        _showConfirmExitMatch(context, onHome: () {
-                          Navigator.pop(context);
-                          onHome();
-                        });
-                      } else {
-                        Navigator.pop(context);
-                        onHome();
-                      }
+                      Navigator.pop(context);
+                      onHome();
                     },
                     icon: const Icon(Icons.home, size: 16),
                     label: Text('main_menu'.tr),
@@ -3158,24 +3177,54 @@ void _showSettings(BuildContext context, {required VoidCallback onHome}) {
 void _showConfirmExitMatch(BuildContext context, {required VoidCallback onHome}) {
   showDialog<void>(
     context: context,
-    builder: (dialogCtx) => AlertDialog(
-      backgroundColor: const Color(0xFF1E2328),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Thoát ván đấu', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      content: const Text('Bạn có muốn kết thúc trận đấu và quay về Menu chính không?', style: TextStyle(color: Colors.white70)),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(dialogCtx),
-          child: const Text('Hủy', style: TextStyle(color: Colors.white70)),
+    builder: (dialogCtx) => ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) => AlertDialog(
+        backgroundColor: const Color(0xFF1E2328),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: Color(0xFFFF5252), width: 1.5),
         ),
-        FilledButton(
-          onPressed: () {
-            Navigator.pop(dialogCtx);
-            onHome();
-          },
-          child: const Text('Đồng ý'),
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF5252), size: 24),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'exit_match_title'.tr,
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
         ),
-      ],
+        content: Text(
+          'exit_match_content'.tr,
+          style: const TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'stay_in_match'.tr,
+              style: const TextStyle(color: Color(0xFF00E676), fontWeight: FontWeight.bold),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFF5252),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              onHome();
+            },
+            child: Text(
+              'confirm_forfeit_exit'.tr,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -3183,29 +3232,40 @@ void _showConfirmExitMatch(BuildContext context, {required VoidCallback onHome})
 void _showDeclareLoss(BuildContext context) {
   showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Chọn người thua'),
-      content: const Text('Player nào bị xử thua trận này?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Hủy'),
-        ),
-        TextButton(
-          onPressed: () {
-            gameInstance.declareLoss(1);
-            Navigator.pop(context);
+    builder: (context) => ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) => AlertDialog(
+        title: Text('surrender_lan'.tr),
+        content: Text(
+          switch (LanguageService.instance.currentCode) {
+            'zh' => '哪位玩家被判负？',
+            'ja' => 'どちらのプレイヤーを不戦敗としますか？',
+            'ko' => '어느 플레이어를 몰수패로 처리합니까?',
+            'en' => 'Which player forfeits this rack?',
+            _ => 'Player nào bị xử thua trận này?',
           },
-          child: const Text('Player 1 thua'),
         ),
-        TextButton(
-          onPressed: () {
-            gameInstance.declareLoss(2);
-            Navigator.pop(context);
-          },
-          child: const Text('Player 2 thua'),
-        ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('cancel'.tr),
+          ),
+          TextButton(
+            onPressed: () {
+              gameInstance.declareLoss(1);
+              Navigator.pop(context);
+            },
+            child: Text('${'player_1'.tr} ${'defeat'.tr.toLowerCase()}'),
+          ),
+          TextButton(
+            onPressed: () {
+              gameInstance.declareLoss(2);
+              Navigator.pop(context);
+            },
+            child: Text('${'player_2'.tr} ${'defeat'.tr.toLowerCase()}'),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -3295,7 +3355,7 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                                 border: Border.all(color: cue.rarity.color, width: 0.6),
                               ),
                               child: Text(
-                                cue.rarity.name.toUpperCase(),
+                                cue.rarity.displayName.toUpperCase(),
                                 style: TextStyle(
                                   color: cue.rarity.color,
                                   fontSize: 8.5,
@@ -3306,7 +3366,7 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
-                                cue.name,
+                                cue.localizedName,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 12.5,
@@ -3314,6 +3374,7 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                                 ),
                               ),
                             ),
+
                             if (isSelected)
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -3421,8 +3482,9 @@ void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
                   visualDensity: VisualDensity.compact,
                 ),
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Đóng'),
+                child: Text('close'.tr),
               ),
+
             ],
           );
         },
@@ -3553,32 +3615,36 @@ Widget _buildPlayerCard(
                 ],
               ),
               // 2. Dòng Tiền Vàng ($) & Tỷ số (lấp đầy vị trí còn trống)
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.monetization_on,
-                    color: const Color(0xFFFFD54F),
-                    size: ultraCompact ? 9 : 11,
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    _formatPlayerCardCoins(coins),
-                    style: TextStyle(
-                      color: const Color(0xFFFFE082),
-                      fontSize: detailFontSize,
-                      fontWeight: FontWeight.w800,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.monetization_on,
+                      color: const Color(0xFFFFD54F),
+                      size: ultraCompact ? 9 : 11,
                     ),
-                  ),
-                  Text(
-                    ' • ',
-                    style: TextStyle(color: Colors.white38, fontSize: detailFontSize),
-                  ),
-                  Text(
-                    '${'score'.tr}: $score',
-                    style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
-                  ),
-                ],
+                    const SizedBox(width: 2),
+                    Text(
+                      _formatPlayerCardCoins(coins),
+                      style: TextStyle(
+                        color: const Color(0xFFFFE082),
+                        fontSize: detailFontSize,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      ' • ',
+                      style: TextStyle(color: Colors.white38, fontSize: detailFontSize),
+                    ),
+                    Text(
+                      '${'score'.tr}: $score',
+                      style: TextStyle(color: Colors.white70, fontSize: detailFontSize),
+                    ),
+                  ],
+                ),
               ),
               // 3. Phân loại bi mục tiêu (Bi trơn / Bi sọc)
               if (groupLabel.isNotEmpty)
@@ -3704,20 +3770,90 @@ class BilliardGame extends Forge2DGame with PanDetector {
   final ValueNotifier<bool> isLocalMultiplayer = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isOnlineMultiplayer = ValueNotifier<bool>(false);
 
-  // Quản lý vòng đời ứng dụng (tránh văng / crash khi người chơi chuyển app)
+  // Quản lý vòng đời ứng dụng và mô phỏng vật lý thời gian thực khi thoát / ấn Home
   bool isAppPaused = false;
+  bool isCatchingUp = false;
+  DateTime? _appPausedTime;
   bool _skipNextDt = false;
   double _shotElapsedTime = 0.0;
 
   void onAppPaused() {
+    _appPausedTime = DateTime.now();
     isAppPaused = true;
-    paused = true;
+    // KHÔNG gán paused = true để Flame GameLoop không bị gián đoạn/lỗi ticker trên Android
   }
 
   void onAppResumed() {
     isAppPaused = false;
-    _skipNextDt = true;
-    paused = false;
+    final pauseTime = _appPausedTime;
+    _appPausedTime = null;
+
+    if (pauseTime != null) {
+      final elapsed = DateTime.now().difference(pauseTime).inMilliseconds / 1000.0;
+      if (elapsed > 0.05) {
+        // Mô phỏng bù vật lý trong thời gian thực cho các bi đang lăn, va chạm và hoàn tất lượt
+        _catchUpRealtimePhysics(elapsed);
+      }
+    }
+
+    _sanitizeAllBallBodies();
+  }
+
+  void _catchUpRealtimePhysics(double elapsedSeconds) {
+    if (!_hasGameLoaded || !physicsReady) return;
+
+    // Giới hạn thời gian bù tối đa 8.0 giây để đảm bảo hoàn tất trọn vẹn cú đánh mà vẫn phản hồi tức thì
+    final double duration = elapsedSeconds.clamp(0.0, 8.0);
+    const double stepDt = 0.0166667;
+    final int steps = (duration / stepDt).round();
+
+    isCatchingUp = true;
+    try {
+      for (int i = 0; i < steps; i++) {
+        super.update(stepDt);
+        _checkContinuousPocketDrops();
+        _keepBallsInsideTable();
+        _applyClothPhysics(stepDt);
+
+        if (shotInProgress) {
+          _shotElapsedTime += stepDt;
+          final cueStopped = _bodyStopped(cueBall.body) && cueBall.isSunkAnimComplete;
+          final ballsStopped = poolBalls.every(
+            (ball) => ball.isRemoved || (_bodyStopped(ball.body) && ball.isSunkAnimComplete),
+          );
+          if (cueStopped && ballsStopped) {
+            settledTime += stepDt;
+            if (settledTime > 0.25) {
+              _shotElapsedTime = 0.0;
+              if (isOnlineMultiplayer.value && !isMyTurn) {
+                shotInProgress = false;
+              } else {
+                finishShot();
+              }
+              break;
+            }
+          } else {
+            settledTime = 0;
+          }
+
+          if (_shotElapsedTime > 18.0) {
+            cueBall.body.linearVelocity.setZero();
+            for (final ball in poolBalls) {
+              ball.body.linearVelocity.setZero();
+            }
+            _shotElapsedTime = 0.0;
+            finishShot();
+            break;
+          }
+        } else {
+          // Các bi đã dừng và không có cú đánh nào diễn ra: dừng catch-up ngay lập tức
+          break;
+        }
+      }
+    } finally {
+      isCatchingUp = false;
+    }
+
     _sanitizeAllBallBodies();
   }
 
@@ -4242,7 +4378,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
   final ValueNotifier<ComboEvent?> comboNotifier = ValueNotifier<ComboEvent?>(null);
 
   void handleBallPocketed(PoolBall ball) {
-    AudioManager.instance.playPocket();
+    if (!isCatchingUp) {
+      AudioManager.instance.playPocket();
+    }
     currentShotPocketedBalls.add(ball);
     _evaluateCombo();
   }
@@ -4317,7 +4455,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
       subtitle: subtitle,
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
-    AudioManager.instance.playCombo(count);
+    if (!isCatchingUp) {
+      AudioManager.instance.playCombo(count);
+    }
   }
 
   double maxDragDistance = 180.0;
@@ -4374,6 +4514,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
       dailyPuzzleShotsTaken = 0;
       breakShot = false;
       _setupDailyPuzzle(activeDailyPuzzle!);
+    } else if (activeLegendaryTrickshot != null) {
+      final shot = activeLegendaryTrickshot!;
+      final avoidText = shot.obstacleBallNumbers.isNotEmpty
+          ? ' (Tránh rơi bi #${shot.obstacleBallNumbers.join(', #')})'
+          : '';
+      ruleMessage.value = '🎯 ${shot.playerName}: Ăn bi ${shot.targetBallNumber} vào ${shot.targetPocketName}$avoidText';
+      breakShot = false;
+      _setupLegendaryTrickshot(activeLegendaryTrickshot!);
     } else {
       spawnTriangleBalls();
       _resetCueBall();
@@ -4435,9 +4583,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
       }
     } catch (_) {}
 
-    if (!initialLoad && !shotInProgress && _hasGameLoaded) {
+    if (!initialLoad && !shotInProgress && _hasGameLoaded && physicsReady) {
       if (activeDailyPuzzle != null) {
         _setupDailyPuzzle(activeDailyPuzzle!);
+      } else if (activeLegendaryTrickshot != null) {
+        _setupLegendaryTrickshot(activeLegendaryTrickshot!);
       } else if (breakShot) {
         spawnTriangleBalls();
         _resetCueBall();
@@ -4627,11 +4777,13 @@ class BilliardGame extends Forge2DGame with PanDetector {
         ball.updateRadius(ballRadius);
         ball.resetSunkState();
         ball.pocketedThisShot = false;
-        ball.body.setTransform(pos, 0);
-        ball.body.linearVelocity.setZero();
-        ball.body.angularVelocity = 0;
-        ball.body.clearForces();
-        ball.body.setAwake(true);
+        try {
+          ball.body.setTransform(pos, 0);
+          ball.body.linearVelocity.setZero();
+          ball.body.angularVelocity = 0;
+          ball.body.clearForces();
+          ball.body.setAwake(true);
+        } catch (_) {}
       }
     } else {
       // Lần đầu tiên khi chưa có đủ 15 bi
@@ -4678,6 +4830,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
         cueBall.isAiming = true;
         _updateAimVector(ballRadius * 2);
         return;
+      } else {
+        cueBall.initialPosition.setFrom(pos);
+        cueBall.isAiming = true;
+        _updateAimVector(ballRadius * 2);
+        return;
       }
     } catch (_) {}
 
@@ -4701,20 +4858,31 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ball.updateRadius(ballRadius);
       if (puzzleBallNumbers.contains(ball.number)) {
         final pos = puzzlePositions[ball.number]!;
+        ball.initialPosition.setFrom(pos);
         ball.resetSunkState();
         ball.pocketedThisShot = false;
-        ball.body.setTransform(pos, 0);
-        ball.body.linearVelocity.setZero();
-        ball.body.angularVelocity = 0;
-        ball.body.clearForces();
-        ball.body.setAwake(true);
+        try {
+          if (ball.isMounted) {
+            ball.body.setTransform(pos, 0);
+            ball.body.linearVelocity.setZero();
+            ball.body.angularVelocity = 0;
+            ball.body.clearForces();
+            ball.body.setAwake(true);
+          }
+        } catch (_) {}
       } else {
+        ball.initialPosition.setValues(-1000, -1000);
         ball.instantSunk();
         ball.pocketedThisShot = false;
-        ball.body.setTransform(Vector2(-1000, -1000), 0);
-        ball.body.linearVelocity.setZero();
-        ball.body.angularVelocity = 0;
-        ball.body.clearForces();
+        try {
+          if (ball.isMounted) {
+            ball.body.setTransform(Vector2(-1000, -1000), 0);
+            ball.body.linearVelocity.setZero();
+            ball.body.angularVelocity = 0;
+            ball.body.clearForces();
+            ball.body.setAwake(false);
+          }
+        } catch (_) {}
       }
     }
 
@@ -4740,20 +4908,31 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ball.updateRadius(ballRadius);
       if (trickshotBallNumbers.contains(ball.number)) {
         final pos = trickshotPositions[ball.number]!;
+        ball.initialPosition.setFrom(pos);
         ball.resetSunkState();
         ball.pocketedThisShot = false;
-        ball.body.setTransform(pos, 0);
-        ball.body.linearVelocity.setZero();
-        ball.body.angularVelocity = 0;
-        ball.body.clearForces();
-        ball.body.setAwake(true);
+        try {
+          if (ball.isMounted) {
+            ball.body.setTransform(pos, 0);
+            ball.body.linearVelocity.setZero();
+            ball.body.angularVelocity = 0;
+            ball.body.clearForces();
+            ball.body.setAwake(true);
+          }
+        } catch (_) {}
       } else {
+        ball.initialPosition.setValues(-1000, -1000);
         ball.instantSunk();
         ball.pocketedThisShot = false;
-        ball.body.setTransform(Vector2(-1000, -1000), 0);
-        ball.body.linearVelocity.setZero();
-        ball.body.angularVelocity = 0;
-        ball.body.clearForces();
+        try {
+          if (ball.isMounted) {
+            ball.body.setTransform(Vector2(-1000, -1000), 0);
+            ball.body.linearVelocity.setZero();
+            ball.body.angularVelocity = 0;
+            ball.body.clearForces();
+            ball.body.setAwake(false);
+          }
+        } catch (_) {}
       }
     }
 
@@ -4766,10 +4945,13 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
     // Tự động căn chỉnh góc ngắm, lực và áp-phê gợi ý của cơ thủ huyền thoại
     aimAngle = shot.suggestedAimAngle;
+    aimAngleNotifier.value = shot.suggestedAimAngle;
     shotPower.value = shot.suggestedPower;
     cueSpin.value = shot.suggestedSpin;
-    cueBall.spinInfluence = shot.suggestedSpin;
-    cueBall.isAiming = true;
+    try {
+      cueBall.spinInfluence = shot.suggestedSpin;
+      cueBall.isAiming = true;
+    } catch (_) {}
     _updateAimVector(ballRadius * 2);
   }
 
@@ -4797,7 +4979,13 @@ class BilliardGame extends Forge2DGame with PanDetector {
     if (!physicsReady) {
       physicsReady =
           cueBall.isMounted && poolBalls.every((ball) => ball.isMounted);
-      if (!physicsReady) {
+      if (physicsReady) {
+        if (activeDailyPuzzle != null) {
+          _setupDailyPuzzle(activeDailyPuzzle!);
+        } else if (activeLegendaryTrickshot != null) {
+          _setupLegendaryTrickshot(activeLegendaryTrickshot!);
+        }
+      } else {
         return;
       }
     }
@@ -5015,7 +5203,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
         vfx.clearBallTrail(0);
         cueBall.sinkIntoPocket(pocket.position);
         cueBall.pocketedThisShot = true;
-        AudioManager.instance.playPocket();
+        if (!isCatchingUp) {
+          AudioManager.instance.playPocket();
+        }
         comboNotifier.value = null;
         vfx.addPocketDrop(pocket.position, pocket.dropDistance);
       }
@@ -5215,8 +5405,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
     // Đảm bảo sync tọa độ khi layout hoàn tất nếu vừa mở lại màn hình
     Future.delayed(const Duration(milliseconds: 250), () {
-      if (isOnlineMultiplayer.value && state != null && size.x > 0) {
-        _applyFullMatchState(state);
+      if (isOnlineMultiplayer.value && state != null && _hasGameLoaded) {
+        try {
+          if (size.x > 0) {
+            _applyFullMatchState(state);
+          }
+        } catch (_) {}
       }
     });
 
@@ -5243,14 +5437,16 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void declareLoss(int loser) {
-    if (rackOver || shotInProgress || (loser != 1 && loser != 2)) {
+    if (rackOver || (loser != 1 && loser != 2)) {
       return;
     }
+    shotInProgress = false;
     winningPlayer = loser == 1 ? 2 : 1;
-    playerScores[winningPlayer!] = playerScores[winningPlayer!]! + 1;
+    playerScores[winningPlayer!] = (playerScores[winningPlayer!] ?? 0) + 1;
     ruleMessage.value = 'Player $loser bị xử thua';
     rackOver = true;
     ballInHand = false;
+    _processMatchRewards();
     matchVersion.value++;
   }
 
@@ -5277,7 +5473,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ruleMessage.value = 'Thế bi: ${activeDailyPuzzle!.title}';
       dailyPuzzleShotsTaken = 0;
     } else if (activeLegendaryTrickshot != null) {
-      ruleMessage.value = '🎯 ${activeLegendaryTrickshot!.playerName}: ${activeLegendaryTrickshot!.title}';
+      final shot = activeLegendaryTrickshot!;
+      final avoidText = shot.obstacleBallNumbers.isNotEmpty
+          ? ' (Tránh rơi bi #${shot.obstacleBallNumbers.join(', #')})'
+          : '';
+      ruleMessage.value = '🎯 ${shot.playerName}: Ăn bi ${shot.targetBallNumber} vào ${shot.targetPocketName}$avoidText';
     } else if (activeTournamentStage != null) {
       ruleMessage.value = 'Bracket ${activeTournamentStage!.bracketNumber}: ${activeTournamentStage!.title} vs ${activeTournamentStage!.opponentName}';
     } else if (activeBotStage != null) {
@@ -6171,6 +6371,19 @@ class BilliardGame extends Forge2DGame with PanDetector {
     dragCurrent = null;
   }
 
+  @override
+  void onPanCancel() {
+    if (movingCueBall) {
+      movingCueBall = false;
+      if (_hasGameLoaded && physicsReady) {
+        cueBall.isAiming = true;
+        _updateAimVector(ballRadius * 2);
+      }
+    }
+    dragStart = null;
+    dragCurrent = null;
+  }
+
   void _prepareCueBallForPlacement() {
     resetCueSpin();
     var position = initialCueBallPosition;
@@ -6853,7 +7066,9 @@ class BilliardContactListener extends ContactListener {
       if (!velA.x.isNaN && !velA.y.isNaN && !velB.x.isNaN && !velB.y.isNaN) {
         final relVel = (velA - velB).length;
         if (!relVel.isNaN && !relVel.isInfinite) {
-          AudioManager.instance.playBallHit(relativeSpeed: relVel);
+          if (activeGame?.isCatchingUp != true) {
+            AudioManager.instance.playBallHit(relativeSpeed: relVel);
+          }
           // Hiệu ứng sóng kích phát quang va chạm nảy bi chân thực
           final contactPos = (first.position + second.position) * 0.5;
           activeGame?.vfx.addBallCollision(
@@ -6956,7 +7171,9 @@ class BilliardContactListener extends ContactListener {
           game?.vfx.clearBallTrail(0);
           cueBall.sinkIntoPocket(pocket.position);
           cueBall.pocketedThisShot = true;
-          AudioManager.instance.playPocket();
+          if (game?.isCatchingUp != true) {
+            AudioManager.instance.playPocket();
+          }
           game?.comboNotifier.value = null;
           game?.vfx.addPocketDrop(pocket.position, pocket.dropDistance);
         }
@@ -7031,7 +7248,7 @@ class AimRayCastCallback extends RayCastCallback {
 }
 
 class CueBall extends BodyComponent {
-  final Vector2 initialPosition;
+  Vector2 initialPosition;
   double radius;
   double hitboxRadius;
 
@@ -7149,6 +7366,12 @@ class CueBall extends BodyComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    if (!isMounted) return;
+    try {
+      final _ = body;
+    } catch (_) {
+      return;
+    }
 
     if (isSunk) {
       body.linearVelocity.setZero();
@@ -7681,7 +7904,7 @@ class CueBall extends BodyComponent {
 }
 
 class PoolBall extends BodyComponent {
-  final Vector2 initialPosition;
+  Vector2 initialPosition;
   double radius;
   double hitboxRadius;
   final String imageName;
@@ -7802,6 +8025,12 @@ class PoolBall extends BodyComponent {
   @override
   void update(double dt) {
     super.update(dt);
+    if (!isMounted) return;
+    try {
+      final _ = body;
+    } catch (_) {
+      return;
+    }
     if (isSunk) {
       if (_sunkStartPos == null) {
         _sunkStartPos = body.position.clone();

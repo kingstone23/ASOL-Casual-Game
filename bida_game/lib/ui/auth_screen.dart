@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/language_service.dart';
+import 'language_selector_dialog.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -63,7 +65,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final pass = _loginPasswordController.text;
 
     if (account.isEmpty || pass.isEmpty) {
-      setState(() => _errorMessage = 'Vui lòng điền đầy đủ tài khoản và mật khẩu.');
+      setState(() => _errorMessage = 'auth_fill_account_pass'.tr);
       return;
     }
 
@@ -88,7 +90,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final pass = _regPasswordController.text;
 
     if (name.isEmpty || account.isEmpty || pass.isEmpty) {
-      setState(() => _errorMessage = 'Vui lòng điền đầy đủ tất cả thông tin.');
+      setState(() => _errorMessage = 'auth_fill_all'.tr);
       return;
     }
 
@@ -122,26 +124,29 @@ class _AuthScreenState extends State<AuthScreen> {
     final isLandscape = size.width > size.height;
     final auth = AuthService.instance;
 
-    return Scaffold(
-      resizeToAvoidBottomInset: true,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.2),
-            radius: 1.3,
-            colors: [
-              Color(0xFF0F3226),
-              Color(0xFF091F17),
-              Color(0xFF040D0A),
-            ],
+    return ListenableBuilder(
+      listenable: LanguageService.instance,
+      builder: (context, _) => Scaffold(
+        resizeToAvoidBottomInset: true,
+        body: Container(
+          width: double.infinity,
+          height: double.infinity,
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment(0, -0.2),
+              radius: 1.3,
+              colors: [
+                Color(0xFF0F3226),
+                Color(0xFF091F17),
+                Color(0xFF040D0A),
+              ],
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: isLandscape
-              ? _buildLandscapeLayout(context, auth)
-              : _buildPortraitLayout(context, auth),
+          child: SafeArea(
+            child: isLandscape
+                ? _buildLandscapeLayout(context, auth)
+                : _buildPortraitLayout(context, auth),
+          ),
         ),
       ),
     );
@@ -231,17 +236,43 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ],
             ),
+            const Spacer(),
+            InkWell(
+              onTap: () => LanguageSelectorDialog.show(context),
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(LanguageService.instance.currentLanguage.flag, style: const TextStyle(fontSize: 14)),
+                    const SizedBox(width: 4),
+                    Text(
+                      LanguageService.instance.currentLanguage.nativeName,
+                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.language, color: Color(0xFF00E676), size: 14),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
 
         const SizedBox(height: 14),
 
         // Các đặc sắc của game (Features bullet list)
-        _buildFeatureItem(Icons.sports_esports, 'Vật lý bi chuẩn xác, trải nghiệm chân thực'),
+        _buildFeatureItem(Icons.sports_esports, 'feature_physics'.tr),
         const SizedBox(height: 6),
-        _buildFeatureItem(Icons.leaderboard, 'Bảng xếp hạng & thành tích đồng bộ Realtime'),
+        _buildFeatureItem(Icons.leaderboard, 'feature_leaderboard'.tr),
         const SizedBox(height: 6),
-        _buildFeatureItem(Icons.people_alt, 'Đấu với Bạn bè, Bot AI và Luyện tập nâng cao'),
+        _buildFeatureItem(Icons.people_alt, 'feature_modes'.tr),
 
         const SizedBox(height: 14),
 
@@ -287,10 +318,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'CHƠI KHÁCH (OFFLINE)',
-                        style: TextStyle(
+                        'guest_offline_btn'.tr,
+                        style: const TextStyle(
                           color: Color(0xFF00E676),
                           fontWeight: FontWeight.w900,
                           fontSize: 12,
@@ -298,8 +329,8 @@ class _AuthScreenState extends State<AuthScreen> {
                         ),
                       ),
                       Text(
-                        'Không cần mạng • Không lưu tiến trình',
-                        style: TextStyle(
+                        'guest_offline_sub'.tr,
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 10,
                         ),
@@ -372,7 +403,7 @@ class _AuthScreenState extends State<AuthScreen> {
             _buildTabSelector(),
 
             // Thông báo lỗi / thành công (nếu có)
-            if (_errorMessage != null) _buildAlertBanner(_errorMessage!, isError: true),
+            if (_errorMessage != null) _buildAlertBanner(LanguageService.instance.localizeAuthError(_errorMessage!), isError: true),
             if (_successMessage != null) _buildAlertBanner(_successMessage!, isError: false),
 
             // Nội dung biểu mẫu theo Tab đang chọn
@@ -400,7 +431,7 @@ class _AuthScreenState extends State<AuthScreen> {
         children: [
           Expanded(
             child: _buildTabButton(
-              title: 'ĐĂNG NHẬP',
+              title: 'login_tab'.tr,
               icon: Icons.login,
               isSelected: _selectedTab == 0,
               onTap: () {
@@ -414,7 +445,7 @@ class _AuthScreenState extends State<AuthScreen> {
           const SizedBox(width: 8),
           Expanded(
             child: _buildTabButton(
-              title: 'ĐĂNG KÝ',
+              title: 'register_tab'.tr,
               icon: Icons.person_add_alt_1,
               isSelected: _selectedTab == 1,
               onTap: () {
@@ -524,8 +555,8 @@ class _AuthScreenState extends State<AuthScreen> {
           key: const ValueKey('login_account_field'),
           controller: _loginAccountController,
           focusNode: _loginAccountFocus,
-          labelText: 'Tài khoản hoặc Email',
-          hintText: 'player01 hoặc email@gmail.com',
+          labelText: 'account_field'.tr,
+          hintText: 'player01 / email@example.com',
           icon: Icons.person_outline,
           keyboardType: TextInputType.emailAddress,
           textCapitalization: TextCapitalization.none,
@@ -539,7 +570,7 @@ class _AuthScreenState extends State<AuthScreen> {
           key: const ValueKey('login_password_field'),
           controller: _loginPasswordController,
           focusNode: _loginPasswordFocus,
-          labelText: 'Mật khẩu',
+          labelText: 'password_field'.tr,
           hintText: '••••••',
           icon: Icons.lock_outline,
           keyboardType: TextInputType.visiblePassword,
@@ -581,9 +612,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
                   )
-                : const Text(
-                    'VÀO BÀN CHƠI',
-                    style: TextStyle(
+                : Text(
+                    'enter_table'.tr,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                       letterSpacing: 0.8,
@@ -608,9 +639,9 @@ class _AuthScreenState extends State<AuthScreen> {
               padding: EdgeInsets.zero,
             ),
             icon: const Icon(Icons.bolt, size: 16),
-            label: const Text(
-              'CHƠI KHÁCH OFFLINE (KHÔNG LƯU)',
-              style: TextStyle(
+            label: Text(
+              'play_guest_no_save'.tr,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 11,
                 letterSpacing: 0.4,
@@ -635,8 +666,8 @@ class _AuthScreenState extends State<AuthScreen> {
           key: const ValueKey('reg_name_field'),
           controller: _regNameController,
           focusNode: _regNameFocus,
-          labelText: 'Tên hiển thị (Nickname)',
-          hintText: 'Cơ Thủ Sài Gòn',
+          labelText: 'display_name_field'.tr,
+          hintText: 'Player',
           icon: Icons.badge_outlined,
           keyboardType: TextInputType.name,
           textCapitalization: TextCapitalization.words,
@@ -648,8 +679,8 @@ class _AuthScreenState extends State<AuthScreen> {
           key: const ValueKey('reg_account_field'),
           controller: _regAccountController,
           focusNode: _regAccountFocus,
-          labelText: 'Tên tài khoản hoặc Email',
-          hintText: 'player01 hoặc email@gmail.com',
+          labelText: 'account_field'.tr,
+          hintText: 'player01 / email@example.com',
           icon: Icons.person_add_outlined,
           keyboardType: TextInputType.emailAddress,
           textCapitalization: TextCapitalization.none,
@@ -661,7 +692,7 @@ class _AuthScreenState extends State<AuthScreen> {
           key: const ValueKey('reg_password_field'),
           controller: _regPasswordController,
           focusNode: _regPasswordFocus,
-          labelText: 'Mật khẩu (tối thiểu 6 ký tự)',
+          labelText: 'password_min_chars'.tr,
           hintText: '••••••',
           icon: Icons.lock_outline,
           keyboardType: TextInputType.visiblePassword,
@@ -685,8 +716,8 @@ class _AuthScreenState extends State<AuthScreen> {
           child: FilledButton.icon(
             onPressed: auth.isLoading ? null : _handleRegister,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF00B0FF),
-              foregroundColor: Colors.white,
+              backgroundColor: const Color(0xFF00E676),
+              foregroundColor: Colors.black87,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               padding: EdgeInsets.zero,
               elevation: 3,
@@ -700,9 +731,9 @@ class _AuthScreenState extends State<AuthScreen> {
                     height: 18,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text(
-                    'TẠO TÀI KHOẢN MỚI',
-                    style: TextStyle(
+                : Text(
+                    'create_account_btn'.tr,
+                    style: const TextStyle(
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                       letterSpacing: 0.8,
@@ -803,9 +834,9 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
               const SizedBox(height: 3),
-              const Text(
-                'Vui lòng đăng nhập để đồng bộ thành tích',
-                style: TextStyle(color: Color(0xFF80CBC4), fontSize: 12),
+              Text(
+                'please_login_sync'.tr,
+                style: const TextStyle(color: Color(0xFF80CBC4), fontSize: 12),
               ),
               const SizedBox(height: 16),
               _buildFormCard(auth),
@@ -814,9 +845,9 @@ class _AuthScreenState extends State<AuthScreen> {
               TextButton.icon(
                 onPressed: auth.isLoading ? null : _handleGuestLogin,
                 icon: const Icon(Icons.bolt, color: Color(0xFF00E676), size: 18),
-                label: const Text(
-                  'CHƠI KHÁCH OFFLINE (KHÔNG LƯU TIẾN TRÌNH)',
-                  style: TextStyle(
+                label: Text(
+                  'play_guest_no_save'.tr,
+                  style: const TextStyle(
                     color: Color(0xFF00E676),
                     fontWeight: FontWeight.bold,
                     fontSize: 11.5,

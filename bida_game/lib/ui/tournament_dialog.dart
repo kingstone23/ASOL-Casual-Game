@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/tournament_model.dart';
 // import '../services/online_multiplayer_service.dart';
+import '../services/language_service.dart';
 import '../services/progression_service.dart';
 
 class TournamentDialog extends StatefulWidget {
@@ -38,40 +39,43 @@ class _TournamentDialogState extends State<TournamentDialog> {
         horizontal: isMobile ? 8 : 28,
         vertical: isMobile ? 8 : 18,
       ),
-      child: Container(
-        width: 860,
-        height: screenSize.height * 0.92,
-        decoration: BoxDecoration(
-          color: const Color(0xFF0D1D17),
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: const Color(0xFFFFD54F), width: 1.8),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.85),
-              blurRadius: 25,
-              offset: const Offset(0, 10),
+      child: ListenableBuilder(
+        listenable: Listenable.merge([
+          ProgressionService.instance,
+          LanguageService.instance,
+        ]),
+        builder: (context, _) {
+          return Container(
+            width: 860,
+            height: screenSize.height * 0.92,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0D1D17),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: const Color(0xFFFFD54F), width: 1.8),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.85),
+                  blurRadius: 25,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Header Giải Đấu Offline Vô Địch 6 Brackets
-            _buildHeader(context),
+            child: Column(
+              children: [
+                // Header Giải Đấu Offline Vô Địch 5 Brackets
+                _buildHeader(context),
 
-            // Grand Champion Reward Banner
-            _buildChampionBanner(),
+                // Grand Champion Reward Banner
+                _buildChampionBanner(),
 
-            // 6 Brackets Ladder
-            Expanded(
-              child: ListenableBuilder(
-                listenable: ProgressionService.instance,
-                builder: (context, _) {
-                  return _buildBracketLadder(context, isMobile);
-                },
-              ),
+                // 5 Brackets Ladder
+                Expanded(
+                  child: _buildBracketLadder(context, isMobile),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -105,9 +109,9 @@ class _TournamentDialogState extends State<TournamentDialog> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'GIẢI ĐẤU VÔ ĐỊCH 6 BRACKETS (TOURNAMENT)',
-                  style: TextStyle(
+                Text(
+                  'tournament_title'.tr,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
                     fontSize: 13.5,
@@ -115,9 +119,9 @@ class _TournamentDialogState extends State<TournamentDialog> {
                   ),
                 ),
                 const SizedBox(height: 2),
-                const Text(
-                  '6 Vòng Đấu Trực Tiếp • Thử Thách Cúp Vô Địch',
-                  style: TextStyle(
+                Text(
+                  'tournament_subtitle'.tr,
+                  style: const TextStyle(
                     color: Color(0xFFFFD54F),
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -163,18 +167,26 @@ class _TournamentDialogState extends State<TournamentDialog> {
                 child: TextButton.icon(
                   onPressed: () {
                     ProgressionService.instance.resetTournament();
+                    final langCode = LanguageService.instance.currentCode;
+                    final snackText = switch (langCode) {
+                      'zh' => '🔄 锦标赛已重置为第1轮!',
+                      'ja' => '🔄 トーナメントを第1ラウンドにリセットしました!',
+                      'ko' => '🔄 토너먼트를 1라운드로 초기화했습니다!',
+                      'en' => '🔄 Tournament reset to Round 1!',
+                      _ => '🔄 Đã làm mới giải đấu về Vòng 1!',
+                    };
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🔄 Đã làm mới giải đấu về Vòng 1!'),
-                        backgroundColor: Color(0xFFC77700),
-                        duration: Duration(seconds: 2),
+                      SnackBar(
+                        content: Text(snackText),
+                        backgroundColor: const Color(0xFFC77700),
+                        duration: const Duration(seconds: 2),
                       ),
                     );
                   },
                   icon: const Icon(Icons.restart_alt, size: 14, color: Color(0xFFFFD54F)),
-                  label: const Text(
-                    'LÀM MỚI',
-                    style: TextStyle(
+                  label: Text(
+                    'reset'.tr,
+                    style: const TextStyle(
                       color: Color(0xFFFFD54F),
                       fontSize: 10.5,
                       fontWeight: FontWeight.bold,
@@ -192,7 +204,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close, color: Colors.white70, size: 20),
-            tooltip: 'Đóng',
+            tooltip: 'close'.tr,
           ),
         ],
       ),
@@ -210,26 +222,26 @@ class _TournamentDialogState extends State<TournamentDialog> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.6)),
       ),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 26),
-          SizedBox(width: 8),
+          const Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 26),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '🏆 PHẦN THƯỞNG QUÁN QUÂN ĐẠI CHUNG KẾT BRACKET 6:',
-                  style: TextStyle(
+                  'champion_reward_banner'.tr,
+                  style: const TextStyle(
                     color: Color(0xFFFFD54F),
                     fontWeight: FontWeight.w900,
                     fontSize: 11,
                   ),
                 ),
-                SizedBox(height: 2),
+                const SizedBox(height: 2),
                 Text(
-                  '+15.000 Vàng • +2.500 EXP • Cúp Quán Quân Tournament • Thành Tựu Vua Giải Đấu!',
-                  style: TextStyle(color: Colors.white, fontSize: 10.5),
+                  'champion_reward_desc'.tr,
+                  style: const TextStyle(color: Colors.white, fontSize: 10.5),
                 ),
               ],
             ),
@@ -252,7 +264,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
         final isPassed = stage.bracketNumber < currentBracket;
         final isCurrent = stage.bracketNumber == currentBracket;
         final isLocked = stage.bracketNumber > currentBracket;
-        final isFinal = stage.bracketNumber == 6;
+        final isFinal = stage.bracketNumber == 5;
 
         return Container(
           decoration: BoxDecoration(
@@ -328,7 +340,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'BRACKET ${stage.bracketNumber} • ${stage.roundName}',
+                              'BRACKET ${stage.bracketNumber} • ${LanguageService.instance.localizeStageTitle(stage.roundName)}',
                               style: TextStyle(
                                 color: isFinal ? const Color(0xFFFFD54F) : Colors.tealAccent,
                                 fontSize: 9,
@@ -338,9 +350,9 @@ class _TournamentDialogState extends State<TournamentDialog> {
                           ),
                           const SizedBox(width: 6),
                           if (isFinal) ...[
-                            const Text(
-                              '👑 TRẬN TRANH CÚP VÔ ĐỊCH',
-                              style: TextStyle(
+                            Text(
+                              'championship_match'.tr,
+                              style: const TextStyle(
                                 color: Color(0xFFFFD54F),
                                 fontWeight: FontWeight.w900,
                                 fontSize: 9.5,
@@ -351,7 +363,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        stage.title,
+                        LanguageService.instance.localizeStageTitle(stage.title),
                         style: TextStyle(
                           color: isLocked ? Colors.white54 : Colors.white,
                           fontSize: 13,
@@ -364,7 +376,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                           const Icon(Icons.sports_esports, color: Colors.white60, size: 13),
                           const SizedBox(width: 4),
                           Text(
-                            'Đối thủ: ${stage.opponentName} (Lv.${stage.opponentLevel}) • ${stage.opponentCue.name}',
+                            '${'opponent'.tr}: ${LanguageService.instance.localizeOpponentName(stage.opponentName)} (Lv.${stage.opponentLevel}) • ${stage.opponentCue.localizedName}',
                             style: const TextStyle(color: Colors.white70, fontSize: 10.5),
                           ),
                         ],
@@ -380,7 +392,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                               const Icon(Icons.monetization_on, color: Color(0xFFFFD54F), size: 12),
                               const SizedBox(width: 3),
                               Text(
-                                '+${stage.coinReward} Vàng',
+                                '+${stage.coinReward} ${'coins'.tr}',
                                 style: const TextStyle(
                                   color: Color(0xFFFFD54F),
                                   fontWeight: FontWeight.bold,
@@ -411,7 +423,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                                 const Icon(Icons.workspace_premium, color: Color(0xFFFF4081), size: 12),
                                 const SizedBox(width: 3),
                                 Text(
-                                  isFinal ? '🏆 Cúp Quán Quân' : '🎖️ Huy Chương',
+                                  isFinal ? '🏆 ${'trophy_cup'.tr}' : '🎖️ ${'medals'.tr}',
                                   style: const TextStyle(
                                     color: Color(0xFFFF4081),
                                     fontWeight: FontWeight.bold,
@@ -433,39 +445,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // // Nút 1: Đấu Phòng Online qua WebSocket cổng điện thoại thật
-                      // ElevatedButton(
-                      //   onPressed: () async {
-                      //     setState(() => _selectedStage = stage);
-                      //     if (!service.isConnected) {
-                      //       await service.connect();
-                      //     }
-                      //     if (service.isConnected) {
-                      //       service.startTournamentQuickMatch(stage.bracketNumber);
-                      //     }
-                      //   },
-                      //   style: ElevatedButton.styleFrom(
-                      //     backgroundColor: const Color(0xFF00B0FF),
-                      //     foregroundColor: Colors.white,
-                      //     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      //     elevation: 3,
-                      //   ),
-                      //   child: const Row(
-                      //     mainAxisSize: MainAxisSize.min,
-                      //     children: [
-                      //       Icon(Icons.public, size: 13),
-                      //       SizedBox(width: 3),
-                      //       Text(
-                      //         'PHÒNG ONLINE',
-                      //         style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
-                      //       ),
-                      //     ],
-                      //   ),
-                      // ),
-                      // const SizedBox(height: 4),
-
-                      // Nút 2: Vào trận Offline (Đấu Bot)
+                      // Nút Vào trận Offline (Đấu Bot)
                       ElevatedButton(
                         onPressed: () {
                           Navigator.of(context).pop();
@@ -484,7 +464,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
                             Icon(isFinal ? Icons.emoji_events : Icons.smart_toy, size: 13),
                             const SizedBox(width: 3),
                             Text(
-                              isFinal ? 'TRANH CÚP' : 'ĐẤU VỚI BOT',
+                              isFinal ? 'compete_cup'.tr : 'play_bot'.tr,
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10),
                             ),
                           ],
@@ -503,14 +483,14 @@ class _TournamentDialogState extends State<TournamentDialog> {
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: const Color(0xFF00E676)),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.check_circle, color: Color(0xFF00E676), size: 14),
-                            SizedBox(width: 4),
+                            const Icon(Icons.check_circle, color: Color(0xFF00E676), size: 14),
+                            const SizedBox(width: 4),
                             Text(
-                              'ĐÃ THẮNG',
-                              style: TextStyle(
+                              'won'.tr,
+                              style: const TextStyle(
                                 color: Color(0xFF00E676),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 10,
@@ -532,14 +512,14 @@ class _TournamentDialogState extends State<TournamentDialog> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           elevation: 1,
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.replay, size: 12),
-                            SizedBox(width: 3),
+                            const Icon(Icons.replay, size: 12),
+                            const SizedBox(width: 3),
                             Text(
-                              'ĐẤU LẠI',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 9.5),
+                              'replay'.tr,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 9.5),
                             ),
                           ],
                         ),
@@ -553,9 +533,9 @@ class _TournamentDialogState extends State<TournamentDialog> {
                       color: Colors.white12,
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'Khóa',
-                      style: TextStyle(color: Colors.white38, fontSize: 10),
+                    child: Text(
+                      'locked'.tr,
+                      style: const TextStyle(color: Colors.white38, fontSize: 10),
                     ),
                   ),
                 ],

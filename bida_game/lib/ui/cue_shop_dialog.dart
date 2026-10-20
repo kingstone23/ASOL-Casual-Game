@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/cue_model.dart';
+import '../services/language_service.dart';
 import '../services/progression_service.dart';
 
 class CueShopDialog extends StatefulWidget {
@@ -35,7 +36,10 @@ class _CueShopDialogState extends State<CueShopDialog> {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: ListenableBuilder(
-        listenable: ProgressionService.instance,
+        listenable: Listenable.merge([
+          ProgressionService.instance,
+          LanguageService.instance,
+        ]),
         builder: (context, _) {
           final service = ProgressionService.instance;
           final selectedCue = CueCatalog.getById(_selectedCueId);
@@ -148,9 +152,9 @@ class _CueShopDialogState extends State<CueShopDialog> {
         children: [
           const Icon(Icons.storefront, color: Color(0xFFFFD54F), size: 24),
           const SizedBox(width: 8),
-          const Text(
-            'CỬA HÀNG GẬY CƠ & TIẾN TRÌNH',
-            style: TextStyle(
+          Text(
+            'shop_title'.tr,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w900,
               fontSize: 16,
@@ -169,7 +173,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
-              'Cấp ${service.playerLevel}',
+              '${'level'.tr} ${service.playerLevel}',
               style: const TextStyle(
                 color: Colors.black87,
                 fontWeight: FontWeight.w900,
@@ -219,7 +223,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
             icon: const Icon(Icons.close, color: Colors.white70),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
-            tooltip: 'Đóng',
+            tooltip: 'close'.tr,
           ),
         ],
       ),
@@ -304,7 +308,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                         children: [
                           Flexible(
                             child: Text(
-                              cue.name,
+                              cue.localizedName,
                               style: TextStyle(
                                 color: isUnlocked ? Colors.white : Colors.white54,
                                 fontWeight: FontWeight.bold,
@@ -339,7 +343,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                         children: [
                           if (!isUnlocked) ...[
                             Text(
-                              'Cần Cấp ${cue.requiredLevel}',
+                              '${'need_level'.tr} ${cue.requiredLevel}',
                               style: const TextStyle(
                                 color: Color(0xFFFF5252),
                                 fontSize: 11,
@@ -348,7 +352,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                             ),
                           ] else if (isOwned) ...[
                             Text(
-                              'Cấp gậy: $cueLevel/10',
+                              '${'cue_level'.tr}: $cueLevel/10',
                               style: const TextStyle(
                                 color: Color(0xFF69F0AE),
                                 fontSize: 11,
@@ -367,9 +371,9 @@ class _CueShopDialogState extends State<CueShopDialog> {
                                     width: 1,
                                   ),
                                 ),
-                                child: const Text(
-                                  'ĐANG DÙNG',
-                                  style: TextStyle(
+                                child: Text(
+                                  'equipped'.tr.toUpperCase(),
+                                  style: const TextStyle(
                                     color: Color(0xFF00E676),
                                     fontSize: 9,
                                     fontWeight: FontWeight.w900,
@@ -396,9 +400,9 @@ class _CueShopDialogState extends State<CueShopDialog> {
 
   Widget _buildPriceTag(CueModel cue) {
     if (cue.isFree) {
-      return const Text(
-        'Miễn phí',
-        style: TextStyle(
+      return Text(
+        'free'.tr,
+        style: const TextStyle(
           color: Color(0xFF69F0AE),
           fontSize: 11,
           fontWeight: FontWeight.bold,
@@ -468,7 +472,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      cue.name,
+                      cue.localizedName,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
@@ -477,7 +481,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      cue.description,
+                      cue.localizedDescription,
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 11,
@@ -538,8 +542,8 @@ class _CueShopDialogState extends State<CueShopDialog> {
             children: [
               Text(
                 isOwned
-                    ? 'CẤP ĐỘ GẬY: $effectiveLevel / 10'
-                    : 'CẤP ĐỘ KHỞI ĐIỂM: Lv.1',
+                    ? '${'level'.tr.toUpperCase()}: $effectiveLevel / 10'
+                    : '${'level'.tr.toUpperCase()}: Lv.1',
                 style: TextStyle(
                   color: cue.rarity.color,
                   fontWeight: FontWeight.w800,
@@ -548,9 +552,9 @@ class _CueShopDialogState extends State<CueShopDialog> {
                 ),
               ),
               if (isOwned && effectiveLevel == 10)
-                const Text(
-                  '★ MAX LEVEL',
-                  style: TextStyle(
+                Text(
+                  'max_level'.tr,
+                  style: const TextStyle(
                     color: Color(0xFFFFD54F),
                     fontWeight: FontWeight.w900,
                     fontSize: 11,
@@ -580,7 +584,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
 
           // 4 THANH CHỈ SỐ STATS
           _buildStatRow(
-            label: 'Lực đánh (Force)',
+            label: '${'force'.tr} (Force)',
             current: currentStats.force,
             next: nextStats?.force,
             color: const Color(0xFFFF7043),
@@ -588,7 +592,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           ),
           const SizedBox(height: 6),
           _buildStatRow(
-            label: 'Tia ngắm (Aim Guide)',
+            label: '${'aim'.tr} (Aim Guide)',
             current: currentStats.aim,
             next: nextStats?.aim,
             color: const Color(0xFF29B6F6),
@@ -596,7 +600,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           ),
           const SizedBox(height: 6),
           _buildStatRow(
-            label: 'Độ xoáy (Spin)',
+            label: '${'spin'.tr} (Spin)',
             current: currentStats.spin,
             next: nextStats?.spin,
             color: const Color(0xFFAB47BC),
@@ -604,7 +608,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           ),
           const SizedBox(height: 6),
           _buildStatRow(
-            label: 'Thời gian lượt (Time)',
+            label: 'time'.tr,
             current: currentStats.time,
             next: nextStats?.time,
             color: const Color(0xFFFFCA28),
@@ -632,13 +636,14 @@ class _CueShopDialogState extends State<CueShopDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    cue.passivePerk,
+                    cue.localizedPerk,
                     style: const TextStyle(
                       color: Color(0xFFE0F2F1),
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+
                 ),
               ],
             ),
@@ -778,7 +783,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           onPressed: () {
             _showToast(
               context,
-              'Cây cơ này yêu cầu đạt Cấp ${cue.requiredLevel} để mở khóa!',
+              'locked_requires_level_toast'.tr.replaceAll('{level}', '${cue.requiredLevel}'),
               isError: true,
             );
           },
@@ -790,7 +795,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           ),
           icon: const Icon(Icons.lock, size: 18),
           label: Text(
-            'KHÓA • YÊU CẦU ĐẠT CẤP ${cue.requiredLevel}',
+            'locked_requires_level'.tr.replaceAll('{level}', '${cue.requiredLevel}'),
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
@@ -817,19 +822,19 @@ class _CueShopDialogState extends State<CueShopDialog> {
               _showToast(
                 context,
                 isDiamond
-                    ? 'Bạn không đủ Kim Cương để mua cây cơ này (còn thiếu $missing Kim Cương)!'
-                    : 'Bạn không đủ Vàng để mua cây cơ này (còn thiếu $missing Vàng)!',
+                    ? 'not_enough_diamonds'.tr.replaceAll('{missing}', '$missing')
+                    : 'not_enough_coins_cue'.tr.replaceAll('{missing}', '$missing'),
                 isError: true,
               );
               return;
             }
             final success = service.buyCue(cue);
             if (success) {
-              _showToast(context, 'Chúc mừng! Đã sở hữu và trang bị ${cue.name}!');
+              _showToast(context, 'cue_purchased_equipped'.tr.replaceAll('{name}', cue.localizedName));
             } else {
               _showToast(
                 context,
-                'Không thể mua cây cơ này. Vui lòng kiểm tra lại số dư!',
+                'cue_buy_failed'.tr,
                 isError: true,
               );
             }
@@ -844,7 +849,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
           label: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'MUA NGAY • $price ${isDiamond ? 'KIM CƯƠNG' : 'VÀNG'}',
+              '${'buy_now'.tr} • $price ${isDiamond ? 'diamonds'.tr.toUpperCase() : 'coins'.tr.toUpperCase()}',
               style: const TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 13,
@@ -874,16 +879,16 @@ class _CueShopDialogState extends State<CueShopDialog> {
                       width: 1.8,
                     ),
                   ),
-                  child: const Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.check_circle, color: Color(0xFF00E676), size: 18),
-                      SizedBox(width: 6),
+                      const Icon(Icons.check_circle, color: Color(0xFF00E676), size: 18),
+                      const SizedBox(width: 6),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'ĐANG DÙNG',
-                          style: TextStyle(
+                          'equipped'.tr.toUpperCase(),
+                          style: const TextStyle(
                             color: Color(0xFF00E676),
                             fontWeight: FontWeight.w900,
                             fontSize: 12,
@@ -897,7 +902,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
               : FilledButton.icon(
                   onPressed: () {
                     service.equipCue(cue.id);
-                    _showToast(context, 'Đã trang bị ${cue.name} thành công!');
+                    _showToast(context, 'cue_equipped_success'.tr.replaceAll('{name}', cue.localizedName));
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF00B0FF),
@@ -909,11 +914,11 @@ class _CueShopDialogState extends State<CueShopDialog> {
                     elevation: 2,
                   ),
                   icon: const Icon(Icons.colorize, size: 18, color: Colors.white),
-                  label: const FittedBox(
+                  label: FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      'TRANG BỊ',
-                      style: TextStyle(
+                      'equip'.tr.toUpperCase(),
+                      style: const TextStyle(
                         fontWeight: FontWeight.w900,
                         fontSize: 12,
                         letterSpacing: 0.8,
@@ -937,7 +942,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                       final missing = upgradeCost - service.coins;
                       _showToast(
                         context,
-                        'Bạn cần thêm $missing Vàng để nâng cấp gậy này (tổng $upgradeCost Vàng)!',
+                        'cue_upgrade_need_coins'.tr.replaceAll('{missing}', '$missing').replaceAll('{total}', '$upgradeCost'),
                         isError: true,
                       );
                       return;
@@ -946,7 +951,7 @@ class _CueShopDialogState extends State<CueShopDialog> {
                     if (ok) {
                       _showToast(
                         context,
-                        'Chúc mừng! Nâng cấp ${cue.name} lên Cấp ${currentLevel + 1} thành công!',
+                        'cue_upgraded_success'.tr.replaceAll('{name}', cue.localizedName).replaceAll('{level}', '${currentLevel + 1}'),
                       );
                     }
                   },
@@ -972,8 +977,8 @@ class _CueShopDialogState extends State<CueShopDialog> {
               fit: BoxFit.scaleDown,
               child: Text(
                 currentLevel >= 10
-                    ? 'TỐI ĐA (MAX)'
-                    : 'NÂNG LV.${currentLevel + 1} • $upgradeCost VÀNG',
+                    ? 'max_level'.tr
+                    : '${'upgrade'.tr.toUpperCase()} LV.${currentLevel + 1} • $upgradeCost ${'coins'.tr.toUpperCase()}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 11,

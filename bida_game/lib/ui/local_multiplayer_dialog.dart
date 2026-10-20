@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/local_multiplayer_service.dart';
+import '../services/language_service.dart';
 
 class LocalMultiplayerDialog extends StatefulWidget {
   final VoidCallback onConnected;
@@ -61,7 +62,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
 
     if (!success) {
       setState(() {
-        _errorMessage = 'Không thể mở phòng. Hãy đảm bảo máy đã bật WiFi hoặc phát Hotspot!';
+        _errorMessage = 'cant_start_hosting'.tr;
       });
     }
   }
@@ -70,7 +71,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
     final ip = (targetIp ?? _ipController.text).trim();
     if (ip.isEmpty) {
       setState(() {
-        _errorMessage = 'Vui lòng nhập địa chỉ IP của máy tạo phòng!';
+        _errorMessage = 'enter_host_ip'.tr;
       });
       return;
     }
@@ -92,8 +93,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
       widget.onConnected();
     } else {
       setState(() {
-        _errorMessage =
-            'Không thể kết nối tới $ip!\n• Đảm bảo 2 máy chung 1 WiFi hoặc 1 máy bật Hotspot cho máy kia bắt.';
+        _errorMessage = 'cant_connect_ip'.tr.replaceAll('{ip}', ip);
       });
     }
   }
@@ -117,7 +117,10 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       child: ListenableBuilder(
-        listenable: LocalMultiplayerService.instance,
+        listenable: Listenable.merge([
+          LocalMultiplayerService.instance,
+          LanguageService.instance,
+        ]),
         builder: (context, _) {
           final service = LocalMultiplayerService.instance;
           final screenSize = MediaQuery.of(context).size;
@@ -172,9 +175,9 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                       children: [
                         const Icon(Icons.wifi, color: Color(0xFF42A5F5), size: 18),
                         const SizedBox(width: 8),
-                        const Text(
-                          'ĐẤU MẠNG CỤC BỘ (WIFI / HOTSPOT)',
-                          style: TextStyle(
+                        Text(
+                          'local_multiplayer_title'.tr,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12.5,
                             fontWeight: FontWeight.w900,
@@ -206,9 +209,9 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                       labelColor: const Color(0xFF00E5FF),
                       unselectedLabelColor: Colors.white54,
                       labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
-                      tabs: const [
-                        Tab(icon: Icon(Icons.wifi_tethering, size: 14), text: 'TẠO PHÒNG (HOST)'),
-                        Tab(icon: Icon(Icons.login, size: 14), text: 'VÀO PHÒNG (JOIN)'),
+                      tabs: [
+                        Tab(icon: const Icon(Icons.wifi_tethering, size: 14), text: 'create_room_host'.tr),
+                        Tab(icon: const Icon(Icons.login, size: 14), text: 'join_room_client'.tr),
                       ],
                     ),
                   ),
@@ -259,7 +262,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
   // =========================================================================
   Widget _buildHostTab(LocalMultiplayerService service) {
     final isHosting = service.connectionState == MultiplayerConnectionState.hosting;
-    final myIp = service.localIp ?? 'Đang tải IP...';
+    final myIp = service.localIp ?? 'loading_ip'.tr;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -286,9 +289,9 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'IP MÁY NÀY (WIFI / HOTSPOT):',
-                              style: TextStyle(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold),
+                            Text(
+                              'this_device_ip'.tr,
+                              style: const TextStyle(color: Colors.white54, fontSize: 9.5, fontWeight: FontWeight.bold),
                             ),
                             const SizedBox(height: 1),
                             Text(
@@ -304,7 +307,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Tải lại IP',
+                        tooltip: 'refresh_ip'.tr,
                         icon: const Icon(Icons.refresh, color: Color(0xFF00E5FF), size: 16),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -325,13 +328,13 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                     border: Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.25)),
                   ),
                   child: Row(
-                    children: const [
-                      Icon(Icons.tips_and_updates, color: Color(0xFF00E676), size: 13),
-                      SizedBox(width: 6),
+                    children: [
+                      const Icon(Icons.tips_and_updates, color: Color(0xFF00E676), size: 13),
+                      const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          'Mẹo: Nếu WiFi chặn kết nối, 1 máy bật Hotspot cho máy kia bắt là chơi được 100%!',
-                          style: TextStyle(color: Colors.white70, fontSize: 9, height: 1.2),
+                          'wifi_tip'.tr,
+                          style: const TextStyle(color: Colors.white70, fontSize: 9, height: 1.2),
                         ),
                       ),
                     ],
@@ -359,16 +362,16 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            SizedBox(
+                          children: [
+                            const SizedBox(
                               width: 14,
                               height: 14,
                               child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5FF)),
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
-                              'Đang phát sóng phòng...',
-                              style: TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 11),
+                              'broadcasting_room'.tr,
+                              style: const TextStyle(color: Color(0xFF00E5FF), fontWeight: FontWeight.bold, fontSize: 11),
                             ),
                           ],
                         ),
@@ -379,7 +382,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                           child: OutlinedButton.icon(
                             onPressed: () => service.disconnect(),
                             icon: const Icon(Icons.close, size: 14),
-                            label: const Text('HỦY PHÒNG', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                            label: Text('cancel_room'.tr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.redAccent,
                               side: const BorderSide(color: Colors.redAccent),
@@ -405,16 +408,16 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                             elevation: 3,
                           ),
                           icon: const Icon(Icons.wifi_tethering, size: 18),
-                          label: const Text(
-                            'MỞ PHÒNG CHỜ ĐỐI THỦ',
-                            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.4),
+                          label: Text(
+                            'open_room_wait_opp'.tr,
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.4),
                           ),
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Máy đối thủ sẽ tự động thấy phòng hoặc nhập IP',
-                        style: TextStyle(color: Colors.white54, fontSize: 9.5),
+                      Text(
+                        'opp_auto_discover'.tr,
+                        style: const TextStyle(color: Colors.white54, fontSize: 9.5),
                         textAlign: TextAlign.center,
                       ),
                     ],
@@ -450,21 +453,21 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                     ),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        SizedBox(
+                      children: [
+                        const SizedBox(
                           width: 14,
                           height: 14,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00E5FF)),
                         ),
-                        SizedBox(height: 6),
+                        const SizedBox(height: 6),
                         Text(
-                          'Đang tự động quét phòng WiFi...',
-                          style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
+                          'scanning_wifi_rooms'.tr,
+                          style: const TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Khi máy Host mở phòng, sẽ hiện ngay tại đây',
-                          style: TextStyle(color: Colors.white38, fontSize: 9),
+                          'room_appear_here'.tr,
+                          style: const TextStyle(color: Colors.white38, fontSize: 9),
                           textAlign: TextAlign.center,
                         ),
                       ],
@@ -509,7 +512,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                             padding: EdgeInsets.zero,
                           ),
-                          child: const Text('VÀO BÀN NGAY (1-CHẠM)', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                          child: Text('join_table_now'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
                         ),
                       ),
                     ],
@@ -528,9 +531,9 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text(
-                  'HOẶC NHẬP IP THỦ CÔNG:',
-                  style: TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.bold),
+                Text(
+                  'manual_ip_entry'.tr,
+                  style: const TextStyle(color: Colors.white70, fontSize: 9.5, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
                 Row(
@@ -572,7 +575,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                         ),
-                        child: const Text('DÁN', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10.5)),
+                        child: Text('paste'.tr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10.5)),
                       ),
                     ),
                   ],
@@ -595,7 +598,7 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87),
                           )
                         : const Icon(Icons.link, size: 15),
-                    label: const Text('KẾT NỐI VÀO PHÒNG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5)),
+                    label: Text('connect_to_room'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5)),
                   ),
                 ),
               ],

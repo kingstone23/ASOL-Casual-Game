@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/language_service.dart';
 
 enum CueRarity {
   common,
@@ -9,17 +10,14 @@ enum CueRarity {
 
 extension CueRarityExt on CueRarity {
   String get displayName {
-    switch (this) {
-      case CueRarity.common:
-        return 'Thường';
-      case CueRarity.rare:
-        return 'Hiếm';
-      case CueRarity.epic:
-        return 'Sử Thi';
-      case CueRarity.legendary:
-        return 'Huyền Thoại';
-    }
+    return LanguageService.instance.localizeCueRarity(name, switch (this) {
+      CueRarity.common => 'Thường',
+      CueRarity.rare => 'Hiếm',
+      CueRarity.epic => 'Sử Thi',
+      CueRarity.legendary => 'Huyền Thoại',
+    });
   }
+
 
   Color get color {
     switch (this) {
@@ -98,6 +96,11 @@ class CueModel {
   });
 
   bool get isFree => priceCoins == null && priceDiamonds == null;
+
+  String get localizedName => LanguageService.instance.localizeCueName(id, name);
+  String get localizedDescription => LanguageService.instance.localizeCueDescription(id, description);
+  String get localizedPerk => LanguageService.instance.localizeCuePerk(id, passivePerk);
+
 
   /// Tính toán 4 chỉ số theo cấp độ gậy (từ Lv.1 đến Lv.10)
   CueStats getStatsForLevel(int level) {

@@ -6,6 +6,7 @@ import '../models/cue_model.dart';
 import '../services/progression_service.dart';
 import '../services/online_multiplayer_service.dart';
 import '../services/local_multiplayer_service.dart';
+import '../services/language_service.dart';
 
 /// Widget Thanh Chỉnh Cơ Kéo Xuống Dạng Con Nhộng (Capsule Cue Slider)
 /// Thiết kế chuẩn phong cách 8 Ball Pool kinh điển:
@@ -84,8 +85,8 @@ class _CuePowerSliderControlState extends State<CuePowerSliderControl> {
       SnackBar(
         content: Text(
           _powerLocked
-              ? '🎯 Đã khóa lực: Thả tay không bắn (Chạm lại nút tròn để bắn hoặc mở khóa)'
-              : '⚡ Đã mở chế độ: Kéo cơ & Thả tay bắn ngay',
+              ? 'power_locked_toast'.tr
+              : 'power_unlocked_toast'.tr,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         duration: const Duration(seconds: 1),

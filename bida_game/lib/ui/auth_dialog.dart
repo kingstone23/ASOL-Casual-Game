@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/progression_service.dart';
+import '../services/language_service.dart';
 
 class AuthDialog extends StatefulWidget {
   const AuthDialog({super.key});
@@ -68,7 +69,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
     final pass = _loginPasswordController.text;
 
     if (account.isEmpty || pass.isEmpty) {
-      setState(() => _errorMessage = 'Vui lòng điền đầy đủ tài khoản và mật khẩu.');
+      setState(() => _errorMessage = 'auth_fill_account_pass'.tr);
       return;
     }
 
@@ -81,7 +82,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
       if (error != null) {
         setState(() => _errorMessage = error);
       } else {
-        setState(() => _successMessage = 'Đăng nhập thành công! Chào mừng ${AuthService.instance.displayName}.');
+        setState(() => _successMessage = 'login_success_welcome'.tr.replaceAll('{name}', AuthService.instance.displayName));
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) Navigator.of(context).pop();
         });
@@ -100,7 +101,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
     final pass = _regPasswordController.text;
 
     if (name.isEmpty || account.isEmpty || pass.isEmpty) {
-      setState(() => _errorMessage = 'Vui lòng điền đầy đủ tất cả thông tin.');
+      setState(() => _errorMessage = 'auth_fill_all'.tr);
       return;
     }
 
@@ -114,7 +115,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
       if (error != null) {
         setState(() => _errorMessage = error);
       } else {
-        setState(() => _successMessage = 'Tạo tài khoản thành công!');
+        setState(() => _successMessage = 'register_success'.tr);
         Future.delayed(const Duration(milliseconds: 1000), () {
           if (mounted) Navigator.of(context).pop();
         });
@@ -165,7 +166,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
         child: ClipRRect(
           borderRadius: BorderRadius.circular(15),
           child: ListenableBuilder(
-            listenable: auth,
+            listenable: Listenable.merge([auth, LanguageService.instance]),
             builder: (context, _) {
               if (auth.isLoggedIn && !_forceShowAuthForms && !auth.isGuest) {
                 return _buildLoggedInView(auth, isCompact);
@@ -198,9 +199,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             children: [
               const Icon(Icons.account_circle, color: Color(0xFF00E676), size: 20),
               const SizedBox(width: 8),
-              const Text(
-                'THÔNG TIN TÀI KHOẢN',
-                style: TextStyle(
+              Text(
+                'account_info_title'.tr,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
@@ -269,7 +270,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        auth.isAdmin ? 'QUẢN TRỊ VIÊN (ADMIN)' : 'THÀNH VIÊN CHÍNH THỨC',
+                        auth.isAdmin ? 'admin_role'.tr : 'member_role'.tr,
                         style: TextStyle(
                           color: auth.isAdmin ? const Color(0xFFFFB300) : const Color(0xFF00E676),
                           fontWeight: FontWeight.bold,
@@ -293,9 +294,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatColumn('CẤP ĐỘ', 'Lv.${prog.playerLevel}', Colors.amber),
-                      _buildStatColumn('TIỀN VÀNG', '${prog.coins}', const Color(0xFFFFD54F)),
-                      _buildStatColumn('CHIẾN THẮNG', '${prog.totalWins}', const Color(0xFF00E676)),
+                      _buildStatColumn('level'.tr.toUpperCase(), 'Lv.${prog.playerLevel}', Colors.amber),
+                      _buildStatColumn('coins'.tr.toUpperCase(), '${prog.coins}', const Color(0xFFFFD54F)),
+                      _buildStatColumn('wins'.tr.toUpperCase(), '${prog.totalWins}', const Color(0xFF00E676)),
                     ],
                   ),
                 ),
@@ -311,9 +312,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                       if (mounted) Navigator.pop(context);
                     },
                     icon: const Icon(Icons.logout, color: Color(0xFFFF5252), size: 16),
-                    label: const Text(
-                      'ĐĂNG XUẤT',
-                      style: TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12),
+                    label: Text(
+                      'logout'.tr.toUpperCase(),
+                      style: const TextStyle(color: Color(0xFFFF5252), fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFFFF5252)),
@@ -345,9 +346,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
             children: [
               const Icon(Icons.bolt, color: Color(0xFFFFB300), size: 18),
               const SizedBox(width: 8),
-              const Text(
-                'TÀI KHOẢN KHÁCH',
-                style: TextStyle(
+              Text(
+                'guest_account_title'.tr,
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
                   fontSize: 13,
@@ -381,9 +382,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
                 ),
                 const SizedBox(height: 3),
-                const Text(
-                  'Chưa liên kết tài khoản • Dữ liệu lưu trên máy này',
-                  style: TextStyle(color: Colors.white54, fontSize: 10.5),
+                Text(
+                  'guest_account_desc'.tr,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10.5),
                 ),
                 const SizedBox(height: 10),
 
@@ -398,9 +399,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatColumn('CẤP ĐỘ', 'Lv.${prog.playerLevel}', Colors.amber),
-                      _buildStatColumn('TIỀN VÀNG', '${prog.coins}', const Color(0xFFFFD54F)),
-                      _buildStatColumn('CHIẾN THẮNG', '${prog.totalWins}', const Color(0xFF00E676)),
+                      _buildStatColumn('level'.tr.toUpperCase(), 'Lv.${prog.playerLevel}', Colors.amber),
+                      _buildStatColumn('coins'.tr.toUpperCase(), '${prog.coins}', const Color(0xFFFFD54F)),
+                      _buildStatColumn('wins'.tr.toUpperCase(), '${prog.totalWins}', const Color(0xFF00E676)),
                     ],
                   ),
                 ),
@@ -413,9 +414,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                   child: FilledButton.icon(
                     onPressed: () => setState(() => _forceShowAuthForms = true),
                     icon: const Icon(Icons.cloud_upload, size: 16),
-                    label: const Text(
-                      'ĐĂNG NHẬP / LƯU TIẾN TRÌNH CLOUD',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
+                    label: Text(
+                      'login_save_cloud_btn'.tr,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
                     ),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF00E676),
@@ -436,9 +437,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                       if (mounted) Navigator.pop(context);
                     },
                     icon: const Icon(Icons.logout, color: Colors.white60, size: 15),
-                    label: const Text(
-                      'Rời khỏi chế độ khách',
-                      style: TextStyle(color: Colors.white60, fontSize: 11),
+                    label: Text(
+                      'leave_guest_mode_btn'.tr,
+                      style: const TextStyle(color: Colors.white60, fontSize: 11),
                     ),
                   ),
                 ),
@@ -486,9 +487,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                     if (_forceShowAuthForms) const SizedBox(width: 8),
                     const Icon(Icons.sports_esports, color: Color(0xFF00E676), size: 18),
                     const SizedBox(width: 6),
-                    const Text(
-                      'TÀI KHOẢN FIREBASE',
-                      style: TextStyle(
+                    Text(
+                      'firebase_account_title'.tr,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 13,
@@ -511,9 +512,9 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                 labelColor: const Color(0xFF00E676),
                 unselectedLabelColor: Colors.white60,
                 labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                tabs: const [
-                  Tab(text: 'ĐĂNG NHẬP'),
-                  Tab(text: 'ĐĂNG KÝ'),
+                tabs: [
+                  Tab(text: 'login_tab'.tr),
+                  Tab(text: 'register_tab'.tr),
                 ],
               ),
             ],
@@ -532,7 +533,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _errorMessage!,
+                    LanguageService.instance.localizeAuthError(_errorMessage!),
                     style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -596,8 +597,8 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               onSubmitted: (_) => _loginPasswordFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'Tài khoản hoặc Email',
-                hintText: 'player01 hoặc email@gmail.com',
+                labelText: 'account_field'.tr,
+                hintText: 'player01 / email@gmail.com',
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.person, color: Color(0xFF00E676), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -624,7 +625,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               onSubmitted: (_) => _handleLogin(),
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'Mật khẩu',
+                labelText: 'password_field'.tr,
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.lock, color: Color(0xFF00E676), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -659,7 +660,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               ),
               child: auth.isLoading
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black87))
-                  : const Text('ĐĂNG NHẬP NGAY', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                  : Text('login_now_btn'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
             ),
           ),
         ],
@@ -690,8 +691,8 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               onSubmitted: (_) => _regAccountFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'Tên hiển thị (Nickname)',
-                hintText: 'Cơ Thủ Pro',
+                labelText: 'display_name_field'.tr,
+                hintText: 'Pro Player',
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.badge, color: Color(0xFF00B0FF), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -718,8 +719,8 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               onSubmitted: (_) => _regPasswordFocus.requestFocus(),
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'Tên tài khoản hoặc Email',
-                hintText: 'player01 hoặc email@gmail.com',
+                labelText: 'account_field'.tr,
+                hintText: 'player01 / email@gmail.com',
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.person_add, color: Color(0xFF00B0FF), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -746,7 +747,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               onSubmitted: (_) => _handleRegister(),
               decoration: InputDecoration(
                 isDense: true,
-                labelText: 'Mật khẩu (ít nhất 6 ký tự)',
+                labelText: 'password_min_chars'.tr,
                 labelStyle: const TextStyle(color: Colors.white70, fontSize: 11),
                 prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF00B0FF), size: 16),
                 prefixIconConstraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -780,7 +781,7 @@ class _AuthDialogState extends State<AuthDialog> with SingleTickerProviderStateM
               ),
               child: auth.isLoading
                   ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Text('TẠO TÀI KHOẢN MỚI', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                  : Text('create_account_btn'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
             ),
           ),
         ],

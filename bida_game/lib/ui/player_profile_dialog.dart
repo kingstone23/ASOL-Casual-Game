@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/progression_service.dart';
+import '../services/language_service.dart';
 import '../models/medal_model.dart';
 import 'achievements_dialog.dart';
 import 'auth_dialog.dart';
@@ -37,6 +38,7 @@ class PlayerProfileDialog extends StatelessWidget {
           listenable: Listenable.merge([
             ProgressionService.instance,
             AuthService.instance,
+            LanguageService.instance,
           ]),
           builder: (context, _) {
             final auth = AuthService.instance;
@@ -68,13 +70,13 @@ class PlayerProfileDialog extends StatelessWidget {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Row(
+                        Row(
                           children: [
-                            Icon(Icons.badge, color: Color(0xFFFFD54F), size: 22),
-                            SizedBox(width: 8),
+                            const Icon(Icons.badge, color: Color(0xFFFFD54F), size: 22),
+                            const SizedBox(width: 8),
                             Text(
-                              'HỒ SƠ CƠ THỦ (PROFILE)',
-                              style: TextStyle(
+                              'profile_title'.tr,
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w900,
                                 fontSize: 16,
@@ -86,7 +88,7 @@ class PlayerProfileDialog extends StatelessWidget {
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.close, color: Colors.white70),
-                          tooltip: 'Đóng',
+                          tooltip: 'close'.tr,
                         ),
                       ],
                     ),
@@ -211,9 +213,9 @@ class PlayerProfileDialog extends StatelessWidget {
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        const Text(
-                                          'Tiến trình cấp độ',
-                                          style: TextStyle(color: Colors.tealAccent, fontSize: 11),
+                                        Text(
+                                          'level_progress'.tr,
+                                          style: const TextStyle(color: Colors.tealAccent, fontSize: 11),
                                         ),
                                         Text(
                                           '$currentXp / $nextXp XP',
@@ -247,7 +249,7 @@ class PlayerProfileDialog extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.monetization_on,
                                 iconColor: const Color(0xFFFFD54F),
-                                title: 'VÀNG (COINS)',
+                                title: 'coins'.tr.toUpperCase(),
                                 value: _formatNumber(coins),
                                 valueColor: const Color(0xFFFFD54F),
                               ),
@@ -259,7 +261,7 @@ class PlayerProfileDialog extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.diamond,
                                 iconColor: const Color(0xFF29B6F6),
-                                title: 'KIM CƯƠNG',
+                                title: 'diamonds'.tr.toUpperCase(),
                                 value: _formatNumber(diamonds),
                                 valueColor: const Color(0xFF81D4FA),
                               ),
@@ -271,7 +273,7 @@ class PlayerProfileDialog extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.military_tech,
                                 iconColor: const Color(0xFF00E676),
-                                title: 'TRẬN THẮNG',
+                                title: 'wins'.tr.toUpperCase(),
                                 value: '$wins',
                                 valueColor: const Color(0xFF00E676),
                               ),
@@ -283,7 +285,7 @@ class PlayerProfileDialog extends StatelessWidget {
                               child: _buildStatCard(
                                 icon: Icons.emoji_events,
                                 iconColor: const Color(0xFFFF4081),
-                                title: 'CÚP VÔ ĐỊCH',
+                                title: 'champion_cups'.tr,
                                 value: '$tourWins',
                                 valueColor: const Color(0xFFFF4081),
                               ),
@@ -314,13 +316,13 @@ class PlayerProfileDialog extends StatelessWidget {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Row(
+                                  Row(
                                     children: [
-                                      Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 20),
-                                      SizedBox(width: 8),
+                                      const Icon(Icons.workspace_premium, color: Color(0xFFFFD54F), size: 20),
+                                      const SizedBox(width: 8),
                                       Text(
-                                        '5 HUY CHƯƠNG VINH DANH TRÊN HỒ SƠ',
-                                        style: TextStyle(
+                                        'medals_showcase_title'.tr,
+                                        style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w900,
                                           fontSize: 13,
@@ -337,17 +339,17 @@ class PlayerProfileDialog extends StatelessWidget {
                                         builder: (_) => const AchievementsDialog(initialTab: 1),
                                       );
                                     },
-                                    child: const Row(
+                                    child: Row(
                                       children: [
                                         Text(
-                                          'Quản Lý',
-                                          style: TextStyle(
+                                          'manage'.tr,
+                                          style: const TextStyle(
                                             color: Color(0xFFFFD54F),
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        Icon(Icons.arrow_forward_ios, color: Color(0xFFFFD54F), size: 12),
+                                        const Icon(Icons.arrow_forward_ios, color: Color(0xFFFFD54F), size: 12),
                                       ],
                                     ),
                                   ),
@@ -435,14 +437,14 @@ class PlayerProfileDialog extends StatelessWidget {
                                                 );
                                               },
                                               borderRadius: BorderRadius.circular(14),
-                                              child: const Column(
+                                              child: Column(
                                                 mainAxisAlignment: MainAxisAlignment.center,
                                                 children: [
-                                                  Icon(Icons.add_circle_outline, color: Colors.white30, size: 24),
-                                                  SizedBox(height: 4),
+                                                  const Icon(Icons.add_circle_outline, color: Colors.white30, size: 24),
+                                                  const SizedBox(height: 4),
                                                   Text(
-                                                    'Thêm',
-                                                    style: TextStyle(color: Colors.white30, fontSize: 10),
+                                                    'add'.tr,
+                                                    style: const TextStyle(color: Colors.white30, fontSize: 10),
                                                   ),
                                                 ],
                                               ),
@@ -469,7 +471,7 @@ class PlayerProfileDialog extends StatelessWidget {
                                   );
                                 },
                                 icon: const Icon(Icons.emoji_events),
-                                label: const Text('DANH SÁCH THÀNH TỰU (+XP)'),
+                                label: Text('achievements_list'.tr),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF00897B),
                                   foregroundColor: Colors.white,
@@ -490,7 +492,7 @@ class PlayerProfileDialog extends StatelessWidget {
                                 );
                               },
                               icon: const Icon(Icons.switch_account),
-                              label: const Text('TÀI KHOẢN'),
+                              label: Text('account'.tr),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF263238),
                                 foregroundColor: Colors.white70,
@@ -561,50 +563,54 @@ class PlayerProfileDialog extends StatelessWidget {
   void _showMedalDetail(BuildContext context, MedalModel medal) {
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: const Color(0xFF132B23),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Row(
-          children: [
-            Icon(medal.icon, color: medal.rarity.glowColor),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                medal.name,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+      builder: (_) => ListenableBuilder(
+        listenable: LanguageService.instance,
+        builder: (context, _) => AlertDialog(
+          backgroundColor: const Color(0xFF132B23),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Row(
+            children: [
+              Icon(medal.icon, color: medal.rarity.glowColor),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  medal.localizedName,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
               ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              medal.description,
-              style: const TextStyle(color: Colors.white70, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Độ hiếm: ${medal.rarity.label}',
-              style: TextStyle(color: medal.rarity.glowColor, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              'Điều kiện: ${medal.unlockRequirement}',
-              style: const TextStyle(color: Color(0xFF00E676), fontSize: 11),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Đóng', style: TextStyle(color: Colors.white70)),
+            ],
           ),
-        ],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                medal.localizedDescription,
+                style: const TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${'rarity'.tr}: ${medal.rarity.label}',
+                style: TextStyle(color: medal.rarity.glowColor, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${'requirement'.tr}: ${medal.localizedRequirement}',
+                style: const TextStyle(color: Color(0xFF00E676), fontSize: 11),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('close'.tr, style: const TextStyle(color: Colors.white70)),
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   static String _formatNumber(int number) {
     if (number >= 1000000) {

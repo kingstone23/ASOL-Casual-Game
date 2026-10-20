@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/bot_stage_model.dart';
 import '../models/cue_model.dart';
 import '../services/progression_service.dart';
+import '../services/language_service.dart';
 
 class BotStagesDialog extends StatelessWidget {
   final void Function(BotStageModel stage) onSelectStage;
@@ -15,7 +16,10 @@ class BotStagesDialog extends StatelessWidget {
       backgroundColor: Colors.transparent,
       insetPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       child: ListenableBuilder(
-        listenable: ProgressionService.instance,
+        listenable: Listenable.merge([
+          ProgressionService.instance,
+          LanguageService.instance,
+        ]),
         builder: (context, _) {
           final service = ProgressionService.instance;
           final stages = BotStageCatalog.stages;
@@ -60,9 +64,9 @@ class BotStagesDialog extends StatelessWidget {
                       children: [
                         const Icon(Icons.military_tech, color: Color(0xFFFFD54F), size: 26),
                         const SizedBox(width: 8),
-                        const Text(
-                          '10 ẢI THỬ THÁCH BOT (THEO CẤP ĐỘ)',
-                          style: TextStyle(
+                        Text(
+                          'bot_stages'.tr,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -77,7 +81,9 @@ class BotStagesDialog extends StatelessWidget {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            'Tiến độ: ${service.completedBotStages.length} / ${stages.length} ải',
+                            'progress'.tr
+                                .replaceAll('{current}', '${service.completedBotStages.length}')
+                                .replaceAll('{total}', '${stages.length}'),
                             style: const TextStyle(
                               color: Color(0xFF69F0AE),
                               fontSize: 12,
@@ -96,7 +102,7 @@ class BotStagesDialog extends StatelessWidget {
                     ),
                   ),
 
-                  // --- LIST OF 7 STAGES ---
+                  // --- LIST OF STAGES ---
                   Expanded(
                     child: ListView.separated(
                       padding: const EdgeInsets.all(16),
@@ -170,7 +176,7 @@ class BotStagesDialog extends StatelessWidget {
                                       crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
                                         Text(
-                                          stage.title,
+                                          LanguageService.instance.localizeStageTitle(stage.title),
                                           style: TextStyle(
                                             color: isUnlocked ? Colors.white : Colors.white54,
                                             fontWeight: FontWeight.w800,
@@ -185,7 +191,7 @@ class BotStagesDialog extends StatelessWidget {
                                             border: Border.all(color: const Color(0xFFFFD54F).withValues(alpha: 0.4), width: 0.8),
                                           ),
                                           child: Text(
-                                            stage.tierName,
+                                            LanguageService.instance.localizeTierName(stage.tierName),
                                             style: const TextStyle(
                                               color: Color(0xFFFFD54F),
                                               fontSize: 9.5,
@@ -200,7 +206,7 @@ class BotStagesDialog extends StatelessWidget {
                                             borderRadius: BorderRadius.circular(6),
                                           ),
                                           child: Text(
-                                            'Gậy: ${cue.name}',
+                                            '${'cue_stick'.tr}: ${cue.localizedName}',
                                             style: TextStyle(
                                               color: cue.rarity.color,
                                               fontSize: 10,
@@ -209,9 +215,9 @@ class BotStagesDialog extends StatelessWidget {
                                           ),
                                         ),
                                         if (isCompleted) ...[
-                                          const Text(
-                                            '★ ĐÃ VƯỢT',
-                                            style: TextStyle(
+                                          Text(
+                                            'stage_cleared'.tr,
+                                            style: const TextStyle(
                                               color: Color(0xFF00E676),
                                               fontWeight: FontWeight.bold,
                                               fontSize: 10,
@@ -222,7 +228,7 @@ class BotStagesDialog extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      stage.description,
+                                      LanguageService.instance.localizeBotStageDescription(stage.stageNumber, stage.description),
                                       style: TextStyle(
                                         color: isUnlocked ? Colors.white70 : Colors.white38,
                                         fontSize: 11,
@@ -235,12 +241,12 @@ class BotStagesDialog extends StatelessWidget {
                                       runSpacing: 2,
                                       crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        const Text(
-                                          'Quà lần đầu: ',
-                                          style: TextStyle(color: Colors.white54, fontSize: 10),
+                                        Text(
+                                          'first_clear_reward'.tr,
+                                          style: const TextStyle(color: Colors.white54, fontSize: 10),
                                         ),
                                         Text(
-                                          '+${stage.firstClearCoins} Vàng',
+                                          '+${stage.firstClearCoins} ${'coins'.tr}',
                                           style: const TextStyle(
                                             color: Color(0xFFFFD54F),
                                             fontWeight: FontWeight.bold,
@@ -293,7 +299,7 @@ class BotStagesDialog extends StatelessWidget {
                                   size: 18,
                                 ),
                                 label: Text(
-                                  isCompleted ? 'ĐẤU LẠI' : 'KHIÊU CHIẾN',
+                                  isCompleted ? 'replay'.tr : 'challenge'.tr,
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w900,
                                     fontSize: 11,

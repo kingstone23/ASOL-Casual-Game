@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/tournament_model.dart';
 import '../services/online_multiplayer_service.dart';
-import '../services/progression_service.dart';
+import '../services/language_service.dart';
 
 class OnlineMultiplayerDialog extends StatefulWidget {
   final void Function(String roomId, bool isHost) onConnected;
@@ -15,7 +14,6 @@ class OnlineMultiplayerDialog extends StatefulWidget {
 class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
   late final TextEditingController _serverController;
   final TextEditingController _roomPinController = TextEditingController();
-  final TextEditingController _tournamentPinController = TextEditingController();
   bool _isConnecting = false;
   bool _showAdvancedSettings = false;
   String? _errorMessage;
@@ -45,7 +43,6 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
   void dispose() {
     _serverController.dispose();
     _roomPinController.dispose();
-    _tournamentPinController.dispose();
     super.dispose();
   }
 
@@ -63,11 +60,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
       setState(() {
         _isConnecting = false;
         if (!success) {
-          _errorMessage = 'Không thể kết nối đến máy chủ WebSocket!\n'
-              '• Nếu chạy trên Windows: Chọn "Máy này (127.0.0.1)"\n'
-              '• Nếu chạy trên Giả lập Android: Chọn "Giả lập Android (10.0.2.2)"\n'
-              '• Nếu chạy trên Điện thoại qua Wi-Fi: Chọn "Wi-Fi LAN (192.168.1.22)"\n'
-              '• Server hiện đã được khởi động sẵn trên cổng 8080.';
+          _errorMessage = 'cant_connect_ws_error'.tr;
         }
       });
     }
@@ -99,7 +92,10 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
           ],
         ),
         child: ListenableBuilder(
-          listenable: OnlineMultiplayerService.instance,
+          listenable: Listenable.merge([
+            OnlineMultiplayerService.instance,
+            LanguageService.instance,
+          ]),
           builder: (context, _) {
             final service = OnlineMultiplayerService.instance;
 
@@ -181,13 +177,13 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
             child: const Icon(Icons.public, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'ĐẤU ONLINE TOÀN CẦU (WEBSOCKET)',
-                  style: TextStyle(
+                  'online_multiplayer_title'.tr,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
                     fontSize: 15,
@@ -195,8 +191,8 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                   ),
                 ),
                 Text(
-                  'Ghép trận ngẫu nhiên hoặc tạo phòng riêng với bạn bè qua Internet',
-                  style: TextStyle(color: Color(0xFF80D8FF), fontSize: 11),
+                  'online_multiplayer_sub'.tr,
+                  style: const TextStyle(color: Color(0xFF80D8FF), fontSize: 11),
                 ),
               ],
             ),
@@ -204,7 +200,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close, color: Colors.white70),
-            tooltip: 'Đóng',
+            tooltip: 'close'.tr,
           ),
         ],
       ),
@@ -247,8 +243,8 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
               Expanded(
                 child: Text(
                   service.isConnected
-                      ? 'Cổng Điện Thoại Thật (Đã kết nối sẵn): ${_serverController.text.trim()}'
-                      : (_isConnecting ? 'Đang kết nối cổng điện thoại thật...' : 'Chưa kết nối máy chủ'),
+                      ? 'server_connected_ready'.tr.replaceAll('{url}', _serverController.text.trim())
+                      : (_isConnecting ? 'server_connecting'.tr : 'server_not_connected'.tr),
                   style: TextStyle(
                     color: service.isConnected ? const Color(0xFF00E676) : Colors.white70,
                     fontSize: 11,
@@ -272,7 +268,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        _showAdvancedSettings ? 'Đóng' : 'Đổi Cổng',
+                        _showAdvancedSettings ? 'close'.tr : 'change_port'.tr,
                         style: const TextStyle(color: Colors.white54, fontSize: 10),
                       ),
                     ],
@@ -296,12 +292,12 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                     child: TextField(
                       controller: _serverController,
                       style: const TextStyle(color: Colors.white, fontSize: 11.5),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 6),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 6),
                         border: InputBorder.none,
-                        hintText: 'Nhập địa chỉ máy chủ (ws:// hoặc wss://)',
-                        hintStyle: TextStyle(color: Colors.white38, fontSize: 11),
+                        hintText: 'server_address_hint'.tr,
+                        hintStyle: const TextStyle(color: Colors.white38, fontSize: 11),
                       ),
                     ),
                   ),
@@ -330,7 +326,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          service.isConnected ? 'Ngắt' : 'Kết Nối',
+                          service.isConnected ? 'disconnect_btn'.tr : 'connect_btn'.tr,
                           style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
                         ),
                 ),
@@ -342,13 +338,13 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
               runSpacing: 4,
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Text(
-                  'Chọn nhanh:',
-                  style: TextStyle(color: Colors.white54, fontSize: 10),
+                Text(
+                  'quick_presets'.tr,
+                  style: const TextStyle(color: Colors.white54, fontSize: 10),
                 ),
-                _buildPresetChip('Điện thoại thật (192.168.1.22)', 'ws://192.168.1.22:8080'),
-                _buildPresetChip('Máy này (127.0.0.1)', 'ws://127.0.0.1:8080'),
-                _buildPresetChip('Giả lập Android (10.0.2.2)', 'ws://10.0.2.2:8080'),
+                _buildPresetChip('Wi-Fi LAN (192.168.1.22)', 'ws://192.168.1.22:8080'),
+                _buildPresetChip('PC (127.0.0.1)', 'ws://127.0.0.1:8080'),
+                _buildPresetChip('Android (10.0.2.2)', 'ws://10.0.2.2:8080'),
               ],
             ),
           ],
@@ -439,7 +435,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'ĐANG CÓ TRẬN ĐẤU DỞ DANG (#${service.currentRoomId ?? ""})',
+                  'active_match_in_progress'.tr.replaceAll('{room}', service.currentRoomId ?? ""),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w900,
@@ -452,7 +448,9 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Đối thủ: ${service.opponentName} (Cấp ${service.opponentLevel}) • Bàn đấu vẫn đang diễn ra theo thời gian thực!',
+            'active_match_desc'.tr
+                .replaceAll('{opp}', service.opponentName)
+                .replaceAll('{lvl}', '${service.opponentLevel}'),
             style: const TextStyle(color: Color(0xFFB3E5FC), fontSize: 12),
           ),
           const SizedBox(height: 12),
@@ -472,9 +470,9 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                     elevation: 3,
                   ),
                   icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                  label: const Text(
-                    'QUAY LẠI TRẬN ĐẤU NGAY',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                  label: Text(
+                    'resume_match_now'.tr,
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
                   ),
                 ),
               ),
@@ -490,7 +488,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
                 icon: const Icon(Icons.close, size: 16),
-                label: const Text('Hủy Trận', style: TextStyle(fontSize: 12)),
+                label: Text('forfeit_match'.tr, style: const TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -500,16 +498,10 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
   }
 
   Widget _buildOnlineModes(OnlineMultiplayerService service) {
-    final currentBracket = ProgressionService.instance.currentTournamentBracket;
-    final currentStage = TournamentCatalog.brackets.firstWhere(
-      (b) => b.bracketNumber == currentBracket,
-      orElse: () => TournamentCatalog.brackets.first,
-    );
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // --- PHẦN 1: ĐẤU ONLINE 1V1 ---
+        // --- ĐẤU ONLINE 1V1 ---
         // Mode 1: Ghép Trận Nhanh (Quick Match)
         Container(
           padding: const EdgeInsets.all(12),
@@ -524,22 +516,22 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
             children: [
               const Icon(Icons.flash_on, color: Color(0xFFFFD54F), size: 28),
               const SizedBox(width: 10),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'TÌM TRẬN NHANH 1V1 (AUTO MATCHMAKING)',
-                      style: TextStyle(
+                      'quick_match_1v1'.tr,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w900,
                         fontSize: 12.5,
                       ),
                     ),
-                    SizedBox(height: 2),
+                    const SizedBox(height: 2),
                     Text(
-                      'Tự động ghép cặp đối thủ trực tuyến qua cổng điện thoại thật',
-                      style: TextStyle(color: Colors.white70, fontSize: 10.5),
+                      'quick_match_sub'.tr,
+                      style: const TextStyle(color: Colors.white70, fontSize: 10.5),
                     ),
                   ],
                 ),
@@ -557,7 +549,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                child: const Text('TÌM TRẬN', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                child: Text('find_match'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
               ),
             ],
           ),
@@ -580,14 +572,14 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                   children: [
                     const Icon(Icons.add_circle, color: Color(0xFF00E676), size: 26),
                     const SizedBox(height: 4),
-                    const Text(
-                      'TẠO PHÒNG 1V1',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    Text(
+                      'create_room_1v1'.tr,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     const SizedBox(height: 2),
-                    const Text(
-                      'Mã PIN 6 số cho bạn bè',
-                      style: TextStyle(color: Colors.white60, fontSize: 9.5),
+                    Text(
+                      'pin_code_for_friends'.tr,
+                      style: const TextStyle(color: Colors.white60, fontSize: 9.5),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
@@ -604,7 +596,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('MỞ PHÒNG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5)),
+                      child: Text('open_room'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5)),
                     ),
                   ],
                 ),
@@ -625,9 +617,9 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                   children: [
                     const Icon(Icons.login, color: Color(0xFF00B0FF), size: 26),
                     const SizedBox(height: 4),
-                    const Text(
-                      'NHẬP MÃ PHÒNG 1V1',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                    Text(
+                      'enter_room_pin_title'.tr,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Container(
@@ -642,11 +634,11 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           isDense: true,
                           border: InputBorder.none,
-                          hintText: 'Mã PIN 6 số',
-                          hintStyle: TextStyle(color: Colors.white38, fontSize: 10),
+                          hintText: 'pin_hint'.tr,
+                          hintStyle: const TextStyle(color: Colors.white38, fontSize: 10),
                         ),
                       ),
                     ),
@@ -666,7 +658,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      child: const Text('VÀO PHÒNG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5)),
+                      child: Text('join_room_btn'.tr, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5)),
                     ),
                   ],
                 ),
@@ -674,208 +666,40 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
             ),
           ],
         ),
-        const SizedBox(height: 14),
-
-        // --- PHẦN 2: PHÒNG GIẢI ĐẤU TOURNAMENT 6 BRACKETS ONLINE ---
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF3E2723), Color(0xFF1B0E09)],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFFFD54F), width: 1.4),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.amber.withValues(alpha: 0.15),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(colors: [Color(0xFFFFD54F), Color(0xFFFF8F00)]),
-                    ),
-                    child: const Icon(Icons.emoji_events, color: Colors.black87, size: 20),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'PHÒNG GIẢI ĐẤU (TOURNAMENT ONLINE)',
-                          style: TextStyle(
-                            color: Color(0xFFFFD54F),
-                            fontWeight: FontWeight.w900,
-                            fontSize: 12.5,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                        Text(
-                          'Đang ở: Bracket $currentBracket (${currentStage.title}) • Thắng nhận +${currentStage.coinReward} Vàng & +${currentStage.xpReward} EXP',
-                          style: const TextStyle(color: Colors.white70, fontSize: 10),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-
-              // Hàng nút điều khiển phòng Tournament
-              Row(
-                children: [
-                  // Nút 1: Tìm nhanh Tournament
-                  Expanded(
-                    flex: 6,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await _ensureConnected();
-                        if (service.isConnected) {
-                          service.startTournamentQuickMatch(currentBracket);
-                        }
-                      },
-                      icon: const Icon(Icons.bolt, size: 16),
-                      label: Text(
-                        'GHÉP ĐẤU B$currentBracket',
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFFB300),
-                        foregroundColor: Colors.black87,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Nút 2: Tạo phòng Tournament
-                  Expanded(
-                    flex: 5,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await _ensureConnected();
-                        if (service.isConnected) {
-                          service.createTournamentRoom(currentBracket);
-                        }
-                      },
-                      icon: const Icon(Icons.add_home, size: 16),
-                      label: const Text(
-                        'MỞ PHÒNG PIN',
-                        style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2E7D32),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-
-              // Hàng nhập mã phòng Tournament
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 30,
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: TextField(
-                        controller: _tournamentPinController,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          isDense: true,
-                          border: InputBorder.none,
-                          hintText: 'Nhập mã PIN phòng Tournament',
-                          hintStyle: TextStyle(color: Colors.white38, fontSize: 10),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final pin = _tournamentPinController.text.trim();
-                      if (pin.isEmpty) return;
-                      await _ensureConnected();
-                      if (service.isConnected) {
-                        service.joinTournamentRoom(pin, bracketNumber: currentBracket);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF8F00),
-                      foregroundColor: Colors.black87,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                    child: const Text('VÀO PHÒNG', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5)),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildMatchmakingWaiting(OnlineMultiplayerService service) {
-    final isTournament = service.isTournamentMatch;
-    final bracket = service.tournamentBracket;
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.black45,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isTournament ? const Color(0xFFFFD54F) : const Color(0xFF00B0FF),
+          color: const Color(0xFF00B0FF),
           width: 1.5,
         ),
       ),
       child: Column(
         children: [
-          SizedBox(
+          const SizedBox(
             width: 44,
             height: 44,
             child: CircularProgressIndicator(
-              color: isTournament ? const Color(0xFFFFD54F) : const Color(0xFF00B0FF),
+              color: Color(0xFF00B0FF),
               strokeWidth: 3,
             ),
           ),
           const SizedBox(height: 14),
           Text(
-            isTournament
-                ? 'ĐANG TÌM ĐỐI THỦ TOURNAMENT BRACKET $bracket...'
-                : 'ĐANG TÌM ĐỐI THỦ XỨNG TẦM...',
+            'searching_worthy_opponent'.tr,
             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 4),
           Text(
-            isTournament
-                ? 'Cổng điện thoại thật (${_serverController.text.trim()}) • Tranh cúp và quà Bracket $bracket'
-                : 'Cổng điện thoại thật (${_serverController.text.trim()}) • Ghép trận trực tuyến',
+            '${_serverController.text.trim()} • Online Matchmaking',
             style: const TextStyle(color: Colors.white70, fontSize: 11),
             textAlign: TextAlign.center,
           ),
@@ -888,7 +712,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
               backgroundColor: const Color(0xFFC62828),
               foregroundColor: Colors.white,
             ),
-            child: const Text('HỦY TÌM TRẬN', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('cancel_search'.tr, style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -897,34 +721,30 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
 
   Widget _buildWaitingInRoom(OnlineMultiplayerService service) {
     final roomId = service.currentRoomId ?? '------';
-    final isTournament = service.isTournamentMatch;
-    final bracket = service.tournamentBracket;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isTournament ? const Color(0xFF261810) : const Color(0xFF132F24),
+        color: const Color(0xFF132F24),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isTournament ? const Color(0xFFFFD54F) : const Color(0xFF00E676),
+          color: const Color(0xFF00E676),
           width: 1.5,
         ),
       ),
       child: Column(
         children: [
           Text(
-            isTournament ? 'PHÒNG TOURNAMENT BRACKET $bracket SẴN SÀNG!' : 'PHÒNG ĐÃ SẴN SÀNG!',
-            style: TextStyle(
-              color: isTournament ? const Color(0xFFFFD54F) : const Color(0xFF00E676),
+            'room_ready_title'.tr,
+            style: const TextStyle(
+              color: Color(0xFF00E676),
               fontWeight: FontWeight.w900,
               fontSize: 15,
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            isTournament
-                ? 'Chia sẻ mã PIN dưới đây cho đối thủ để cùng tranh tài Bracket $bracket:'
-                : 'Chia sẻ mã PIN dưới đây cho đối thủ để cùng vào bàn đấu:',
+            'share_pin_with_opponent'.tr,
             style: const TextStyle(color: Colors.white70, fontSize: 11),
             textAlign: TextAlign.center,
           ),
@@ -947,18 +767,18 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
             ),
           ),
           const SizedBox(height: 16),
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(
+              const SizedBox(
                 width: 14,
                 height: 14,
                 child: CircularProgressIndicator(color: Colors.tealAccent, strokeWidth: 2),
               ),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text(
-                'Đang chờ đối thủ nhập mã...',
-                style: TextStyle(color: Colors.tealAccent, fontSize: 11),
+                'waiting_for_opponent_pin'.tr,
+                style: const TextStyle(color: Colors.tealAccent, fontSize: 11),
               ),
             ],
           ),
@@ -967,7 +787,7 @@ class _OnlineMultiplayerDialogState extends State<OnlineMultiplayerDialog> {
             onPressed: () {
               service.disconnect();
             },
-            child: const Text('Hủy & Rời Phòng', style: TextStyle(color: Colors.redAccent)),
+            child: Text('cancel_and_leave_room'.tr, style: const TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),

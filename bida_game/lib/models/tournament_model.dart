@@ -94,25 +94,9 @@ class TournamentCatalog {
       description: 'Đối đầu bậc thầy gậy neon với kỹ năng dọn bàn thần tốc.',
     ),
 
-    // Bracket 5
+    // Bracket 5: Grand Championship Finals
     TournamentBracketStage(
       bracketNumber: 5,
-      title: 'CHUNG KẾT KHU VỰC',
-      roundName: 'Regional Finals',
-      opponentName: 'Alex Volkov',
-      opponentLevel: 12,
-      opponentAvatarAsset: 'assets/images/ball_5.png',
-      opponentCue: CueCatalog.cyberNeo,
-      botDifficultyRating: 9,
-      coinReward: 9000,
-      xpReward: 1400,
-      bonusMedalId: 'tournament_runner_up',
-      description: 'Trận chiến sống còn giành tấm vé bước vào trận Đại Chung Kết.',
-    ),
-
-    // Bracket 6
-    TournamentBracketStage(
-      bracketNumber: 6,
       title: 'ĐẠI CHUNG KẾT ĐỈNH PHONG',
       roundName: 'Grand Championship Finals',
       opponentName: 'Long Hoàng Vũ (Đương Kim Vô Địch)',
