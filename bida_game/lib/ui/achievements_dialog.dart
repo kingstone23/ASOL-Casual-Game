@@ -292,12 +292,16 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                         children: [
                           Row(
                             children: [
-                              Text(
-                                ach.localizedTitle,
-                                style: TextStyle(
-                                  color: isUnlocked ? Colors.white : Colors.white60,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              Flexible(
+                                child: Text(
+                                  ach.localizedTitle,
+                                  style: TextStyle(
+                                    color: isUnlocked ? Colors.white : Colors.white60,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 8),
@@ -625,12 +629,16 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
                         children: [
                           Row(
                             children: [
-                              Text(
-                                medal.localizedName,
-                                style: TextStyle(
-                                  color: isUnlocked ? Colors.white : Colors.white60,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                              Flexible(
+                                child: Text(
+                                  medal.localizedName,
+                                  style: TextStyle(
+                                    color: isUnlocked ? Colors.white : Colors.white60,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                               const SizedBox(width: 8),

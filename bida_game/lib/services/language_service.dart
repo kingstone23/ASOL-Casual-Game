@@ -105,6 +105,12 @@ class LanguageService extends ChangeNotifier {
   String localizeMedalRarity(String key, [String fallback = '']) =>
       GameContentLocalization.getMedalRarity(key, _currentLanguage.code, fallback);
 
+  String localizeTableSkinName(String id, [String fallback = '']) =>
+      GameContentLocalization.getTableSkinName(id, _currentLanguage.code, fallback);
+
+  String localizeTableSkinDescription(String id, [String fallback = '']) =>
+      GameContentLocalization.getTableSkinDescription(id, _currentLanguage.code, fallback);
+
   String describeSpin(Offset spin) =>
       GameContentLocalization.describeSpin(spin, _currentLanguage.code);
 

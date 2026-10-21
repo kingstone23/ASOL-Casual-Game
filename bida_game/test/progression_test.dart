@@ -15,7 +15,11 @@ import 'package:bida_game/ui/cue_shop_dialog.dart';
 import 'package:bida_game/services/online_multiplayer_service.dart';
 import 'package:bida_game/services/language_service.dart';
 import 'package:bida_game/models/tournament_model.dart';
+import 'package:bida_game/models/achievement_model.dart';
+import 'package:bida_game/models/medal_model.dart';
 import 'package:bida_game/ui/billiard_vfx_component.dart';
+import 'package:bida_game/models/table_skin_model.dart';
+import 'package:bida_game/ui/table_shop_dialog.dart';
 import 'package:bida_game/main.dart';
 
 void main() {
@@ -782,6 +786,188 @@ void main() {
       vfx.update(0.016);
     });
   });
+
+  group('Expanded 100 Achievements and Medals Catalog Tests', () {
+    test('AchievementCatalog contains 60 achievements with valid fields', () {
+      final achs = AchievementCatalog.allAchievements;
+      expect(achs.length, equals(60));
+
+      final uniqueIds = <String>{};
+      for (final a in achs) {
+        expect(uniqueIds.add(a.id), isTrue, reason: 'Achievement ID ${a.id} should be unique');
+        expect(a.title.isNotEmpty, isTrue);
+        expect(a.description.isNotEmpty, isTrue);
+        expect(a.rewardXP, greaterThan(0));
+      }
+    });
+
+    test('MedalCatalog contains 40 medals across 5 rarities with unique IDs', () {
+      final medals = MedalCatalog.allMedals;
+      expect(medals.length, equals(40));
+
+      final uniqueIds = <String>{};
+      for (final m in medals) {
+        expect(uniqueIds.add(m.id), isTrue, reason: 'Medal ID ${m.id} should be unique');
+        expect(m.name.isNotEmpty, isTrue);
+        expect(m.description.isNotEmpty, isTrue);
+        expect(m.unlockRequirement.isNotEmpty, isTrue);
+        expect(m.rarity.gradientColors.length, greaterThanOrEqualTo(2));
+      }
+
+      // Verify combined count is exactly 100
+      expect(AchievementCatalog.allAchievements.length + MedalCatalog.allMedals.length, equals(100));
+    });
+
+    test('LanguageService translates achievements and medals across all languages', () {
+      final ach = AchievementCatalog.allAchievements.first;
+      final medal = MedalCatalog.allMedals.first;
+
+      for (final lang in ['vi', 'en', 'zh', 'ja', 'ko']) {
+        LanguageService.instance.setLanguage(AppLanguage.fromCode(lang));
+        expect(ach.localizedTitle.isNotEmpty, isTrue);
+        expect(ach.localizedDescription.isNotEmpty, isTrue);
+        expect(medal.localizedName.isNotEmpty, isTrue);
+        expect(medal.localizedDescription.isNotEmpty, isTrue);
+        expect(medal.localizedRequirement.isNotEmpty, isTrue);
+        expect(medal.rarity.label.isNotEmpty, isTrue);
+      }
+      LanguageService.instance.setLanguage(AppLanguage.vi);
+    });
+
+    test('checkAchievementsAndMedals unlocks milestone tiers automatically', () async {
+      await ProgressionService.instance.init();
+      ProgressionService.instance.resetTournament();
+
+      // Add wins and coins
+      ProgressionService.instance.addCoins(100000);
+      for (int i = 0; i < 50; i++) {
+        ProgressionService.instance.recordWin();
+      }
+      ProgressionService.instance.checkAchievementsAndMedals();
+
+      expect(ProgressionService.instance.isAchievementUnlocked('first_win'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('win_streak_3'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('win_10'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('win_25'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('win_50'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('rich_player'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('billiard_god'), isTrue);
+
+      expect(ProgressionService.instance.isMedalUnlocked('bronze_champion'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('veteran_striker'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('centurion_victor'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('golden_treasury'), isTrue);
+    });
+
+    test('Admin privileges unlock all achievements and medals', () {
+      ProgressionService.instance.applyAdminPrivileges();
+      ProgressionService.instance.checkAchievementsAndMedals();
+
+      expect(ProgressionService.instance.playerLevel, equals(99));
+      expect(ProgressionService.instance.coins, equals(9999999));
+      expect(ProgressionService.instance.totalWins, equals(999));
+
+      // Key high-tier achievements & medals are unlocked
+      expect(ProgressionService.instance.isAchievementUnlocked('reach_level_50'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('billiard_emperor'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('cue_arsenal_full'), isTrue);
+      expect(ProgressionService.instance.isAchievementUnlocked('tournament_champion_legend'), isTrue);
+
+      expect(ProgressionService.instance.isMedalUnlocked('bot_overlord'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('immortal_sovereign'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('cue_collector_mythic'), isTrue);
+      expect(ProgressionService.instance.isMedalUnlocked('trickshot_immortal'), isTrue);
+    });
+  });
+
+  group('Table Skin Shop & Realistic Spin Physics Tests', () {
+    test('TableSkinCatalog contains exactly 20 distinct pool table skins', () {
+      expect(TableSkinCatalog.allTables.length, equals(20));
+
+      final ids = <String>{};
+      for (final table in TableSkinCatalog.allTables) {
+        expect(ids.add(table.id), isTrue, reason: 'Duplicate table ID: ${table.id}');
+        expect(table.name.isNotEmpty, isTrue);
+        expect(table.description.isNotEmpty, isTrue);
+        expect(table.clothPrimary, isNotNull);
+        expect(table.clothSecondary, isNotNull);
+        expect(table.railColor, isNotNull);
+        expect(table.railAccentColor, isNotNull);
+        expect(table.pocketColor, isNotNull);
+      }
+    });
+
+    test('Table skins translate names and descriptions across all 5 languages', () {
+      final sampleTable = TableSkinCatalog.allTables.first;
+
+      for (final lang in ['vi', 'en', 'zh', 'ja', 'ko']) {
+        LanguageService.instance.setLanguage(AppLanguage.fromCode(lang));
+        expect(sampleTable.localizedName.isNotEmpty, isTrue);
+        expect(sampleTable.localizedDescription.isNotEmpty, isTrue);
+        expect(sampleTable.rarity.label.isNotEmpty, isTrue);
+      }
+      LanguageService.instance.setLanguage(AppLanguage.vi);
+    });
+
+    test('ProgressionService table purchase, level requirement and equip mechanics work', () async {
+      ProgressionService.instance.resetToDefault(save: false);
+      ProgressionService.instance.addCoins(20000);
+      ProgressionService.instance.addDiamonds(50);
+
+      // Default table is classic_green
+      expect(ProgressionService.instance.equippedTableId, equals('classic_green'));
+      expect(ProgressionService.instance.isTableOwned('classic_green'), isTrue);
+      expect(ProgressionService.instance.isTableEquipped('classic_green'), isTrue);
+
+      // Buy royal_navy with coins (level 2 requirement, 2500 coins)
+      final navyTable = TableSkinCatalog.getById('royal_navy');
+      if (ProgressionService.instance.playerLevel < 2) {
+        expect(ProgressionService.instance.canUnlockTable(navyTable), isFalse);
+      }
+
+      // Add XP to reach level 2
+      ProgressionService.instance.addXPAndCoins(xpGained: 500, coinsGained: 0);
+      expect(ProgressionService.instance.canUnlockTable(navyTable), isTrue);
+
+      final bought = ProgressionService.instance.buyTable(navyTable);
+      expect(bought, isTrue);
+      expect(ProgressionService.instance.isTableOwned('royal_navy'), isTrue);
+      expect(ProgressionService.instance.isTableEquipped('royal_navy'), isTrue);
+      expect(ProgressionService.instance.equippedTable.id, equals('royal_navy'));
+
+      // Equip back to classic_green
+      final equippedBack = ProgressionService.instance.equipTable('classic_green');
+      expect(equippedBack, isTrue);
+      expect(ProgressionService.instance.equippedTableId, equals('classic_green'));
+    });
+
+    test('Admin privileges unlock all 20 tables and equip dragon_emperor', () {
+      ProgressionService.instance.applyAdminPrivileges();
+
+      expect(ProgressionService.instance.equippedTableId, equals('dragon_emperor'));
+      expect(ProgressionService.instance.ownedTableIds.length, equals(20));
+      for (final table in TableSkinCatalog.allTables) {
+        expect(ProgressionService.instance.isTableOwned(table.id), isTrue);
+      }
+    });
+
+    testWidgets('TableShopDialog renders on mobile layout without errors', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(720, 360));
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: TableShopDialog(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TableShopDialog), findsOneWidget);
+      expect(find.text('CỬA HÀNG BÀN BIDA'), findsOneWidget);
+      await tester.binding.setSurfaceSize(null);
+    });
+  });
 }
+
 
 

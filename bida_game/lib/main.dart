@@ -33,6 +33,9 @@ import 'ui/legendary_trickshot_dialog.dart';
 import 'ui/billiard_vfx_component.dart';
 import 'services/language_service.dart';
 import 'ui/language_selector_dialog.dart';
+import 'models/table_skin_model.dart';
+import 'ui/table_shop_dialog.dart';
+import 'ui/table_skin_component.dart';
 
 enum BallGroup { solids, stripes }
 
@@ -1796,20 +1799,6 @@ void _showCueSpinDialog(BuildContext context) {
                   );
                 },
               ),
-              const SizedBox(height: 12),
-              // Các nút chọn nhanh preset xoáy
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                alignment: WrapAlignment.center,
-                children: [
-                  _spinPresetChip('preset_center'.tr, Offset.zero),
-                  _spinPresetChip('preset_top'.tr, const Offset(0.0, -0.75)),
-                  _spinPresetChip('preset_bottom'.tr, const Offset(0.0, 0.75)),
-                  _spinPresetChip('preset_left'.tr, const Offset(-0.75, 0.0)),
-                  _spinPresetChip('preset_right'.tr, const Offset(0.75, 0.0)),
-                ],
-              ),
               const SizedBox(height: 14),
               SizedBox(
                 width: double.infinity,
@@ -1836,21 +1825,6 @@ void _showCueSpinDialog(BuildContext context) {
 
 String _describeSpin(Offset spin) {
   return LanguageService.instance.describeSpin(spin);
-}
-
-
-Widget _spinPresetChip(String label, Offset presetSpin) {
-  return ActionChip(
-    label: Text(label, style: const TextStyle(fontSize: 11.5, color: Colors.white)),
-    backgroundColor: const Color(0xFF2B323B),
-    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    onPressed: () {
-      if (!gameInstance.canUserControl) return;
-      gameInstance.setCueSpin(presetSpin);
-      gameInstance.commitCueSpin();
-    },
-  );
 }
 
 class _CueBallGuidePainter extends CustomPainter {
@@ -2843,7 +2817,7 @@ Widget _buildControlBar(
                         cueLevel: p1CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
-                        onTapCue: () => _showCueSelectorDialog(context, forPlayer2: false),
+                        onTapCue: null, // Chỉ được đổi cơ ở ngoài main menu, không được đổi giữa trận đấu
                       ),
                     ),
                     SizedBox(width: ultraCompact ? 2 : 4),
@@ -2905,13 +2879,7 @@ Widget _buildControlBar(
                         cueLevel: p2CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
-                        onTapCue: (!gameInstance.isBotMode.value &&
-                                   !gameInstance.isLocalMultiplayer.value &&
-                                   !gameInstance.isOnlineMultiplayer.value &&
-                                   gameInstance.activeTournamentStage == null &&
-                                   gameInstance.activeBotStage == null)
-                            ? () => _showCueSelectorDialog(context, forPlayer2: true)
-                            : null,
+                        onTapCue: null, // Chỉ được đổi cơ ở ngoài main menu, không được đổi giữa trận đấu
                       ),
                     ),
                   ],
@@ -4455,6 +4423,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
       subtitle: subtitle,
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
+    ProgressionService.instance.unlockAchievement('combo_hunter');
+    ProgressionService.instance.unlockMedal('sharpshooter');
     if (!isCatchingUp) {
       AudioManager.instance.playCombo(count);
     }
@@ -4505,6 +4475,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     final tableSprite = await Sprite.load('pool_table.png');
     tableSpriteComponent = SpriteComponent(sprite: tableSprite, size: size, priority: -2);
     add(tableSpriteComponent!);
+    add(TableSkinComponent());
     add(vfx);
 
     _reconfigureTableForSize(size, initialLoad: true);
@@ -5116,9 +5087,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
         cueBall.activeSpin.dy * decayY,
       );
 
-      // 3. Trước va chạm: nếu có xoáy giật lùi (trô) thì hãm nhẹ tự nhiên
+      // 3. Trước va chạm: nếu có xoáy giật lùi (trô) thì hãm rất nhẹ tự nhiên
       if (!cueBall.hasCollidedBall && cueBall.activeSpin.dy > 0.1) {
-        final brake = cueBall.activeSpin.dy * 16.0 * dt;
+        final brake = cueBall.activeSpin.dy * 3.5 * dt;
         final reducedSpeed = math.max(0.0, speed - brake);
         if (speed > 0) {
           velocity.scale(reducedSpeed / speed);
@@ -5538,6 +5509,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
     final dist = value.distance;
     final clamped = dist > 1.0 ? value / dist : value;
     cueSpin.value = clamped;
+    if (dist > 0.08) {
+      ProgressionService.instance.unlockAchievement('spin_trick');
+      ProgressionService.instance.unlockMedal('english_spin_master');
+    }
     if (_hasGameLoaded) {
       cueBall.spinInfluence = clamped;
       if (cueBall.isAiming && cueBall.aimVector != null) {
@@ -7061,6 +7036,10 @@ class BilliardContactListener extends ContactListener {
     final isFirstBall = first.userData is CueBall || first.userData is PoolBall;
     final isSecondBall = second.userData is CueBall || second.userData is PoolBall;
     if (isFirstBall && isSecondBall) {
+      // Giảm animation xoay bi quá mức mỗi lần va chạm bi
+      first.angularVelocity *= 0.25;
+      second.angularVelocity *= 0.25;
+
       final velA = first.linearVelocity;
       final velB = second.linearVelocity;
       if (!velA.x.isNaN && !velA.y.isNaN && !velB.x.isNaN && !velB.y.isNaN) {
@@ -7111,17 +7090,21 @@ class BilliardContactListener extends ContactListener {
         // 1. Trô bóng (draw shot / backspin: dy > 0.05)
         if (cue.activeSpin.dy > 0.05) {
           final spinDy = cue.activeSpin.dy;
+          // Truyền trọn vẹn động lượng cho bi mục tiêu theo đúng thực tế va chạm đàn hồi
+          final targetForwardSpeed = (shotSpeed * math.max(0.35, dot) * 0.94);
+          target.body.linearVelocity = normal * targetForwardSpeed;
+
           if (dot >= 0.72) {
-            // Đánh trực diện: Bi cái truyền phần lớn động lượng, giật lùi dọc trục -normal
+            // Đánh trực diện: Bi mục tiêu lao đi mạnh mẽ, bi cái triệt tiêu vận tốc tiến và giật lùi dọc trục -normal
             cue.body.linearVelocity.scale(0.08);
-            final drawStrength = (430.0 + shotSpeed * 0.35) * spinDy;
+            final drawStrength = (460.0 + shotSpeed * 0.38) * spinDy;
             cue.drawFollowForce = -normal * drawStrength;
-            cue.drawFollowTimer = 0.45;
+            cue.drawFollowTimer = 0.48;
           } else {
-            // Đánh góc chéo (Cut shot): Lực xoáy uốn cong quỹ đạo giật về phía sau
-            final drawStrength = (380.0 + shotSpeed * 0.30) * spinDy;
+            // Đánh góc chéo (Cut shot): Bi mục tiêu vẫn lao đi với lực thực tế, bi cái giật về phía sau
+            final drawStrength = (400.0 + shotSpeed * 0.32) * spinDy;
             cue.drawFollowForce = (-normal * (dot * 0.85) - dir * (1.0 - dot * 0.5)).normalized() * drawStrength;
-            cue.drawFollowTimer = 0.40;
+            cue.drawFollowTimer = 0.42;
           }
         }
         // 2. Cu-lê (follow shot / topspin: dy < -0.05)
@@ -7356,7 +7339,7 @@ class CueBall extends BodyComponent {
         bullet: true,
         fixedRotation: false,
         linearDamping: 0.0,
-        angularDamping: 0.18,
+        angularDamping: 1.6,
       ),
     )..createFixture(fixtureDef);
     createdBody.userData = this;
@@ -7485,7 +7468,7 @@ class CueBall extends BodyComponent {
       orientation.roll(vel.x * dt, vel.y * dt, radius);
     }
     if (body.angularVelocity.abs() > 0.01 && !body.angularVelocity.isNaN) {
-      orientation.spinZ(body.angularVelocity * dt);
+      orientation.spinZ(body.angularVelocity * dt * 0.25);
     }
 
     if (aimVector != null &&
@@ -8015,7 +7998,7 @@ class PoolBall extends BodyComponent {
         bullet: true,
         fixedRotation: false,
         linearDamping: 0.0,
-        angularDamping: 0.18,
+        angularDamping: 1.6,
       ),
     )..createFixture(fixtureDef);
     createdBody.userData = this;
@@ -8142,7 +8125,7 @@ class PoolBall extends BodyComponent {
       orientation.roll(vel.x * dt, vel.y * dt, radius);
     }
     if (body.angularVelocity.abs() > 0.01 && !body.angularVelocity.isNaN) {
-      orientation.spinZ(body.angularVelocity * dt);
+      orientation.spinZ(body.angularVelocity * dt * 0.25);
     }
   }
 

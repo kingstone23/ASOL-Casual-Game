@@ -7,6 +7,7 @@ import '../models/daily_puzzle_model.dart';
 import '../models/achievement_model.dart';
 import '../models/tournament_model.dart';
 import '../models/legendary_trickshot_model.dart';
+import '../models/table_skin_model.dart';
 
 class MatchRewardResult {
   final int earnedXP;
@@ -40,6 +41,10 @@ class ProgressionService extends ChangeNotifier {
   int _totalWins = 0;
   String _equippedCueId = 'standard_cue';
   final Map<String, int> _ownedCueLevels = {'standard_cue': 1};
+
+  // Quản lý Bàn Bida (Table Skins - 20 mẫu bàn)
+  String _equippedTableId = 'classic_green';
+  final Set<String> _ownedTableIds = {'classic_green'};
 
   // Quản lý Ải Bot Campaign
   int _unlockedBotStage = 1;
@@ -85,6 +90,13 @@ class ProgressionService extends ChangeNotifier {
 
   CueModel get equippedCue => CueCatalog.getById(_equippedCueId);
   int get equippedCueLevel => _ownedCueLevels[_equippedCueId] ?? 1;
+
+  String get equippedTableId => _equippedTableId;
+  TableSkinModel get equippedTable => TableSkinCatalog.getById(_equippedTableId);
+  Set<String> get ownedTableIds => Set.unmodifiable(_ownedTableIds);
+  bool isTableOwned(String id) => _ownedTableIds.contains(id);
+  bool isTableEquipped(String id) => _equippedTableId == id;
+  bool canUnlockTable(TableSkinModel table) => _playerLevel >= table.unlockLevel;
 
   int get xpRequiredForNextLevel => _playerLevel * 120;
   double get xpProgress => (_currentXP / xpRequiredForNextLevel).clamp(0.0, 1.0);
@@ -164,6 +176,16 @@ class ProgressionService extends ChangeNotifier {
         _equippedCueId = 'standard_cue';
       }
 
+      _equippedTableId = prefs.getString('progression_equipped_table') ?? 'classic_green';
+      final tableList = prefs.getStringList('progression_owned_tables');
+      if (tableList != null) {
+        _ownedTableIds.addAll(tableList);
+      }
+      _ownedTableIds.add('classic_green');
+      if (!_ownedTableIds.contains(_equippedTableId)) {
+        _equippedTableId = 'classic_green';
+      }
+
       checkAchievementsAndMedals();
     } catch (e) {
       debugPrint('Error loading progression data: $e');
@@ -216,6 +238,8 @@ class ProgressionService extends ChangeNotifier {
         await prefs.setString('progression_last_daily_puzzle', _lastDailyPuzzleDateCompleted!);
       }
       await prefs.setString('progression_owned_cues', jsonEncode(_ownedCueLevels));
+      await prefs.setString('progression_equipped_table', _equippedTableId);
+      await prefs.setStringList('progression_owned_tables', _ownedTableIds.toList());
     } catch (e) {
       debugPrint('Error saving progression data: $e');
     }
@@ -259,6 +283,7 @@ class ProgressionService extends ChangeNotifier {
     _diamonds = 99999;
     _totalWins = 999;
     _unlockedBotStage = 10;
+    _tournamentWins = 5;
     for (int i = 1; i <= 10; i++) {
       _completedBotStages.add(i);
     }
@@ -269,6 +294,11 @@ class ProgressionService extends ChangeNotifier {
       _ownedCueLevels[cue.id] = 10;
     }
     _equippedCueId = 'dragon_god';
+    for (final table in TableSkinCatalog.allTables) {
+      _ownedTableIds.add(table.id);
+    }
+    _equippedTableId = 'dragon_emperor';
+    checkAchievementsAndMedals();
     _save();
     notifyListeners();
   }
@@ -337,6 +367,9 @@ class ProgressionService extends ChangeNotifier {
     _claimedAchievements.clear();
     _unlockedMedals.clear();
     _showcasedMedals.clear();
+    _equippedTableId = 'classic_green';
+    _ownedTableIds.clear();
+    _ownedTableIds.add('classic_green');
     if (save && !isGuestSession) {
       _save();
     }
@@ -374,6 +407,7 @@ class ProgressionService extends ChangeNotifier {
 
     _ownedCueLevels[cue.id] = 1;
     _equippedCueId = cue.id;
+    checkAchievementsAndMedals();
     _save();
     notifyListeners();
     return true;
@@ -391,6 +425,7 @@ class ProgressionService extends ChangeNotifier {
     if (!spendCoins(cost)) return false;
 
     _ownedCueLevels[cueId] = currentLvl + 1;
+    checkAchievementsAndMedals();
     _save();
     notifyListeners();
     return true;
@@ -400,8 +435,36 @@ class ProgressionService extends ChangeNotifier {
   void equipCue(String cueId) {
     if (!isCueOwned(cueId)) return;
     _equippedCueId = cueId;
+    checkAchievementsAndMedals();
     _save();
     notifyListeners();
+  }
+
+  /// Mua bàn bida trong Shop
+  bool buyTable(TableSkinModel table) {
+    if (isTableOwned(table.id)) return false;
+    if (!canUnlockTable(table)) return false;
+
+    if (table.priceDiamonds > 0) {
+      if (!spendDiamonds(table.priceDiamonds)) return false;
+    } else if (table.priceCoins > 0) {
+      if (!spendCoins(table.priceCoins)) return false;
+    }
+
+    _ownedTableIds.add(table.id);
+    _equippedTableId = table.id;
+    _save();
+    notifyListeners();
+    return true;
+  }
+
+  /// Trang bị bàn bida
+  bool equipTable(String tableId) {
+    if (!isTableOwned(tableId)) return false;
+    _equippedTableId = tableId;
+    _save();
+    notifyListeners();
+    return true;
   }
 
   /// Thêm XP và tính toán thăng cấp (Level Up)
@@ -540,6 +603,7 @@ class ProgressionService extends ChangeNotifier {
         xpGained: stage.firstClearXP,
         coinsGained: stage.firstClearCoins,
       );
+      checkAchievementsAndMedals();
       _save();
       return MatchRewardResult(
         earnedXP: stage.firstClearXP,
@@ -577,6 +641,7 @@ class ProgressionService extends ChangeNotifier {
       xpGained: xp,
       coinsGained: coins,
     );
+    checkAchievementsAndMedals();
     _save();
     return MatchRewardResult(
       earnedXP: xp,
@@ -604,6 +669,7 @@ class ProgressionService extends ChangeNotifier {
       xpGained: puzzle.rewardXP,
       coinsGained: puzzle.rewardCoins,
     );
+    checkAchievementsAndMedals();
     _save();
     return MatchRewardResult(
       earnedXP: puzzle.rewardXP,
@@ -691,114 +757,208 @@ class ProgressionService extends ChangeNotifier {
   void checkAchievementsAndMedals() {
     bool changed = false;
 
-    // Thành tựu thắng trận đầu
+    void tryUnlockAch(String id) {
+      if (!_unlockedAchievements.contains(id)) {
+        _unlockedAchievements.add(id);
+        changed = true;
+      }
+    }
+
+    void tryUnlockMedal(String id) {
+      if (!_unlockedMedals.contains(id)) {
+        _unlockedMedals.add(id);
+        if (_showcasedMedals.length < 5 && !_showcasedMedals.contains(id)) {
+          _showcasedMedals.add(id);
+        }
+        changed = true;
+      }
+    }
+
+    // 1. Trận thắng & Chiến tích
     if (_totalWins >= 1) {
-      if (!_unlockedAchievements.contains('first_win')) {
-        _unlockedAchievements.add('first_win');
-        changed = true;
-      }
-      if (!_unlockedMedals.contains('bronze_champion')) {
-        _unlockedMedals.add('bronze_champion');
-        if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('bronze_champion')) {
-          _showcasedMedals.add('bronze_champion');
-        }
-        changed = true;
-      }
+      tryUnlockAch('first_win');
+      tryUnlockMedal('bronze_champion');
     }
+    if (_totalWins >= 3) tryUnlockAch('win_streak_3');
+    if (_totalWins >= 10) tryUnlockAch('win_10');
+    if (_totalWins >= 15) tryUnlockMedal('veteran_striker');
+    if (_totalWins >= 25) tryUnlockAch('win_25');
+    if (_totalWins >= 30) tryUnlockMedal('centurion_victor');
+    if (_totalWins >= 50) tryUnlockAch('win_50');
+    if (_totalWins >= 75) tryUnlockMedal('legendary_champion');
+    if (_totalWins >= 100) tryUnlockAch('win_100');
+    if (_totalWins >= 200) tryUnlockAch('win_200');
 
-    // Tam liên thắng
-    if (_totalWins >= 3 && !_unlockedAchievements.contains('win_streak_3')) {
-      _unlockedAchievements.add('win_streak_3');
-      changed = true;
+    // 2. Cấp độ người chơi (Level)
+    if (_playerLevel >= 3) tryUnlockAch('reach_level_3');
+    if (_playerLevel >= 5) {
+      tryUnlockAch('reach_level_5');
+      tryUnlockMedal('rising_star');
     }
-
-    // Sở hữu gậy
-    if (_ownedCueLevels.length >= 2 && !_unlockedAchievements.contains('cue_enthusiast')) {
-      _unlockedAchievements.add('cue_enthusiast');
-      changed = true;
-    }
-    if (_ownedCueLevels.length >= 4 && !_unlockedAchievements.contains('cue_collector')) {
-      _unlockedAchievements.add('cue_collector');
-      changed = true;
-    }
-
-    // Gậy nâng cấp Lv.5+
-    final hasCueLv5 = _ownedCueLevels.values.any((lvl) => lvl >= 5);
-    if (hasCueLv5 && !_unlockedMedals.contains('cue_master')) {
-      _unlockedMedals.add('cue_master');
-      if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('cue_master')) {
-        _showcasedMedals.add('cue_master');
-      }
-      changed = true;
-    }
-
-    // Gậy nâng cấp Max Lv.10
-    final hasCueLv10 = _ownedCueLevels.values.any((lvl) => lvl >= 10);
-    if (hasCueLv10 && !_unlockedAchievements.contains('cue_level_max')) {
-      _unlockedAchievements.add('cue_level_max');
-      changed = true;
-    }
-
-    // Tài sản vàng
-    if (_coins >= 20000 && !_unlockedMedals.contains('wealthy_striker')) {
-      _unlockedMedals.add('wealthy_striker');
-      if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('wealthy_striker')) {
-        _showcasedMedals.add('wealthy_striker');
-      }
-      changed = true;
-    }
-    if (_coins >= 25000 && !_unlockedAchievements.contains('rich_player')) {
-      _unlockedAchievements.add('rich_player');
-      changed = true;
-    }
-    if (_coins >= 100000 && _totalWins >= 50 && !_unlockedAchievements.contains('billiard_god')) {
-      _unlockedAchievements.add('billiard_god');
-      changed = true;
-    }
-
-    // Cấp độ người chơi
+    if (_playerLevel >= 8) tryUnlockAch('reach_level_8');
     if (_playerLevel >= 10) {
-      if (!_unlockedAchievements.contains('reach_level_10')) {
-        _unlockedAchievements.add('reach_level_10');
-        changed = true;
-      }
-      if (!_unlockedMedals.contains('grandmaster')) {
-        _unlockedMedals.add('grandmaster');
-        if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('grandmaster')) {
-          _showcasedMedals.add('grandmaster');
-        }
-        changed = true;
-      }
+      tryUnlockAch('reach_level_10');
+      tryUnlockMedal('grandmaster');
+    }
+    if (_playerLevel >= 15) tryUnlockAch('reach_level_15');
+    if (_playerLevel >= 20) tryUnlockAch('reach_level_20');
+    if (_playerLevel >= 25) tryUnlockMedal('hall_of_fame');
+    if (_playerLevel >= 30) tryUnlockAch('reach_level_30');
+    if (_playerLevel >= 50) {
+      tryUnlockAch('reach_level_50');
+      tryUnlockMedal('immortal_sovereign');
     }
 
-    // Chiến dịch Bot Ải 7
+    // 3. Tài sản Vàng & Kim Cương
+    if (_coins >= 5000) tryUnlockAch('first_wealth');
+    if (_coins >= 10000) tryUnlockAch('coins_10k');
+    if (_coins >= 20000) {
+      tryUnlockAch('coins_20k');
+      tryUnlockMedal('wealthy_striker');
+    }
+    if (_coins >= 25000) tryUnlockAch('rich_player');
+    if (_coins >= 50000) {
+      tryUnlockAch('coins_50k');
+      tryUnlockMedal('silver_treasury');
+    }
+    if (_coins >= 75000) tryUnlockAch('coins_75k');
+    if (_coins >= 100000) {
+      tryUnlockMedal('golden_treasury');
+      if (_totalWins >= 50) tryUnlockAch('billiard_god');
+    }
+    if (_coins >= 200000) tryUnlockAch('coins_200k');
+    if (_coins >= 500000 && _playerLevel >= 70 && _totalWins >= 100) {
+      tryUnlockAch('billiard_emperor');
+    }
+
+    if (_diamonds >= 30) tryUnlockAch('first_diamond');
+    if (_diamonds >= 100) tryUnlockMedal('diamond_royalty');
+
+    // 4. Số lượng gậy sở hữu & Trang bị
+    if (_ownedCueLevels.length >= 2) {
+      tryUnlockAch('cue_enthusiast');
+      tryUnlockMedal('cue_collector_bronze');
+    }
+    if (_ownedCueLevels.length >= 4) {
+      tryUnlockAch('cue_collector');
+      tryUnlockMedal('cue_collector_gold');
+    }
+    if (_ownedCueLevels.length >= 7) {
+      tryUnlockAch('cue_arsenal_full');
+      tryUnlockMedal('cue_collector_mythic');
+    }
+    if (_equippedCueId != 'standard_cue') {
+      tryUnlockAch('change_profile_cue');
+    }
+
+    // 5. Cấp độ nâng cấp gậy
+    final hasCueLv2 = _ownedCueLevels.values.any((lvl) => lvl >= 2);
+    final hasCueLv3 = _ownedCueLevels.values.any((lvl) => lvl >= 3);
+    final hasCueLv4 = _ownedCueLevels.values.any((lvl) => lvl >= 4);
+    final hasCueLv5 = _ownedCueLevels.values.any((lvl) => lvl >= 5);
+    final hasCueLv7 = _ownedCueLevels.values.any((lvl) => lvl >= 7);
+    final hasCueLv8 = _ownedCueLevels.values.any((lvl) => lvl >= 8);
+    final hasCueLv10 = _ownedCueLevels.values.any((lvl) => lvl >= 10);
+
+    if (hasCueLv2) tryUnlockAch('cue_upgrade_first');
+    if (hasCueLv3) {
+      tryUnlockAch('cue_upgrade_level_3');
+      tryUnlockMedal('cue_apprentice');
+    }
+    if (hasCueLv4) tryUnlockMedal('cue_artisan');
+    if (hasCueLv5) {
+      tryUnlockAch('cue_upgrade_level_5');
+      tryUnlockMedal('cue_master');
+    }
+    if (hasCueLv7) tryUnlockAch('cue_upgrade_level_7');
+    if (hasCueLv8) tryUnlockAch('cue_upgrade_level_8');
+    if (hasCueLv10) {
+      tryUnlockAch('cue_level_max');
+      tryUnlockMedal('cue_god_forge');
+    }
+
+    // 6. Chiến dịch Bot Campaign
+    if (_completedBotStages.contains(1)) {
+      tryUnlockAch('bot_stage_1');
+      tryUnlockMedal('bot_cadet');
+    }
+    if (_completedBotStages.contains(2)) tryUnlockAch('bot_stage_2');
+    if (_completedBotStages.contains(3)) {
+      tryUnlockAch('bot_stage_3');
+      tryUnlockMedal('bot_fighter');
+    }
+    if (_completedBotStages.contains(4)) tryUnlockAch('bot_stage_4');
+    if (_completedBotStages.contains(5)) {
+      tryUnlockAch('bot_stage_5');
+      tryUnlockMedal('bot_challenger');
+    }
+    if (_completedBotStages.contains(6)) tryUnlockAch('bot_stage_6');
     if (_completedBotStages.contains(7)) {
-      if (!_unlockedAchievements.contains('bot_campaign_clear')) {
-        _unlockedAchievements.add('bot_campaign_clear');
-        changed = true;
-      }
-      if (!_unlockedMedals.contains('bot_slayer')) {
-        _unlockedMedals.add('bot_slayer');
-        if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('bot_slayer')) {
-          _showcasedMedals.add('bot_slayer');
-        }
-        changed = true;
-      }
+      tryUnlockAch('bot_campaign_clear');
+      tryUnlockMedal('bot_slayer');
+    }
+    if (_completedBotStages.contains(8)) tryUnlockMedal('master_duel_victor');
+    if (_completedBotStages.contains(9)) {
+      tryUnlockAch('bot_stage_9');
+      tryUnlockMedal('bot_annihilator');
+    }
+    if (_completedBotStages.contains(10)) {
+      tryUnlockAch('bot_stage_10');
+      tryUnlockMedal('bot_overlord');
     }
 
-    // Vô địch Tournament
+    // 7. Giải đấu Tournament 5 Brackets
+    if (_currentTournamentBracket >= 2 || _tournamentWins >= 1) {
+      tryUnlockAch('tournament_entry');
+      tryUnlockMedal('tournament_quarter');
+    }
+    if (_currentTournamentBracket >= 3 || _tournamentWins >= 1) {
+      tryUnlockAch('tournament_bracket_2');
+    }
+    if (_currentTournamentBracket >= 4 || _tournamentWins >= 1) {
+      tryUnlockAch('tournament_bracket_3');
+      tryUnlockMedal('tournament_semis');
+    }
+    if (_currentTournamentBracket >= 5 || _tournamentWins >= 1) {
+      tryUnlockAch('tournament_bracket_4');
+      tryUnlockMedal('tournament_runner_up');
+    }
     if (_tournamentWins >= 1) {
-      if (!_unlockedAchievements.contains('tournament_champion_legend')) {
-        _unlockedAchievements.add('tournament_champion_legend');
-        changed = true;
-      }
-      if (!_unlockedMedals.contains('tournament_champion')) {
-        _unlockedMedals.add('tournament_champion');
-        if (_showcasedMedals.length < 5 && !_showcasedMedals.contains('tournament_champion')) {
-          _showcasedMedals.add('tournament_champion');
-        }
-        changed = true;
-      }
+      tryUnlockAch('tournament_champion_legend');
+      tryUnlockMedal('tournament_champion');
+    }
+    if (_tournamentWins >= 3) {
+      tryUnlockAch('tournament_multi_champ');
+      tryUnlockMedal('tournament_dynasty');
+    }
+
+    // 8. Thế Đánh Huyền Thoại & Thế Bi Hàng Ngày
+    if (_completedTrickshots.isNotEmpty) {
+      tryUnlockAch('trickshot_first');
+      tryUnlockMedal('trickshot_apprentice');
+    }
+    if (_completedTrickshots.length >= 5) {
+      tryUnlockAch('trickshot_master_5');
+      tryUnlockMedal('trickshot_virtuoso');
+    }
+    if (_completedTrickshots.length >= 10) {
+      tryUnlockAch('trickshot_master_10');
+      tryUnlockMedal('trickshot_legend');
+    }
+    if (_completedTrickshots.length >= 25) {
+      tryUnlockMedal('trickshot_immortal');
+    }
+    if (_lastDailyPuzzleDateCompleted != null) {
+      tryUnlockAch('explore_daily_puzzle');
+      tryUnlockAch('daily_puzzle_clear');
+      tryUnlockMedal('trickshot_master');
+    }
+
+    // 9. Huy chương ghim trên Profile
+    if (_showcasedMedals.length >= 3) tryUnlockAch('medals_showcase_3');
+    if (_showcasedMedals.length >= 5) {
+      tryUnlockAch('medals_showcase_5');
+      tryUnlockMedal('profile_perfection');
     }
 
     if (changed) {
@@ -834,6 +994,7 @@ class ProgressionService extends ChangeNotifier {
           _showcasedMedals[0] = 'tournament_champion';
         }
       }
+      checkAchievementsAndMedals();
       _save();
       return MatchRewardResult(
         earnedXP: stage.xpReward,
@@ -846,6 +1007,7 @@ class ProgressionService extends ChangeNotifier {
       );
     } else {
       _currentTournamentBracket = stage.bracketNumber + 1;
+      checkAchievementsAndMedals();
       _save();
       return MatchRewardResult(
         earnedXP: stage.xpReward,

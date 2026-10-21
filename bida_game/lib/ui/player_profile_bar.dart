@@ -3,6 +3,7 @@ import '../services/progression_service.dart';
 import '../services/auth_service.dart';
 import '../services/language_service.dart';
 import 'cue_shop_dialog.dart';
+import 'table_shop_dialog.dart';
 import 'auth_dialog.dart';
 import 'leaderboard_dialog.dart';
 import 'player_profile_dialog.dart';
@@ -310,6 +311,54 @@ class PlayerProfileBar extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.8,
                             fontSize: compact ? 10 : 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(width: compact ? 4 : 6),
+                InkWell(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => const TableShopDialog(),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 7 : 11,
+                      vertical: compact ? 4 : 6,
+                    ),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF00897B), Color(0xFF004D40)],
+                      ),
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.tealAccent.withValues(alpha: 0.3),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.table_restaurant,
+                          color: Colors.white,
+                          size: compact ? 13 : 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'BÀN ĐẤU',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.8,
+                            fontSize: compact ? 9.5 : 12,
                           ),
                         ),
                       ],
