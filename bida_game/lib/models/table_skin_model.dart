@@ -57,6 +57,25 @@ extension TableRarityExt on TableRarity {
   }
 }
 
+/// Hệ Concept Anime đặc trưng của Bàn Đấu
+enum TableAnimeConcept {
+  classic('Cổ Điển', 'Classic', Icons.table_bar),
+  sakuraZen('Hoa Anh Đào Kimetsu', 'Sakura Zen', Icons.spa),
+  cyberTokyo('Cyberpunk Neo Tokyo', 'Cyber Neo Tokyo', Icons.memory),
+  dragonLava('Long Thần Dung Nham', 'Dragon Magma', Icons.local_fire_department),
+  arcaneGrimoire('Trận Đồ Ma Pháp', 'Arcane Grimoire', Icons.auto_awesome),
+  shadowVoid('Vực Sâu Bóng Tối', 'Shadow Void', Icons.dark_mode),
+  mechaEva('Pháo Đài Biomecha', 'Mecha Citadel', Icons.smart_toy);
+
+  final String viLabel;
+  final String enLabel;
+  final IconData icon;
+  const TableAnimeConcept(this.viLabel, this.enLabel, this.icon);
+
+  String get localizedLabel =>
+      LanguageService.instance.currentCode == 'vi' ? viLabel : enLabel;
+}
+
 /// Đại diện cho một mẫu Skin Bàn Bida tùy chỉnh
 class TableSkinModel {
   final String id;
@@ -73,6 +92,7 @@ class TableSkinModel {
   final int priceDiamonds;
   final int unlockLevel;
   final String pattern;
+  final TableAnimeConcept animeConcept;
 
   const TableSkinModel({
     required this.id,
@@ -89,6 +109,7 @@ class TableSkinModel {
     this.priceDiamonds = 0,
     this.unlockLevel = 1,
     this.pattern = 'classic',
+    this.animeConcept = TableAnimeConcept.classic,
   });
 
   String get localizedName =>
@@ -204,8 +225,8 @@ class TableSkinCatalog {
 
   static const TableSkinModel sakuraBlossom = TableSkinModel(
     id: 'sakura_blossom',
-    name: 'Hoa Anh Đào Nhật Bản',
-    description: 'Sắc hồng cánh hoa anh đào dịu dàng kết hợp gỗ anh đào sáng và hoa văn phương Đông.',
+    name: 'Hoa Anh Đào Kimetsu',
+    description: 'Sắc hồng cánh hoa anh đào kiếm đạo Nhật Bản kết hợp biểu tượng gia huy Kamon và cánh hoa bay.',
     clothPrimary: Color(0xFFC25975),
     clothSecondary: Color(0xFF7A2A3E),
     railColor: Color(0xFF4A2830),
@@ -217,6 +238,7 @@ class TableSkinCatalog {
     priceDiamonds: 0,
     unlockLevel: 5,
     pattern: 'sakura',
+    animeConcept: TableAnimeConcept.sakuraZen,
   );
 
   static const TableSkinModel copperVintage = TableSkinModel(
@@ -238,8 +260,8 @@ class TableSkinCatalog {
 
   static const TableSkinModel cyberNeon = TableSkinModel(
     id: 'cyber_neon',
-    name: 'Cyber Neon 2077',
-    description: 'Bàn thi đấu phong cách tương lai với các dải phát quang neon xanh lơ và tím rực rỡ.',
+    name: 'Cyberpunk Neo Tokyo 2077',
+    description: 'Lưới ma trận vi mạch số phát quang neon cyan-magenta với ký hiệu điện não và băng từ trường.',
     clothPrimary: Color(0xFF0D1B2A),
     clothSecondary: Color(0xFF050B14),
     railColor: Color(0xFF0F151F),
@@ -251,12 +273,13 @@ class TableSkinCatalog {
     priceDiamonds: 30,
     unlockLevel: 6,
     pattern: 'cyber',
+    animeConcept: TableAnimeConcept.cyberTokyo,
   );
 
   static const TableSkinModel volcanicMagma = TableSkinModel(
     id: 'volcanic_magma',
-    name: 'Dung Nham Núi Lửa',
-    description: 'Mặt bàn rực lửa nham thạch với sắc đỏ cam bốc khói cùng thành bàn đá bazan đen.',
+    name: 'Dung Nham Long Thần',
+    description: 'Trận đồ rồng lửa dung nham bốc khói cùng các vết nứt nham thạch nóng bỏng và vảy rồng bảo hộ.',
     clothPrimary: Color(0xFF9E2A2B),
     clothSecondary: Color(0xFF540B0E),
     railColor: Color(0xFF2B090A),
@@ -268,12 +291,13 @@ class TableSkinCatalog {
     priceDiamonds: 40,
     unlockLevel: 7,
     pattern: 'magma',
+    animeConcept: TableAnimeConcept.dragonLava,
   );
 
   static const TableSkinModel amethystGalaxy = TableSkinModel(
     id: 'amethyst_galaxy',
-    name: 'Tinh Vân Thạch Anh',
-    description: 'Sắc tím tinh vân huyền ảo đưa bạn vào không gian vũ trụ sâu thẳm đầy mê hoặc.',
+    name: 'Trận Đồ Ma Pháp Tinh Tú',
+    description: 'Vòng tròn ma pháp thuật cổ đại phát quang trên nền nỉ tinh vân tím vũ trụ và chòm sao đa chiều.',
     clothPrimary: Color(0xFF4A148C),
     clothSecondary: Color(0xFF240046),
     railColor: Color(0xFF1C0830),
@@ -285,11 +309,12 @@ class TableSkinCatalog {
     priceDiamonds: 50,
     unlockLevel: 8,
     pattern: 'galaxy',
+    animeConcept: TableAnimeConcept.arcaneGrimoire,
   );
 
   static const TableSkinModel electricViolet = TableSkinModel(
     id: 'electric_violet',
-    name: 'Tia Sét Tím',
+    name: 'Tia Sét Tím Cyberpunk',
     description: 'Năng lượng điện trường tím sẫm chớp nhoáng với thành bàn mạ crom phản chiếu sắc sảo.',
     clothPrimary: Color(0xFF311B92),
     clothSecondary: Color(0xFF1A0A5E),
@@ -302,12 +327,13 @@ class TableSkinCatalog {
     priceDiamonds: 60,
     unlockLevel: 8,
     pattern: 'electric',
+    animeConcept: TableAnimeConcept.cyberTokyo,
   );
 
   static const TableSkinModel carbonStealth = TableSkinModel(
     id: 'carbon_stealth',
-    name: 'Carbon Tàng Hình',
-    description: 'Sợi carbon dệt đan siêu nhẹ phủ toàn bộ khung bàn cùng họa tiết hình học tinh tế.',
+    name: 'Pháo Đài Biomecha EVA',
+    description: 'Khung giáp tổ ong lục giác AT-Field của chiến cơ Mecha tương lai với vạch chỉ dẫn quân sự.',
     clothPrimary: Color(0xFF1F2421),
     clothSecondary: Color(0xFF111412),
     railColor: Color(0xFF151816),
@@ -319,6 +345,7 @@ class TableSkinCatalog {
     priceDiamonds: 60,
     unlockLevel: 8,
     pattern: 'carbon',
+    animeConcept: TableAnimeConcept.mechaEva,
   );
 
   static const TableSkinModel iceGlacier = TableSkinModel(
@@ -336,6 +363,7 @@ class TableSkinCatalog {
     priceDiamonds: 50,
     unlockLevel: 9,
     pattern: 'glacier',
+    animeConcept: TableAnimeConcept.arcaneGrimoire,
   );
 
   static const TableSkinModel rubyRoyale = TableSkinModel(
@@ -391,8 +419,8 @@ class TableSkinCatalog {
 
   static const TableSkinModel phantomBlack = TableSkinModel(
     id: 'phantom_black',
-    name: 'Bóng Ma Hư Vô',
-    description: 'Mặt nỉ đen huyền ảo tuyệt đối hấp thụ ánh sáng, chỉ để lại viền sáng tím ma mị.',
+    name: 'Bóng Ma Hư Vô Solo',
+    description: 'Lãnh địa hắc ám của Quân vương Bóng tối với vòng xoáy hư vô tím sẫm ma mị và cổ ngữ hắc ám.',
     clothPrimary: Color(0xFF121212),
     clothSecondary: Color(0xFF080808),
     railColor: Color(0xFF0A0A0A),
@@ -404,12 +432,13 @@ class TableSkinCatalog {
     priceDiamonds: 150,
     unlockLevel: 14,
     pattern: 'void',
+    animeConcept: TableAnimeConcept.shadowVoid,
   );
 
   static const TableSkinModel dragonEmperor = TableSkinModel(
     id: 'dragon_emperor',
     name: 'Long Hoàng Bá Chủ',
-    description: 'Vảy rồng uy nghiêm khắc nổi trên nền lụa đỏ thẫm với năng lượng rồng cuộn bảo hộ.',
+    description: 'Trận đồ rồng uy nghiêm với đại phong ấn thần long trên nền lụa đỏ thẫm cuộn lửa bảo hộ.',
     clothPrimary: Color(0xFF700B0B),
     clothSecondary: Color(0xFF380000),
     railColor: Color(0xFF1F0000),
@@ -421,6 +450,7 @@ class TableSkinCatalog {
     priceDiamonds: 250,
     unlockLevel: 16,
     pattern: 'dragon',
+    animeConcept: TableAnimeConcept.dragonLava,
   );
 
   static const TableSkinModel celestialOlympus = TableSkinModel(

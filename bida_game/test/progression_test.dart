@@ -33,7 +33,7 @@ void main() {
   group('Cue Catalog & Stats Scaling Tests', () {
     test('Catalog contains 7 cues with valid attributes', () {
       final cues = CueCatalog.allCues;
-      expect(cues.length, equals(7));
+      expect(cues.length, equals(13));
 
       final standard = CueCatalog.getById('standard_cue');
       expect(standard.isFree, isTrue);

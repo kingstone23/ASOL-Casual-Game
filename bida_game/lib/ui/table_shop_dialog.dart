@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/table_skin_model.dart';
 import '../services/language_service.dart';
 import '../services/progression_service.dart';
+import 'table_skin_component.dart';
 
 /// Hộp thoại Cửa Hàng Bàn Bida với 20 mẫu bàn đa dạng phẩm cấp, chuẩn Mobile
 class TableShopDialog extends StatefulWidget {
@@ -296,7 +297,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: rarities.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 6),
+        separatorBuilder: (_, _) => const SizedBox(width: 6),
         itemBuilder: (context, index) {
           final rarity = rarities[index];
           final isSelected = _filterRarity == rarity;
@@ -515,9 +516,10 @@ class _TableShopDialogState extends State<TableShopDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildTableStat('Độ Nảy Băng', 'Chuẩn Tour', Icons.sports_tennis),
-                _buildTableStat('Mặt Vải Nỉ', 'Siêu Mịn', Icons.texture),
-                _buildTableStat('Cấp Yêu Cầu', 'Lv.${table.unlockLevel}', Icons.military_tech),
+                Expanded(child: _buildTableStat('Độ Nảy Băng', 'Chuẩn Tour', Icons.sports_tennis)),
+                Expanded(child: _buildTableStat('Mặt Vải Nỉ', 'Siêu Mịn', Icons.texture)),
+                Expanded(child: _buildTableStat('Concept', table.animeConcept.localizedLabel, table.animeConcept.icon)),
+                Expanded(child: _buildTableStat('Cấp Độ', 'Lv.${table.unlockLevel}', Icons.military_tech)),
               ],
             ),
           ),
@@ -532,11 +534,28 @@ class _TableShopDialogState extends State<TableShopDialog> {
 
   Widget _buildTableStat(String title, String val, IconData icon) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: const Color(0xFF26A69A), size: 16),
         const SizedBox(height: 2),
-        Text(title, style: const TextStyle(color: Colors.white54, fontSize: 10)),
-        Text(val, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11.5)),
+        Text(
+          title,
+          style: const TextStyle(color: Colors.white54, fontSize: 10),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
+        Text(
+          val,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+        ),
       ],
     );
   }
@@ -561,7 +580,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // Lòng bàn (Vải Nỉ)
+          // Lòng bàn (Vải Nỉ có hoa văn Anime)
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -581,7 +600,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
             ),
             child: CustomPaint(
               size: Size.infinite,
-              painter: _MiniTableMarksPainter(accentColor: table.railAccentColor),
+              painter: _MiniTableMarksPainter(table: table),
             ),
           ),
           // 4 Lỗ Góc và 2 Lỗ Giữa
@@ -740,14 +759,21 @@ class _TableShopDialogState extends State<TableShopDialog> {
     );
   }
 }
-
-/// Vẽ vạch phát bóng và điểm ngắm mini
+/// Vẽ họa tiết Concept Anime và vạch phát bóng cho mô hình thu nhỏ
 class _MiniTableMarksPainter extends CustomPainter {
-  final Color accentColor;
-  _MiniTableMarksPainter({required this.accentColor});
+  final TableSkinModel table;
+  _MiniTableMarksPainter({required this.table});
 
   @override
   void paint(Canvas canvas, Size size) {
+    // 1. Vẽ họa tiết Concept Anime thu nhỏ
+    AnimeTablePatternRenderer.renderAnimePattern(
+      canvas: canvas,
+      playRect: Rect.fromLTWH(0, 0, size.width, size.height),
+      table: table,
+      scale: (size.height / 140.0).clamp(0.4, 1.2),
+    );
+
     final linePaint = Paint()
       ..color = Colors.white24
       ..strokeWidth = 1.0;
@@ -765,5 +791,6 @@ class _MiniTableMarksPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MiniTableMarksPainter oldDelegate) =>
+      oldDelegate.table.id != table.id;
 }

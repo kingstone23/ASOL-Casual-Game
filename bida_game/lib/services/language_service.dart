@@ -3133,6 +3133,13 @@ class LanguageService extends ChangeNotifier {
       'ja': 'すべての項目を入力してください。',
       'ko': '모든 정보를 빠짐없이 입력해 주세요.',
     },
+    'auth_name_taken': {
+      'vi': 'Tên hiển thị này đã được người chơi khác sử dụng. Vui lòng chọn tên khác!',
+      'en': 'This display name is already taken. Please choose another name!',
+      'zh': '该昵称已被其他玩家使用，请选择其他昵称！',
+      'ja': 'この表示名は既に使用されています。別の名前を選択してください！',
+      'ko': '이 닉네임은 이미 다른 플레이어가 사용 중입니다. 다른 이름을 선택하세요!',
+    },
     'auth_fill_account_pass': {
       'vi': 'Vui lòng điền đầy đủ tài khoản và mật khẩu.',
       'en': 'Please enter both username/email and password.',

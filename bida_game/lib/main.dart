@@ -34,7 +34,6 @@ import 'ui/billiard_vfx_component.dart';
 import 'services/language_service.dart';
 import 'ui/language_selector_dialog.dart';
 import 'models/table_skin_model.dart';
-import 'ui/table_shop_dialog.dart';
 import 'ui/table_skin_component.dart';
 
 enum BallGroup { solids, stripes }
@@ -1233,251 +1232,306 @@ Widget _buildRightSideControls(
 
 Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
   final controlWidth = ultraCompact ? 36.0 : (compact ? 44.0 : 52.0);
-  return Container(
-    width: controlWidth,
-    padding: EdgeInsets.symmetric(
-      horizontal: ultraCompact ? 2.5 : (compact ? 4 : 5),
-      vertical: ultraCompact ? 4 : (compact ? 6 : 8),
-    ),
-    decoration: BoxDecoration(
-      color: const Color(0xFF1B2026),
-      borderRadius: BorderRadius.circular(ultraCompact ? 10 : 14),
-      border: Border.all(color: Colors.white24, width: 1.0),
-      boxShadow: const [
-        BoxShadow(
-          color: Colors.black45,
-          blurRadius: 8,
-          offset: Offset(0, 3),
-        ),
-      ],
-    ),
-    child: GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onPanStart: (details) {
-        if (!gameInstance.canUserControl) {
-          return;
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.currentTurn,
+      ProgressionService.instance,
+      gameInstance.player2CueId,
+      gameInstance.player2CueLevel,
+      OnlineMultiplayerService.instance,
+      LocalMultiplayerService.instance,
+      gameInstance.isBotMode,
+    ]),
+    builder: (context, _) {
+      final (activeCue, activeLevel) = gameInstance.getActivePlayerCue();
+      final playerTag = () {
+        if (gameInstance.isOnlineMultiplayer.value || gameInstance.isLocalMultiplayer.value) {
+          return gameInstance.isMyTurn ? 'P1' : 'P2';
+        } else if (gameInstance.isBotMode.value) {
+          return gameInstance.currentTurn.value == 2 ? 'BOT' : 'P1';
+        } else {
+          return gameInstance.currentTurn.value == 2 ? 'P2' : 'P1';
         }
-        gameInstance.beginPowerDrag(details.localPosition.dy);
-      },
-      onPanUpdate: (details) {
-        if (!gameInstance.canUserControl) {
-          return;
-        }
-        gameInstance.updatePowerDrag(details.localPosition.dy);
-      },
-      onPanEnd: (_) {
-        if (!gameInstance.canUserControl) {
-          return;
-        }
-        gameInstance.endPowerDrag();
-        gameInstance.shootWithPower();
-      },
-      onPanCancel: () {
-        if (!gameInstance.canUserControl) {
-          return;
-        }
-        gameInstance.endPowerDrag();
-      },
-      child: ValueListenableBuilder<double>(
-        valueListenable: gameInstance.shotPower,
-        builder: (context, power, child) {
-          final powerColor = power > 0.80
-              ? Colors.redAccent
-              : power > 0.45
-                  ? Colors.amber
-                  : const Color(0xFF00E676);
+      }();
 
-          return Column(
-            children: [
-              Icon(
-                Icons.flash_on,
-                color: powerColor,
-                size: ultraCompact ? 13 : (compact ? 15 : 18),
-              ),
-              const SizedBox(height: 1),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: ultraCompact ? 2 : 4,
-                  vertical: 1,
-                ),
-                decoration: BoxDecoration(
-                  color: powerColor.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(3),
-                  border: Border.all(
-                    color: powerColor.withValues(alpha: 0.6),
-                    width: 0.7,
-                  ),
-                ),
-                child: Text(
-                  '${(power * 100).round()}%',
-                  style: TextStyle(
-                    color: powerColor,
-                    fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.5),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              SizedBox(height: ultraCompact ? 3 : 5),
-              Expanded(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Thanh đo lực neon
-                    Container(
-                      width: ultraCompact ? 5.5 : (compact ? 7.0 : 8.5),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(color: Colors.white24, width: 0.6),
+      return Container(
+        width: controlWidth,
+        padding: EdgeInsets.symmetric(
+          horizontal: ultraCompact ? 2.5 : (compact ? 4 : 5),
+          vertical: ultraCompact ? 4 : (compact ? 6 : 8),
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF14171C),
+          borderRadius: BorderRadius.circular(ultraCompact ? 10 : 14),
+          border: Border.all(
+            color: activeCue.rarity.color.withValues(alpha: 0.65),
+            width: 1.2,
+          ),
+          boxShadow: [
+            const BoxShadow(
+              color: Colors.black54,
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+            BoxShadow(
+              color: activeCue.auraColor.withValues(alpha: 0.22),
+              blurRadius: 8,
+              spreadRadius: 0.5,
+            ),
+          ],
+        ),
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanStart: (details) {
+            if (!gameInstance.canUserControl) {
+              return;
+            }
+            gameInstance.beginPowerDrag(details.localPosition.dy);
+          },
+          onPanUpdate: (details) {
+            if (!gameInstance.canUserControl) {
+              return;
+            }
+            gameInstance.updatePowerDrag(details.localPosition.dy);
+          },
+          onPanEnd: (_) {
+            if (!gameInstance.canUserControl) {
+              return;
+            }
+            gameInstance.endPowerDrag();
+            gameInstance.shootWithPower();
+          },
+          onPanCancel: () {
+            if (!gameInstance.canUserControl) {
+              return;
+            }
+            gameInstance.endPowerDrag();
+          },
+          child: ValueListenableBuilder<double>(
+            valueListenable: gameInstance.shotPower,
+            builder: (context, power, child) {
+              final powerColor = power > 0.80
+                  ? Colors.redAccent
+                  : power > 0.45
+                      ? Colors.amber
+                      : const Color(0xFF00E676);
+
+              return Column(
+                children: [
+                  // Huy hiệu người chơi & Cấp độ cơ đang đánh
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 2),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ultraCompact ? 2 : 3,
+                      vertical: 1.0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: activeCue.rarity.color.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(
+                        color: activeCue.rarity.color.withValues(alpha: 0.70),
+                        width: 0.8,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(2.5),
-                        child: Stack(
-                          alignment: Alignment.bottomCenter,
-                          children: [
-                            Container(color: Colors.white10),
-                            FractionallySizedBox(
-                              heightFactor: power,
-                              widthFactor: 1.0,
-                              alignment: Alignment.bottomCenter,
-                              child: DecoratedBox(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [
-                                      Color(0xFF00E676),
-                                      Colors.amber,
-                                      Colors.redAccent,
-                                    ],
-                                    stops: [0.0, 0.6, 1.0],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            for (var mark = 1; mark < 10; mark++)
-                              Positioned.fill(
-                                child: Align(
-                                  alignment: Alignment(0, 1.0 - mark / 5.0),
-                                  child: Container(
-                                    height: 1,
-                                    color: Colors.black45,
-                                  ),
-                                ),
-                              ),
-                          ],
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        ultraCompact ? playerTag : '$playerTag Lv$activeLevel',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: ultraCompact ? 7.0 : (compact ? 8.0 : 9.0),
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
-                    SizedBox(width: ultraCompact ? 3 : (compact ? 4 : 6)),
-                    // Cây cơ bida tương tác - lún sâu theo lực
-                    Expanded(
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final trackHeight = constraints.maxHeight;
-                          // Khi tăng lực từ 5% -> 100%, cây cơ lún sâu xuống dọc theo thanh lực
-                          final maxTravel = trackHeight * 0.72;
-                          final normalizedPower =
-                              ((power - 0.05) / 0.95).clamp(0.0, 1.0);
-                          final pullOffset = normalizedPower * maxTravel;
-
-                          final stickWidth = ultraCompact ? 10.0 : (compact ? 12.0 : 15.0);
-
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(5),
+                  ),
+                  Icon(
+                    Icons.flash_on,
+                    color: powerColor,
+                    size: ultraCompact ? 13 : (compact ? 15 : 18),
+                  ),
+                  const SizedBox(height: 1),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: ultraCompact ? 2 : 4,
+                      vertical: 1,
+                    ),
+                    decoration: BoxDecoration(
+                      color: powerColor.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(
+                        color: powerColor.withValues(alpha: 0.6),
+                        width: 0.7,
+                      ),
+                    ),
+                    child: Text(
+                      '${(power * 100).round()}%',
+                      style: TextStyle(
+                        color: powerColor,
+                        fontSize: ultraCompact ? 8.0 : (compact ? 9.0 : 10.5),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ultraCompact ? 3 : 5),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Thanh đo lực neon
+                        Container(
+                          width: ultraCompact ? 5.5 : (compact ? 7.0 : 8.5),
+                          decoration: BoxDecoration(
+                            color: Colors.black45,
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(color: Colors.white24, width: 0.6),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2.5),
                             child: Stack(
-                              alignment: Alignment.topCenter,
+                              alignment: Alignment.bottomCenter,
                               children: [
-                                // Rãnh cơ bóng mờ tinh tế
-                                Container(
-                                  width: stickWidth,
-                                  decoration: BoxDecoration(
-                                    color: Colors.black38,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: Colors.white10,
-                                      width: 0.6,
-                                    ),
-                                  ),
-                                ),
-                                // Vệt sáng năng lượng chạy phía trên đầu cơ khi lún xuống
-                                if (pullOffset > 2)
-                                  Positioned(
-                                    top: 0,
-                                    height: pullOffset,
-                                    width: stickWidth * 0.65,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(2),
-                                        gradient: LinearGradient(
-                                          begin: Alignment.topCenter,
-                                          end: Alignment.bottomCenter,
-                                          colors: [
-                                            powerColor.withValues(alpha: 0.12),
-                                            powerColor.withValues(alpha: 0.70),
-                                          ],
-                                        ),
+                                Container(color: Colors.white10),
+                                FractionallySizedBox(
+                                  heightFactor: power,
+                                  widthFactor: 1.0,
+                                  alignment: Alignment.bottomCenter,
+                                  child: DecoratedBox(
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          Color(0xFF00E676),
+                                          Colors.amber,
+                                          Colors.redAccent,
+                                        ],
+                                        stops: [0.0, 0.6, 1.0],
                                       ),
                                     ),
                                   ),
-                                // Cây cơ di chuyển lún sâu xuống theo lực kéo
-                                Transform.translate(
-                                  offset: Offset(0, pullOffset),
-                                  child: ListenableBuilder(
-                                    listenable: Listenable.merge([
-                                      ProgressionService.instance,
-                                      gameInstance.currentTurn,
-                                      gameInstance.player2CueId,
-                                      gameInstance.player2CueLevel,
-                                      OnlineMultiplayerService.instance,
-                                      LocalMultiplayerService.instance,
-                                    ]),
-                                    builder: (context, _) {
-                                      final (activeCue, _) =
-                                          gameInstance.getActivePlayerCue();
-                                      return _CueStickWidget(
+                                ),
+                                for (var mark = 1; mark < 10; mark++)
+                                  Positioned.fill(
+                                    child: Align(
+                                      alignment: Alignment(0, 1.0 - mark / 5.0),
+                                      child: Container(
+                                        height: 1,
+                                        color: Colors.black45,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: ultraCompact ? 3 : (compact ? 4 : 6)),
+                        // Cây cơ bida tương tác - lún sâu theo lực
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              final trackHeight = constraints.maxHeight;
+                              // Khi tăng lực từ 5% -> 100%, cây cơ lún sâu xuống dọc theo thanh lực
+                              final maxTravel = trackHeight * 0.72;
+                              final normalizedPower =
+                                  ((power - 0.05) / 0.95).clamp(0.0, 1.0);
+                              final pullOffset = normalizedPower * maxTravel;
+
+                              final stickWidth = ultraCompact ? 10.0 : (compact ? 12.0 : 15.0);
+
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(5),
+                                child: Stack(
+                                  alignment: Alignment.topCenter,
+                                  children: [
+                                    // Rãnh cơ bóng mờ tinh tế
+                                    Container(
+                                      width: stickWidth,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black38,
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(
+                                          color: Colors.white10,
+                                          width: 0.6,
+                                        ),
+                                      ),
+                                    ),
+                                    // Vệt sáng năng lượng chạy phía trên đầu cơ khi lún xuống
+                                    if (pullOffset > 2)
+                                      Positioned(
+                                        top: 0,
+                                        height: pullOffset,
+                                        width: stickWidth * 0.65,
+                                        child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(2),
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                powerColor.withValues(alpha: 0.12),
+                                                powerColor.withValues(alpha: 0.70),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    // Cây cơ di chuyển lún sâu xuống theo lực kéo
+                                    Transform.translate(
+                                      offset: Offset(0, pullOffset),
+                                      child: _CueStickWidget(
                                         height: trackHeight,
                                         width: stickWidth,
                                         cue: activeCue,
-                                      );
-                                    },
-                                  ),
+                                        level: activeLevel,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        ),
+      );
+    },
   );
 }
 
 class _CueStickWidget extends StatelessWidget {
   final double height;
   final double width;
-  final CueModel? cue;
-  const _CueStickWidget({required this.height, this.width = 16.0, this.cue});
+  final CueModel cue;
+  final int level;
+
+  const _CueStickWidget({
+    required this.height,
+    this.width = 16.0,
+    required this.cue,
+    this.level = 1,
+  });
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
       size: Size(width, height),
-      painter: _VerticalCueStickPainter(cue: cue),
+      painter: _VerticalCueStickPainter(cue: cue, level: level),
     );
   }
 }
 
 class _VerticalCueStickPainter extends CustomPainter {
-  final CueModel? cue;
-  _VerticalCueStickPainter({this.cue});
+  final CueModel cue;
+  final int level;
+
+  _VerticalCueStickPainter({required this.cue, required this.level});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1485,10 +1539,12 @@ class _VerticalCueStickPainter extends CustomPainter {
     final h = size.height;
     final centerX = w / 2;
 
-    final topR = (w * 0.22).clamp(2.5, 3.8);
-    final botR = (w * 0.42).clamp(5.0, 7.5);
+    // Bán kính côn từ ngọn đến chuôi
+    final topR = (w * 0.22).clamp(2.5, 4.0);
+    final botR = (w * 0.44).clamp(5.0, 8.0);
 
-    double radiusAt(double y) => topR + (botR - topR) * (y / h);
+    double radiusAt(double y) =>
+        topR + (botR - topR) * (y / h).clamp(0.0, 1.0);
 
     void drawSection({
       required double yTop,
@@ -1496,6 +1552,7 @@ class _VerticalCueStickPainter extends CustomPainter {
       required List<Color> colors,
       List<double>? stops,
     }) {
+      if (yBot <= yTop) return;
       final rTop = radiusAt(yTop);
       final rBot = radiusAt(yBot);
       final path = Path()
@@ -1519,8 +1576,54 @@ class _VerticalCueStickPainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    // A. Đầu lơ (Chalk tip) ở trên cùng: y = 0 -> y = 7
-    final tipH = 7.0;
+    // ==========================================
+    // 0. HÀO QUANG LINH THẠCH XUNG QUANH CƠ (Lv >= 3)
+    // ==========================================
+    if (level >= 3) {
+      final isMax = level == 10;
+      final auraWidth = (w * 0.55).clamp(6.0, 12.0);
+      final auraColor = cue.auraColor;
+
+      final auraPaint = Paint()
+        ..color = auraColor.withValues(
+            alpha: isMax ? 0.35 : (level >= 6 ? 0.24 : 0.15))
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isMax ? 6.0 : 3.5);
+
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromCenter(
+            center: Offset(centerX, h * 0.5),
+            width: w + auraWidth * 0.5,
+            height: h - 10,
+          ),
+          Radius.circular(w * 0.4),
+        ),
+        auraPaint,
+      );
+
+      // Cột sáng tia năng lượng chạy hai bên
+      if (level >= 6) {
+        final lineP = Paint()
+          ..color = auraColor.withValues(alpha: isMax ? 0.65 : 0.42)
+          ..strokeWidth = isMax ? 1.6 : 1.0
+          ..style = PaintingStyle.stroke;
+        canvas.drawLine(
+          Offset(centerX - radiusAt(h * 0.3) - 1.2, 14),
+          Offset(centerX - radiusAt(h * 0.9) - 1.2, h - 14),
+          lineP,
+        );
+        canvas.drawLine(
+          Offset(centerX + radiusAt(h * 0.3) + 1.2, 14),
+          Offset(centerX + radiusAt(h * 0.9) + 1.2, h - 14),
+          lineP,
+        );
+      }
+    }
+
+    // ==========================================
+    // 1. ĐẦU LƠ (Chalk Tip) ở đỉnh gậy: y = 0 -> y = 6.0
+    // ==========================================
+    final tipH = 6.0;
     final tipR = radiusAt(tipH);
     final tipPath = Path()
       ..moveTo(centerX - radiusAt(0), 0)
@@ -1528,112 +1631,519 @@ class _VerticalCueStickPainter extends CustomPainter {
       ..lineTo(centerX + tipR, tipH)
       ..lineTo(centerX - tipR, tipH)
       ..close();
-    final tipColor = cue?.tipColor ?? const Color(0xFF26A69A);
+
+    final tipColor = cue.tipColor;
     canvas.drawPath(
       tipPath,
       Paint()
-        ..shader = LinearGradient(
+        ..shader = RadialGradient(
+          center: const Alignment(-0.2, -0.4),
+          radius: 0.9,
           colors: [
+            Color.lerp(tipColor, Colors.white, 0.45) ?? tipColor,
             tipColor,
-            tipColor.withValues(alpha: 0.8),
-            const Color(0xFF004D40),
+            Color.lerp(tipColor, Colors.black, 0.40) ?? tipColor,
           ],
         ).createShader(Rect.fromLTWH(centerX - tipR, 0, tipR * 2, tipH)),
     );
 
-    // B. Phíp cơ (Ferrule): y = 7 -> y = 17
+    // ==========================================
+    // 2. PHÍP CƠ TRẮNG (Ivory Ferrule): y = 6.0 -> y = 16.0
+    // ==========================================
     drawSection(
-      yTop: 7,
-      yBot: 17,
-      colors: const [Color(0xFFFFFFFF), Color(0xFFE8E8E8), Color(0xFFBDBDBD)],
-    );
-
-    // C. Ngọn cơ gỗ phong (Shaft): y = 17 -> y = h * 0.58
-    final shaftBot = h * 0.58;
-    drawSection(
-      yTop: 17,
-      yBot: shaftBot,
-      colors: cue?.shaftColors ?? const [
-        Color(0xFFFDE8C4),
-        Color(0xFFDDB075),
-        Color(0xFFB58045),
-        Color(0xFF8D5B28),
+      yTop: 6.0,
+      yBot: 16.0,
+      colors: const [
+        Color(0xFFE0E0E0),
+        Color(0xFFFFFFFF),
+        Color(0xFFF5F5F5),
+        Color(0xFFBDBDBD),
       ],
-      stops: cue != null ? null : const [0.0, 0.35, 0.75, 1.0],
+      stops: const [0.0, 0.35, 0.65, 1.0],
     );
 
-    // D. Ren nối kim loại (Joint collar): y = shaftBot -> y = shaftBot + 12
+    // Đai vàng nẹp chân phíp cơ (Lv >= 5)
+    if (level >= 5) {
+      drawSection(
+        yTop: 14.5,
+        yBot: 16.0,
+        colors: const [
+          Color(0xFFFFD54F),
+          Color(0xFFFFF9C4),
+          Color(0xFFB8860B),
+        ],
+      );
+    }
+
+    // ==========================================
+    // 3. NGỌN CƠ (Shaft): y = 16.0 -> y = h * 0.52
+    // ==========================================
+    final shaftBot = h * 0.52;
+    final baseShaft = cue.shaftColors.isNotEmpty
+        ? cue.shaftColors
+        : const [Color(0xFFDF9E52), Color(0xFFC78438)];
+
+    final shaft3D = [
+      baseShaft.first,
+      baseShaft.length > 1 ? baseShaft[1] : baseShaft.first,
+      Colors.white.withValues(alpha: 0.45),
+      baseShaft.last,
+      const Color(0xFF3E2723),
+    ];
     drawSection(
-      yTop: shaftBot,
-      yBot: shaftBot + 3,
-      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
-    );
-    drawSection(
-      yTop: shaftBot + 3,
-      yBot: shaftBot + 9,
-      colors: const [Color(0xFF303030), Color(0xFF151515), Color(0xFF000000)],
-    );
-    drawSection(
-      yTop: shaftBot + 9,
-      yBot: shaftBot + 12,
-      colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
+      yTop: 16.0,
+      yBot: shaftBot,
+      colors: shaft3D,
+      stops: const [0.0, 0.28, 0.50, 0.78, 1.0],
     );
 
-    // E. Chuôi cơ (Butt Sleeve): y = shaftBot + 12 -> y = h - 14
-    final buttTop = shaftBot + 12;
-    final buttBot = h - 14;
+    // ------------------------------------------
+    // HỌA TIẾT CONCEPT ANIME TRÊN NGỌN CƠ
+    // ------------------------------------------
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        final hamonPaint = Paint()
+          ..color = const Color(0xFFFF1744).withValues(
+              alpha: level >= 6 ? 0.95 : 0.80)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = level >= 7 ? 1.2 : 0.9;
+        final hamonPath = Path()..moveTo(centerX, 18.0);
+        for (double hy = 18.0; hy < shaftBot - 8.0; hy += 11.0) {
+          hamonPath.quadraticBezierTo(
+              centerX - 1.4, hy + 2.8, centerX, hy + 5.5);
+          hamonPath.quadraticBezierTo(
+              centerX + 1.4, hy + 8.2, centerX, hy + 11.0);
+        }
+        canvas.drawPath(hamonPath, hamonPaint);
+
+        if (level >= 5) {
+          drawSection(
+            yTop: shaftBot - 7.0,
+            yBot: shaftBot,
+            colors: const [
+              Color(0xFFFFD54F),
+              Color(0xFFFFF9C4),
+              Color(0xFFB8860B)
+            ],
+          );
+        }
+        if (level >= 8) {
+          final runeP = Paint()
+            ..color = Colors.white.withValues(alpha: 0.85)
+            ..strokeWidth = 0.8;
+          for (double ry = 28.0; ry < shaftBot - 14.0; ry += 16.0) {
+            canvas.drawLine(
+                Offset(centerX - 1.0, ry), Offset(centerX + 1.0, ry + 2.0), runeP);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.cyberNeo:
+        final laserP = Paint()
+          ..color = const Color(0xFF00E5FF).withValues(
+              alpha: level >= 6 ? 0.95 : 0.80)
+          ..strokeWidth = level >= 6 ? 1.4 : 1.0;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), laserP);
+        if (level >= 4) {
+          final nodeP = Paint()..color = const Color(0xFFE040FB);
+          for (double ny = 30.0; ny < shaftBot - 12.0; ny += 20.0) {
+            canvas.drawCircle(Offset(centerX, ny), 1.2, nodeP);
+            canvas.drawCircle(
+                Offset(centerX, ny), 0.6, Paint()..color = Colors.white);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.dragonFlame:
+        final flameP = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(
+              alpha: level >= 6 ? 0.95 : 0.80)
+          ..strokeWidth = 1.3;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), flameP);
+        final emberP = Paint()
+          ..color = const Color(0xFFFFD54F)
+          ..strokeWidth = 0.8;
+        for (double ey = 25.0; ey < shaftBot - 10.0; ey += 16.0) {
+          canvas.drawLine(
+              Offset(centerX - 1.2, ey), Offset(centerX + 1.2, ey - 2.0), emberP);
+        }
+        break;
+
+      case CueAnimeConcept.arcaneMagic:
+        final manaP = Paint()
+          ..color = const Color(0xFFB388FF).withValues(alpha: 0.85)
+          ..strokeWidth = 1.1;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), manaP);
+        if (level >= 4) {
+          final starP = Paint()..color = const Color(0xFFFF80AB);
+          for (double sy = 28.0; sy < shaftBot - 12.0; sy += 18.0) {
+            canvas.drawCircle(Offset(centerX, sy), 1.0, starP);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.mechaGundam:
+        final mechP = Paint()
+          ..color = const Color(0xFF76FF03).withValues(alpha: 0.85)
+          ..strokeWidth = 1.1;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), mechP);
+        break;
+
+      case CueAnimeConcept.sakuraZen:
+        final petalP = Paint()
+          ..color = const Color(0xFFFF80AB).withValues(alpha: 0.85);
+        for (double py = 26.0; py < shaftBot - 10.0; py += 18.0) {
+          canvas.drawCircle(
+              Offset(centerX + (py % 36 == 0 ? 1.0 : -1.0), py), 1.2, petalP);
+        }
+        break;
+
+      case CueAnimeConcept.shadowVoid:
+        final voidP = Paint()
+          ..color = const Color(0xFF7C4DFF).withValues(alpha: 0.90)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), voidP);
+        break;
+
+      case CueAnimeConcept.frostCryo:
+        final frostP = Paint()
+          ..color = const Color(0xFF80D8FF).withValues(alpha: 0.90)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(
+            Offset(centerX, 18.0), Offset(centerX, shaftBot - 2), frostP);
+        break;
+
+      case CueAnimeConcept.classic:
+        final grainP = Paint()
+          ..color = const Color(0xFF6D4C41).withValues(alpha: 0.4)
+          ..strokeWidth = 0.6;
+        canvas.drawLine(
+            Offset(centerX - 1.0, 18.0), Offset(centerX - 1.0, shaftBot - 2), grainP);
+        canvas.drawLine(
+            Offset(centerX + 1.0, 18.0), Offset(centerX + 1.0, shaftBot - 2), grainP);
+        break;
+    }
+
+    // ==========================================
+    // 4. KHỚP REN KIM LOẠI / VÀNH TSUBA (Joint)
+    // ==========================================
+    final jointTop = shaftBot;
+    final jointBot = shaftBot + 10.0;
+
+    if (cue.animeConcept == CueAnimeConcept.katanaSamurai) {
+      final tsubaW = (radiusAt(jointTop) * 2.8).clamp(8.0, 15.0);
+      final tsubaRect = Rect.fromCenter(
+        center: Offset(centerX, jointTop + 4.5),
+        width: tsubaW,
+        height: 4.5,
+      );
+      final tsubaRRect =
+          RRect.fromRectAndRadius(tsubaRect, const Radius.circular(2.0));
+      canvas.drawRRect(tsubaRRect, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawRRect(
+        tsubaRRect,
+        Paint()
+          ..color = Colors.black87
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 0.7,
+      );
+      if (level >= 6) {
+        canvas.drawCircle(
+            Offset(centerX - tsubaW * 0.3, jointTop + 4.5), 0.7, Paint()..color = const Color(0xFFB8860B));
+        canvas.drawCircle(
+            Offset(centerX + tsubaW * 0.3, jointTop + 4.5), 0.7, Paint()..color = const Color(0xFFB8860B));
+      }
+    } else {
+      drawSection(
+        yTop: jointTop,
+        yBot: jointTop + 2.5,
+        colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
+      );
+      drawSection(
+        yTop: jointTop + 2.5,
+        yBot: jointBot - 2.5,
+        colors: level >= 5
+            ? const [Color(0xFFFFD54F), Color(0xFFFFF9C4), Color(0xFFB8860B)]
+            : const [Color(0xFF303030), Color(0xFF151515), Color(0xFF000000)],
+      );
+      drawSection(
+        yTop: jointBot - 2.5,
+        yBot: jointBot,
+        colors: const [Color(0xFFEEEEEE), Color(0xFF9E9E9E), Color(0xFF616161)],
+      );
+      if (level >= 6) {
+        canvas.drawCircle(
+            Offset(centerX, jointTop + 5.0),
+            radiusAt(jointTop) * 0.35,
+            Paint()..color = cue.auraColor);
+      }
+    }
+
+    // ==========================================
+    // 5. CHUÔI CƠ (Butt Sleeve): y = jointBot -> y = h - 14.0
+    // ==========================================
+    final buttTop = jointBot;
+    final buttBot = h - 14.0;
+    final baseHandle = cue.handleColors.isNotEmpty
+        ? cue.handleColors
+        : const [Color(0xFF2979FF), Color(0xFF0D47A1)];
+
+    final handle3D = [
+      baseHandle.first,
+      baseHandle.length > 1 ? baseHandle[1] : baseHandle.first,
+      Colors.white.withValues(alpha: 0.35),
+      baseHandle.last,
+      Colors.black87,
+    ];
     drawSection(
       yTop: buttTop,
       yBot: buttBot,
-      colors: cue?.handleColors ?? const [
-        Color(0xFF2979FF),
-        Color(0xFF1565C0),
-        Color(0xFF0D47A1),
-        Color(0xFF062B66),
-      ],
-      stops: cue != null ? null : const [0.0, 0.3, 0.7, 1.0],
+      colors: handle3D,
+      stops: const [0.0, 0.28, 0.50, 0.78, 1.0],
     );
 
-    // Họa tiết hoa văn chuôi cơ
-    final wrapTop = buttTop + (buttBot - buttTop) * 0.22;
-    final wrapBot = buttTop + (buttBot - buttTop) * 0.78;
+    // ------------------------------------------
+    // VÙNG TAY QUẤN CƠ (Grip Wrap) & HỌA TIẾT ANIME
+    // ------------------------------------------
+    final wrapTop = buttTop + (buttBot - buttTop) * 0.16;
+    final wrapBot = buttTop + (buttBot - buttTop) * 0.84;
+
     drawSection(
       yTop: wrapTop,
       yBot: wrapBot,
       colors: const [
-        Color(0xFFEEEEEE),
-        Color(0xFFCFD8DC),
-        Color(0xFF90A4AE),
-        Color(0xFF455A64),
+        Color(0xFF1E2126),
+        Color(0xFF2C3238),
+        Color(0xFF14171A),
       ],
     );
 
-    // F. Bịt đáy chuôi (Butt Cap): y = buttBot -> y = h - 6
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        final tsukaLace = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(
+              alpha: level >= 6 ? 0.92 : 0.78)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = level >= 6 ? 1.2 : 0.9;
+        final diamondH = 8.5;
+        for (double dy = wrapTop + 4.0; dy < wrapBot - diamondH; dy += diamondH) {
+          final r = radiusAt(dy + diamondH * 0.5) * 0.75;
+          final p = Path()
+            ..moveTo(centerX, dy)
+            ..lineTo(centerX + r, dy + diamondH * 0.5)
+            ..lineTo(centerX, dy + diamondH)
+            ..lineTo(centerX - r, dy + diamondH * 0.5)
+            ..close();
+          canvas.drawPath(p, tsukaLace);
+
+          if (level >= 5) {
+            canvas.drawCircle(
+                Offset(centerX, dy + diamondH * 0.5), 1.0, Paint()..color = const Color(0xFFFF1744));
+          }
+        }
+        break;
+
+      case CueAnimeConcept.cyberNeo:
+        final cyanBus = Paint()
+          ..color = const Color(0xFF00E5FF).withValues(alpha: 0.90)
+          ..strokeWidth = 1.1;
+        final magBus = Paint()
+          ..color = const Color(0xFFE040FB).withValues(alpha: 0.90)
+          ..strokeWidth = 1.1;
+        final rW = radiusAt((wrapTop + wrapBot) * 0.5) * 0.45;
+        canvas.drawLine(
+            Offset(centerX - rW, wrapTop + 4), Offset(centerX - rW, wrapBot - 4), cyanBus);
+        canvas.drawLine(
+            Offset(centerX + rW, wrapTop + 4), Offset(centerX + rW, wrapBot - 4), magBus);
+        for (double my = wrapTop + 10.0; my < wrapBot - 8.0; my += 14.0) {
+          canvas.drawLine(
+              Offset(centerX - rW, my), Offset(centerX + rW, my + 3.0), cyanBus..strokeWidth = 0.7);
+          canvas.drawCircle(
+              Offset(centerX - rW, my), 1.1, Paint()..color = Colors.white);
+          canvas.drawCircle(
+              Offset(centerX + rW, my + 3.0), 1.1, Paint()..color = const Color(0xFF00E5FF));
+        }
+        break;
+
+      case CueAnimeConcept.dragonFlame:
+        final scaleP = Paint()
+          ..color = const Color(0xFFFFD600).withValues(
+              alpha: level >= 6 ? 0.90 : 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        for (double sy = wrapTop + 4.0; sy < wrapBot - 8.0; sy += 7.5) {
+          final r = radiusAt(sy) * 0.65;
+          final p = Path()
+            ..moveTo(centerX - r, sy)
+            ..lineTo(centerX, sy + 3.2)
+            ..lineTo(centerX + r, sy);
+          canvas.drawPath(p, scaleP);
+        }
+        break;
+
+      case CueAnimeConcept.mechaGundam:
+        final hazardP = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(alpha: 0.90)
+          ..strokeWidth = 1.8;
+        for (double hy = wrapTop + 4.0; hy < wrapBot - 8.0; hy += 9.0) {
+          final r = radiusAt(hy) * 0.70;
+          canvas.drawLine(
+              Offset(centerX - r, hy), Offset(centerX + r, hy + 4.0), hazardP);
+        }
+        break;
+
+      case CueAnimeConcept.arcaneMagic:
+        final ringP = Paint()
+          ..color = const Color(0xFFB388FF).withValues(alpha: 0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        for (double ay = wrapTop + 6.0; ay < wrapBot - 6.0; ay += 12.0) {
+          final r = radiusAt(ay) * 0.65;
+          canvas.drawOval(
+              Rect.fromCenter(center: Offset(centerX, ay), width: r * 2, height: 3.0),
+              ringP);
+          canvas.drawCircle(
+              Offset(centerX, ay), 0.9, Paint()..color = const Color(0xFFFF80AB));
+        }
+        break;
+
+      case CueAnimeConcept.sakuraZen:
+        final sakuraP = Paint()
+          ..color = const Color(0xFFFF80AB).withValues(alpha: 0.90);
+        final goldCenterP = Paint()..color = const Color(0xFFFFD54F);
+        for (double py = wrapTop + 6.0; py < wrapBot - 6.0; py += 14.0) {
+          final xOffset = (py % 28 == 0 ? 1.5 : -1.5);
+          canvas.drawCircle(Offset(centerX + xOffset, py), 1.4, sakuraP);
+          canvas.drawCircle(Offset(centerX + xOffset, py), 0.6, goldCenterP);
+        }
+        break;
+
+      case CueAnimeConcept.shadowVoid:
+        final voidP = Paint()
+          ..color = const Color(0xFF7C4DFF).withValues(alpha: 0.85)
+          ..strokeWidth = 1.0;
+        for (double vy = wrapTop + 6.0; vy < wrapBot - 6.0; vy += 11.0) {
+          final r = radiusAt(vy) * 0.6;
+          canvas.drawLine(
+              Offset(centerX - r, vy), Offset(centerX + r, vy + 2.0), voidP);
+          canvas.drawCircle(
+              Offset(centerX, vy + 1.0), 0.8, Paint()..color = Colors.white70);
+        }
+        break;
+
+      case CueAnimeConcept.frostCryo:
+        final frostP = Paint()
+          ..color = const Color(0xFF80D8FF).withValues(alpha: 0.90)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        for (double fy = wrapTop + 6.0; fy < wrapBot - 6.0; fy += 10.0) {
+          final r = radiusAt(fy) * 0.6;
+          final p = Path()
+            ..moveTo(centerX, fy - 2)
+            ..lineTo(centerX + r, fy)
+            ..lineTo(centerX, fy + 2)
+            ..lineTo(centerX - r, fy)
+            ..close();
+          canvas.drawPath(p, frostP);
+        }
+        break;
+
+      case CueAnimeConcept.classic:
+        final trimP = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: 0.80)
+          ..strokeWidth = 0.9;
+        canvas.drawLine(
+            Offset(centerX - radiusAt(wrapTop) * 0.7, wrapTop + 4),
+            Offset(centerX + radiusAt(wrapTop) * 0.7, wrapTop + 4),
+            trimP);
+        canvas.drawLine(
+            Offset(centerX - radiusAt(wrapBot) * 0.7, wrapBot - 4),
+            Offset(centerX + radiusAt(wrapBot) * 0.7, wrapBot - 4),
+            trimP);
+        break;
+    }
+
+    // ==========================================
+    // 6. BỊT ĐÁY CHUÔI (Butt Cap): y = buttBot -> y = h - 6.0
+    // ==========================================
     drawSection(
       yTop: buttBot,
-      yBot: h - 6,
-      colors: const [Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E)],
+      yBot: h - 6.0,
+      colors: level >= 5
+          ? const [Color(0xFFFFD54F), Color(0xFFFFF9C4), Color(0xFFB8860B)]
+          : const [Color(0xFFFFFFFF), Color(0xFFE0E0E0), Color(0xFF9E9E9E)],
     );
 
-    // G. Đệm chân cao su (Bumper): y = h - 6 -> y = h
+    // ==========================================
+    // 7. ĐỆM CAO SU & KHẢM ĐÁ QUÝ ĐUÔI CƠ (Bumper & Gemstone)
+    // ==========================================
     final bumpR = radiusAt(h);
     final bumperPath = Path()
-      ..moveTo(centerX - radiusAt(h - 6), h - 6)
-      ..lineTo(centerX + radiusAt(h - 6), h - 6)
-      ..lineTo(centerX + bumpR, h - 2)
-      ..quadraticBezierTo(centerX, h + 2, centerX - bumpR, h - 2)
+      ..moveTo(centerX - radiusAt(h - 6.0), h - 6.0)
+      ..lineTo(centerX + radiusAt(h - 6.0), h - 6.0)
+      ..lineTo(centerX + bumpR, h - 2.0)
+      ..quadraticBezierTo(centerX, h + 2.0, centerX - bumpR, h - 2.0)
       ..close();
     canvas.drawPath(
       bumperPath,
-      Paint()..color = const Color(0xFF1E1E1E),
+      Paint()..color = const Color(0xFF141414),
     );
 
-    // H. Đường bóng sáng (Glossy highlight)
+    // Lv >= 5: KHẢM VIÊN NGỌC LINH HỒN Ở ĐUÔI CHUÔI CƠ (Butt Gemstone Bezel)
+    if (level >= 5) {
+      final gemColor = switch (cue.animeConcept) {
+        CueAnimeConcept.katanaSamurai => const Color(0xFFFF1744),
+        CueAnimeConcept.cyberNeo => const Color(0xFF00E5FF),
+        CueAnimeConcept.dragonFlame => const Color(0xFFFF6D00),
+        CueAnimeConcept.arcaneMagic => const Color(0xFFB388FF),
+        CueAnimeConcept.shadowVoid => const Color(0xFF7C4DFF),
+        CueAnimeConcept.mechaGundam => const Color(0xFF76FF03),
+        CueAnimeConcept.sakuraZen => const Color(0xFFFF80AB),
+        CueAnimeConcept.frostCryo => const Color(0xFF80D8FF),
+        CueAnimeConcept.classic => const Color(0xFFFFD54F),
+      };
+
+      final gemRadius = (bumpR * 0.55).clamp(2.5, 4.2);
+      final gemCenter = Offset(centerX, h - 3.2);
+
+      // Đĩa vàng 24K đỡ ngọc
+      canvas.drawCircle(
+          gemCenter, gemRadius + 1.0, Paint()..color = const Color(0xFFFFD54F));
+      // Viên đá quý đa diện
+      canvas.drawCircle(gemCenter, gemRadius, Paint()..color = gemColor);
+      // Điểm lóe sáng phản chiếu trên mặt đá
+      canvas.drawCircle(
+        Offset(gemCenter.dx - gemRadius * 0.35, gemCenter.dy - gemRadius * 0.35),
+        gemRadius * 0.35,
+        Paint()..color = Colors.white.withValues(alpha: 0.95),
+      );
+
+      // Cấp 10 Tối Thượng: Ngôi sao sáng 4 cánh (Star Glint) rực rỡ trên viên ngọc
+      if (level == 10) {
+        final starPaint = Paint()
+          ..color = Colors.white
+          ..strokeWidth = 1.0;
+        final starLen = gemRadius + 2.0;
+        canvas.drawLine(Offset(gemCenter.dx - starLen, gemCenter.dy),
+            Offset(gemCenter.dx + starLen, gemCenter.dy), starPaint);
+        canvas.drawLine(Offset(gemCenter.dx, gemCenter.dy - starLen),
+            Offset(gemCenter.dx, gemCenter.dy + starLen), starPaint);
+      }
+    }
+
+    // ==========================================
+    // 8. ĐƯỜNG PHẢN QUANG 3D (Glossy Highlight)
+    // ==========================================
     final shinePath = Path()
-      ..moveTo(centerX - topR * 0.3, 2)
-      ..lineTo(centerX - topR * 0.1, 2)
-      ..lineTo(centerX - botR * 0.1, h - 8)
-      ..lineTo(centerX - botR * 0.3, h - 8)
+      ..moveTo(centerX - topR * 0.35, 2.0)
+      ..lineTo(centerX - topR * 0.10, 2.0)
+      ..lineTo(centerX - botR * 0.10, h - 8.0)
+      ..lineTo(centerX - botR * 0.35, h - 8.0)
       ..close();
     canvas.drawPath(
       shinePath,
@@ -1643,7 +2153,7 @@ class _VerticalCueStickPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _VerticalCueStickPainter oldDelegate) =>
-      oldDelegate.cue != cue;
+      oldDelegate.cue != cue || oldDelegate.level != level;
 }
 
 
@@ -1953,6 +2463,58 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
       final screenHeight = MediaQuery.of(context).size.height;
       final isShort = screenHeight < 520;
       final isVeryShort = screenHeight < 360;
+      final equippedTable = ProgressionService.instance.equippedTable;
+      final tableConcept = equippedTable.animeConcept;
+
+      List<Color> dialogGradient;
+      Color borderColor;
+      Color glowShadowColor;
+      String? conceptBadgeText;
+
+      switch (tableConcept) {
+        case TableAnimeConcept.cyberTokyo:
+          dialogGradient = const [Color(0xFF071B26), Color(0xFF030D14)];
+          borderColor = const Color(0xFF00E5FF);
+          glowShadowColor = const Color(0x6600E5FF);
+          conceptBadgeText = '⚡ CYBER VICTORY // 電脳完勝';
+          break;
+        case TableAnimeConcept.sakuraZen:
+          dialogGradient = const [Color(0xFF2E0D1B), Color(0xFF19060E)];
+          borderColor = const Color(0xFFF48FB1);
+          glowShadowColor = const Color(0x66F48FB1);
+          conceptBadgeText = '🌸 SAKURA TRIUMPH // 桜華無双';
+          break;
+        case TableAnimeConcept.dragonLava:
+          dialogGradient = const [Color(0xFF2E0D03), Color(0xFF190601)];
+          borderColor = const Color(0xFFFF6D00);
+          glowShadowColor = const Color(0x66FF6D00);
+          conceptBadgeText = '🔥 DRAGON ASCENT // 龍神降臨';
+          break;
+        case TableAnimeConcept.arcaneGrimoire:
+          dialogGradient = const [Color(0xFF1E0D33), Color(0xFF0E041A)];
+          borderColor = const Color(0xFFB388FF);
+          glowShadowColor = const Color(0x667C4DFF);
+          conceptBadgeText = '✨ ARCANE MASTERY // 魔導制覇';
+          break;
+        case TableAnimeConcept.shadowVoid:
+          dialogGradient = const [Color(0xFF150A21), Color(0xFF08030D)];
+          borderColor = const Color(0xFFBA68C8);
+          glowShadowColor = const Color(0x666A1B9A);
+          conceptBadgeText = '🌑 SHADOW MONARCH // 影の君主';
+          break;
+        case TableAnimeConcept.mechaEva:
+          dialogGradient = const [Color(0xFF0F1A12), Color(0xFF070D08)];
+          borderColor = const Color(0xFF76FF03);
+          glowShadowColor = const Color(0x6676FF03);
+          conceptBadgeText = '🛡️ SYSTEM CLEAR // 殲滅完了';
+          break;
+        case TableAnimeConcept.classic:
+          dialogGradient = const [Color(0xFF133E32), Color(0xFF0D251E)];
+          borderColor = Colors.amber;
+          glowShadowColor = const Color(0x55000000);
+          conceptBadgeText = null;
+          break;
+      }
 
       return Positioned.fill(
         child: Container(
@@ -1970,15 +2532,16 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
               child: Container(
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF133E32), Color(0xFF0D251E)],
+                  gradient: LinearGradient(
+                    colors: dialogGradient,
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Colors.amber, width: 2),
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black87, blurRadius: 20),
+                  border: Border.all(color: borderColor, width: 2),
+                  boxShadow: [
+                    BoxShadow(color: glowShadowColor, blurRadius: 18, spreadRadius: 1),
+                    const BoxShadow(color: Colors.black87, blurRadius: 20),
                   ],
                 ),
                 child: SingleChildScrollView(
@@ -1990,11 +2553,31 @@ Widget _buildRackOverlay({VoidCallback? onHome}) {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (conceptBadgeText != null && isLocalWinner) ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: borderColor.withValues(alpha: 0.18),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor.withValues(alpha: 0.5), width: 1),
+                          ),
+                          child: Text(
+                            conceptBadgeText,
+                            style: TextStyle(
+                              color: borderColor,
+                              fontSize: isVeryShort ? 9.5 : (isShort ? 10.5 : 12),
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ),
+                      ],
                       Icon(
                         isLocalWinner
                             ? Icons.emoji_events
                             : Icons.sentiment_dissatisfied,
-                        color: isLocalWinner ? Colors.amber : Colors.redAccent,
+                        color: isLocalWinner ? borderColor : Colors.redAccent,
                         size: isVeryShort ? 28 : (isShort ? 32 : 46),
                       ),
                       SizedBox(height: isVeryShort ? 1 : (isShort ? 2 : 5)),
@@ -5051,12 +5634,83 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   void _applyClothPhysics(double dt) {
     if (!_hasGameLoaded) return;
+    _resolveBallOverlaps();
     _applyClothPhysicsToBody(cueBall.body, dt);
     for (final ball in poolBalls) {
       if (ball.isRemoved) {
         continue;
       }
       _applyClothPhysicsToBody(ball.body, dt);
+    }
+  }
+
+  /// Triệt tiêu chồng lấn bi (De-penetration Solver) và làm mượt va chạm:
+  /// Ngăn chặn hiện tượng bi đè xuyên nhau, giật rung xung đột hay nảy nổ bất thường khi phá bi / chụm bi
+  /// Giữ nguyên 100% các hằng số vật lý cốt lõi (restitution 0.90, friction 0.16, mass).
+  void _resolveBallOverlaps() {
+    if (!physicsReady) return;
+
+    final activeBalls = <dynamic>[];
+    if (!cueBall.isSunk && cueBall.isMounted) {
+      activeBalls.add(cueBall);
+    }
+    for (final ball in poolBalls) {
+      if (!ball.isRemoved && !ball.isSunk && ball.isMounted) {
+        activeBalls.add(ball);
+      }
+    }
+
+    final len = activeBalls.length;
+    if (len < 2) return;
+
+    final minDist = ballRadius * 1.76; // 2 * hitboxRadius (hitboxRadius = 0.88 * ballRadius)
+    final minDist2 = minDist * minDist;
+
+    for (int i = 0; i < len; i++) {
+      final dynamic ballA = activeBalls[i];
+      final Body bodyA = ballA.body;
+      final posA = bodyA.position;
+
+      for (int j = i + 1; j < len; j++) {
+        final dynamic ballB = activeBalls[j];
+        final Body bodyB = ballB.body;
+        final posB = bodyB.position;
+
+        final dx = posB.x - posA.x;
+        final dy = posB.y - posA.y;
+        final d2 = dx * dx + dy * dy;
+
+        if (d2 < minDist2 && d2 > 0.000001) {
+          final d = math.sqrt(d2);
+          final overlap = minDist - d;
+          if (overlap > 0.02) {
+            final nx = dx / d;
+            final ny = dy / d;
+
+            // Nới tách vị trí 2 bi nhẹ nhàng đối xứng
+            final nudge = overlap * 0.5 * 0.65;
+            posA.x -= nx * nudge;
+            posA.y -= ny * nudge;
+            posB.x += nx * nudge;
+            posB.y += ny * nudge;
+
+            bodyA.setTransform(posA, bodyA.angle);
+            bodyB.setTransform(posB, bodyB.angle);
+
+            // Làm mượt vận tốc xuyên thấu để loại bỏ xung đột giật nảy vô lý
+            final velA = bodyA.linearVelocity;
+            final velB = bodyB.linearVelocity;
+            final relVelNorm = (velB.x - velA.x) * nx + (velB.y - velA.y) * ny;
+            if (relVelNorm < 0) {
+              final damp = relVelNorm * 0.5;
+              velA.x += nx * damp;
+              velA.y += ny * damp;
+              velB.x -= nx * damp;
+              velB.y -= ny * damp;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -5657,6 +6311,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
     // Hiệu ứng bụi lơ gậy (Chalk Dust Puff) tán xạ chân thực khi đầu gậy phát lực
     final tipPos = cueBall.body.position - direction * cueBall.radius;
     vfx.addCueChalkPuff(
+      tipPos: tipPos,
+      shotDirection: direction,
+      shotSpeed: targetSpeed,
+      ballRadius: ballRadius,
+    );
+    // Hiệu ứng tiếp xúc gậy cơ độc quyền theo Anime Concept
+    vfx.addCueContactEffect(
+      cue: cue,
       tipPos: tipPos,
       shotDirection: direction,
       shotSpeed: targetSpeed,
@@ -6952,6 +7614,7 @@ class BilliardContactListener extends ContactListener {
   }
 
   void _checkRailCollision(Body first, Body second) {
+    final equippedTable = ProgressionService.instance.equippedTable;
     if (first.userData is Wall && (second.userData is CueBall || second.userData is PoolBall)) {
       final wall = first.userData as Wall;
       final speed = second.linearVelocity.length;
@@ -6962,6 +7625,8 @@ class BilliardContactListener extends ContactListener {
           wallEnd: wall.end,
           speed: speed,
           ballRadius: activeGame?.ballRadius ?? 12.0,
+          tableConcept: equippedTable.animeConcept,
+          railAccentColor: equippedTable.railAccentColor,
         );
       }
       if (second.userData is CueBall) {
@@ -6983,6 +7648,8 @@ class BilliardContactListener extends ContactListener {
           wallEnd: wall.end,
           speed: speed,
           ballRadius: activeGame?.ballRadius ?? 12.0,
+          tableConcept: equippedTable.animeConcept,
+          railAccentColor: equippedTable.railAccentColor,
         );
       }
       if (first.userData is CueBall) {
@@ -7734,7 +8401,7 @@ class CueBall extends BodyComponent {
     final jointR = radius * 0.33;
     final buttR = radius * 0.44;
 
-    // 0a. Bóng đổ của gậy cơ xuống mặt bàn nỉ (2.5D Cue Shadow)
+    // 0a. Bóng đổ 2.5D chân thực của gậy cơ xuống mặt bàn nỉ
     canvas.save();
     canvas.translate(-radius * 0.15, radius * 0.38);
     final cueShadowPath = Path()
@@ -7746,21 +8413,42 @@ class CueBall extends BodyComponent {
     canvas.drawPath(
       cueShadowPath,
       Paint()
-        ..color = const Color(0x35000000)
+        ..color = const Color(0x38000000)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.5),
     );
     canvas.restore();
 
-    // 0. Hào quang tỏa sáng (Aura Glow) cho gậy cấp cao (Lv >= 3 hoặc Epic/Legendary)
+    // 0b. HÀO QUANG NĂNG LƯỢNG (Aura Corona) - CÀNG CAO CÀNG RỰC RỠ & LỘNG LẪY
+    // Lv 3-5: Quầng sáng dịu; Lv 6-8: Hào quang sắc nét; Lv 9-10 (MAX): Thiên quang Thần Thoại
     if (level >= 3 || cue.rarity == CueRarity.epic || cue.rarity == CueRarity.legendary) {
       final auraColor = cue.auraColor;
-      final auraAlpha = level >= 7 ? 0.60 : 0.38;
-      final auraPaint = Paint()
-        ..color = auraColor.withValues(alpha: auraAlpha)
-        ..strokeWidth = radius * (level >= 7 ? 1.4 : 0.9)
-        ..style = PaintingStyle.stroke
-        ..maskFilter = MaskFilter.blur(BlurStyle.normal, level >= 7 ? 4.5 : 2.5);
-      canvas.drawLine(const Offset(-2, 0), Offset(-stickLength + 2, 0), auraPaint);
+      final isMaxTier = level >= 9;
+      final isHighTier = level >= 6;
+
+      // Pass 1: Quầng sáng nở rộng tỏa lan (Soft ambient aura)
+      final ambientAlpha = isMaxTier ? 0.55 : (isHighTier ? 0.40 : 0.26);
+      canvas.drawLine(
+        const Offset(-2, 0),
+        Offset(-stickLength + 2, 0),
+        Paint()
+          ..color = auraColor.withValues(alpha: ambientAlpha)
+          ..strokeWidth = radius * (isMaxTier ? 2.2 : (isHighTier ? 1.6 : 1.1))
+          ..style = PaintingStyle.stroke
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, isMaxTier ? 6.0 : 3.5),
+      );
+
+      // Pass 2: Lõi năng lượng phát quang cường độ cao cho gậy Lv >= 6
+      if (isHighTier) {
+        canvas.drawLine(
+          const Offset(-4, 0),
+          Offset(-stickLength + 4, 0),
+          Paint()
+            ..color = Colors.white.withValues(alpha: isMaxTier ? 0.65 : 0.45)
+            ..strokeWidth = radius * 0.35
+            ..style = PaintingStyle.stroke
+            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.8),
+        );
+      }
     }
 
     void drawSegment({
@@ -7782,6 +8470,7 @@ class CueBall extends BodyComponent {
       final cMid = colors.length > 2 ? colors[1] : colors[0];
       final cLast = colors.last;
 
+      // Chiếu sáng hình trụ 3D siêu thực với dải phản quang ánh kim (High-specular cylinder)
       final paint = Paint()
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
@@ -7789,18 +8478,18 @@ class CueBall extends BodyComponent {
           colors: [
             c0,
             cMid,
-            const Color(0xFFFFFFFF).withValues(alpha: 0.65), // Vệt phản chiếu ánh sáng trụ 3D
+            Colors.white.withValues(alpha: 0.72), // Vệt bóng sáng trắng phản chiếu ánh đèn bàn
             cMid,
-            cLast.withValues(alpha: 0.85),
+            cLast.withValues(alpha: 0.90),
           ],
-          stops: const [0.0, 0.25, 0.48, 0.72, 1.0],
+          stops: const [0.0, 0.24, 0.46, 0.74, 1.0],
         ).createShader(Rect.fromLTRB(xEnd, -maxR, xStart, maxR));
 
       canvas.drawPath(path, paint);
     }
 
-    // 1. Đầu lơ (Chalk Tip) bo cong vòm ở đỉnh x = 0
-    final tipLen = radius * 0.35;
+    // 1. Đầu lơ (Chalk Tip) bo cong hình bán nguyệt ở đỉnh x = 0
+    final tipLen = radius * 0.36;
     final tipPath = Path()
       ..moveTo(0, 0)
       ..arcToPoint(
@@ -7817,26 +8506,27 @@ class CueBall extends BodyComponent {
       ..close();
     canvas.drawPath(tipPath, Paint()..color = cue.tipColor);
 
-    // 2. Phíp cơ trắng ngà (White Ferrule)
-    final ferruleLen = radius * 0.70;
+    // 2. Phíp cơ trắng ngà (White Ferrule) bọc viền vàng kim
+    final ferruleLen = radius * 0.72;
     drawSegment(
       xStart: -tipLen,
       xEnd: -(tipLen + ferruleLen),
       rStart: tipR,
       rEnd: ferruleR,
-      colors: const [Color(0xFFDCDCDC), Color(0xFFFFFFFF), Color(0xFFB0B0B0)],
+      colors: const [Color(0xFFE8E8E8), Color(0xFFFFFFFF), Color(0xFFC0C0C0)],
     );
 
-    // Vòng chỉ đen giữa phíp và thân ngọn
+    // Chỉ vàng / titanium nẹp chân phíp
+    final ferruleTrimColor = level >= 5 ? const Color(0xFFFFD54F) : const Color(0xFF222222);
     canvas.drawLine(
       Offset(-(tipLen + ferruleLen), -ferruleR),
       Offset(-(tipLen + ferruleLen), ferruleR),
       Paint()
-        ..color = const Color(0xFF222222)
-        ..strokeWidth = 0.6,
+        ..color = ferruleTrimColor
+        ..strokeWidth = level >= 8 ? 1.0 : 0.6,
     );
 
-    // 3. Ngọn cơ (Shaft) - thể hiện màu sắc skin đặc trưng của cây gậy
+    // 3. Ngọn cơ (Shaft) - thể hiện màu sắc đặc trưng của cây gậy
     final jointX = -stickLength * 0.52;
     drawSegment(
       xStart: -(tipLen + ferruleLen),
@@ -7846,15 +8536,177 @@ class CueBall extends BodyComponent {
       colors: cue.shaftColors,
     );
 
-    // 4. Khớp ren kim loại trang trí dát vàng / chrome (Joint Rings)
+    // HỌA TIẾT CONCEPT ANIME TRÊN THÂN NGỌN CƠ - PHÂN CẤP THEO LEVEL
+    final shaftXStart = -(tipLen + ferruleLen);
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        // Vân tôi kiếm Hamon đỏ/trắng uốn lượn sắc bén
+        final hamonPaint = Paint()
+          ..color = const Color(0xFFFF1744).withValues(alpha: level >= 6 ? 0.95 : 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = level >= 7 ? 1.2 : 0.8;
+        final hamonPath = Path()..moveTo(shaftXStart - 2, 0);
+        for (double hx = shaftXStart - 2; hx > jointX + 2; hx -= radius * 0.8) {
+          hamonPath.quadraticBezierTo(hx - radius * 0.2, -jointR * 0.45, hx - radius * 0.4, 0);
+          hamonPath.quadraticBezierTo(hx - radius * 0.6, jointR * 0.45, hx - radius * 0.8, 0);
+        }
+        canvas.drawPath(hamonPath, hamonPaint);
+
+        // Lv >= 5: Thêm đai cổ kiếm Habaki dát vàng 24K ở gốc ngọn
+        if (level >= 5) {
+          canvas.drawRect(
+            Rect.fromLTWH(jointX + radius * 0.2, -jointR * 0.8, radius * 0.5, jointR * 1.6),
+            Paint()..color = const Color(0xFFFFD54F),
+          );
+        }
+        // Lv >= 8: Khắc chìm cổ tự Diệt Quỷ dát vàng dọc sống kiếm
+        if (level >= 8) {
+          final runePaint = Paint()
+            ..color = Colors.white.withValues(alpha: 0.85)
+            ..strokeWidth = 0.6;
+          for (double rx = shaftXStart - radius * 2.0; rx > jointX + radius * 1.5; rx -= radius * 1.8) {
+            canvas.drawLine(Offset(rx, -1.0), Offset(rx - radius * 0.5, 1.0), runePaint);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.cyberNeo:
+        // Tia laser năng lượng Cyan & Magenta chạy dọc ngọn cơ
+        final beamPaint = Paint()
+          ..color = const Color(0xFF00E5FF).withValues(alpha: level >= 6 ? 0.95 : 0.75)
+          ..strokeWidth = level >= 6 ? 1.2 : 0.8;
+        canvas.drawLine(Offset(shaftXStart - 4, 0), Offset(jointX + 4, 0), beamPaint);
+
+        // Lv >= 4: Các vi mạch bán dẫn và tụ điện Nano phát quang
+        if (level >= 4) {
+          final microPaint = Paint()..color = const Color(0xFFE040FB);
+          for (double cx = shaftXStart - radius * 1.5; cx > jointX + radius * 1.5; cx -= radius * 2.2) {
+            canvas.drawRect(Rect.fromCenter(center: Offset(cx, 0), width: 2.2, height: jointR * 0.7), microPaint);
+            canvas.drawCircle(Offset(cx, 0), 1.0, Paint()..color = Colors.white);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.dragonFlame:
+        // Vệt lửa Hỏa Long rực cháy
+        final flamePaint = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(alpha: level >= 6 ? 0.95 : 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = level >= 6 ? 1.4 : 0.9;
+        canvas.drawLine(Offset(shaftXStart - 4, 0), Offset(jointX + 4, 0), flamePaint);
+
+        // Lv >= 4: Vảy rồng mạ vàng khắc nổi dọc thân
+        if (level >= 4) {
+          final scalePaint = Paint()
+            ..color = const Color(0xFFFFD54F).withValues(alpha: 0.80)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 0.9;
+          for (double dx = shaftXStart - radius * 1.2; dx > jointX + radius * 1.2; dx -= radius * 1.4) {
+            final p = Path()
+              ..moveTo(dx, -jointR * 0.4)
+              ..lineTo(dx - radius * 0.35, 0)
+              ..lineTo(dx, jointR * 0.4);
+            canvas.drawPath(p, scalePaint);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.arcaneMagic:
+        // Vòng khuyên Mana xoay quanh thân ngọn
+        final manaPaint = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: level >= 6 ? 0.90 : 0.70)
+          ..strokeWidth = level >= 6 ? 1.3 : 0.9;
+        for (double mx = shaftXStart - radius * 1.0; mx > jointX + radius * 0.8; mx -= radius * 1.4) {
+          canvas.drawLine(Offset(mx, -jointR * 0.6), Offset(mx - radius * 0.4, jointR * 0.6), manaPaint);
+          if (level >= 6) {
+            canvas.drawCircle(Offset(mx - radius * 0.2, 0), 1.2, Paint()..color = const Color(0xFFB388FF));
+          }
+        }
+        break;
+
+      case CueAnimeConcept.mechaGundam:
+        // Rãnh ghép giáp Titanium Mecha và sọc phản quang
+        final mechaLine = Paint()
+          ..color = const Color(0xFF76FF03).withValues(alpha: level >= 6 ? 0.90 : 0.70)
+          ..strokeWidth = 1.0;
+        canvas.drawLine(Offset(shaftXStart - 4, 0), Offset(jointX + 4, 0), mechaLine);
+        if (level >= 5) {
+          for (double gx = shaftXStart - radius * 1.8; gx > jointX + radius * 1.2; gx -= radius * 2.0) {
+            canvas.drawLine(Offset(gx, -jointR * 0.5), Offset(gx, jointR * 0.5), mechaLine);
+          }
+        }
+        break;
+
+      case CueAnimeConcept.sakuraZen:
+        // Cánh hoa anh đào dát vàng bay trên thân ngọn
+        final sakuraPaint = Paint()..color = const Color(0xFFFFD54F).withValues(alpha: 0.80);
+        for (double sx = shaftXStart - radius * 1.5; sx > jointX + radius * 1.2; sx -= radius * 2.0) {
+          canvas.drawOval(
+            Rect.fromCenter(center: Offset(sx, (sx.toInt() % 2 == 0 ? 1 : -1) * jointR * 0.3), width: 3.5, height: 1.8),
+            sakuraPaint,
+          );
+        }
+        break;
+
+      case CueAnimeConcept.shadowVoid:
+        final shadowLine = Paint()
+          ..color = const Color(0xFFBA68C8).withValues(alpha: 0.85)
+          ..strokeWidth = 1.0;
+        canvas.drawLine(Offset(shaftXStart - 4, 0), Offset(jointX + 4, 0), shadowLine);
+        break;
+
+      case CueAnimeConcept.frostCryo:
+        final iceLine = Paint()
+          ..color = const Color(0xFF80D8FF).withValues(alpha: 0.90)
+          ..strokeWidth = 1.0;
+        canvas.drawLine(Offset(shaftXStart - 4, 0), Offset(jointX + 4, 0), iceLine);
+        break;
+
+      case CueAnimeConcept.classic:
+        break;
+    }
+
+    // 4. Khớp ren kim loại trang trí hoặc Vành Tsuba hộ kiếm (Joint Rings / Tsuba)
     final jointLen = radius * 0.55;
-    drawSegment(
-      xStart: jointX,
-      xEnd: jointX - jointLen,
-      rStart: jointR,
-      rEnd: jointR + 0.05,
-      colors: const [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFF5A440D)],
-    );
+    if (cue.animeConcept == CueAnimeConcept.katanaSamurai) {
+      // Vành Tsuba hộ kiếm Nhật Bản dát vàng chạm khắc
+      final tsubaH = jointR * (level >= 7 ? 4.8 : 4.4);
+      final tsubaPath = Path()
+        ..addRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(jointX - radius * 0.42, -tsubaH * 0.5, radius * 0.42, tsubaH),
+            Radius.circular(radius * 0.6),
+          ),
+        );
+      canvas.drawPath(tsubaPath, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawPath(
+        tsubaPath,
+        Paint()
+          ..color = Colors.black87
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
+      // Lv >= 6: Khắc rãnh hoa văn Tsuba
+      if (level >= 6) {
+        canvas.drawCircle(Offset(jointX - radius * 0.21, -tsubaH * 0.28), 1.2, Paint()..color = const Color(0xFFB8860B));
+        canvas.drawCircle(Offset(jointX - radius * 0.21, tsubaH * 0.28), 1.2, Paint()..color = const Color(0xFFB8860B));
+      }
+    } else {
+      // Vòng ren kim loại đa tầng có vân chỉ khắc sắc sảo
+      drawSegment(
+        xStart: jointX,
+        xEnd: jointX - jointLen,
+        rStart: jointR,
+        rEnd: jointR + 0.05,
+        colors: level >= 5
+            ? const [Color(0xFFFFD54F), Color(0xFFFFF9C4), Color(0xFFB8860B)]
+            : const [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFF5A440D)],
+      );
+      if (level >= 6) {
+        // Viền khảm ngọc quý ở khớp nối
+        canvas.drawCircle(Offset(jointX - jointLen * 0.5, 0), jointR * 0.35, Paint()..color = cue.auraColor);
+      }
+    }
 
     // 5. Chuôi gậy (Handle / Butt) - hoa văn tay cầm của skin
     final buttCapX = -stickLength + radius * 0.50;
@@ -7866,7 +8718,69 @@ class CueBall extends BodyComponent {
       colors: cue.handleColors,
     );
 
-    // 6. Đệm cao su chống va đập ở đuôi gậy (Bumper)
+    // Họa tiết Concept Anime trên chuôi tay cầm - PHÂN CẤP THEO LEVEL
+    final handleXStart = jointX - jointLen;
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        // Đan dây quấn Tsuka hình quả trám (Diamond laces)
+        final tsukaLace = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: level >= 6 ? 0.90 : 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = level >= 6 ? 1.4 : 1.1;
+        for (double tx = handleXStart - radius * 0.6; tx > buttCapX + radius * 0.6; tx -= radius * 1.2) {
+          final diamond = Path()
+            ..moveTo(tx, 0)
+            ..lineTo(tx - radius * 0.3, -buttR * 0.6)
+            ..lineTo(tx - radius * 0.6, 0)
+            ..lineTo(tx - radius * 0.3, buttR * 0.6)
+            ..close();
+          canvas.drawPath(diamond, tsukaLace);
+
+          // Lv >= 5: Hạt ngọc Menuki dát vàng cài giữa tâm đan dây
+          if (level >= 5) {
+            canvas.drawCircle(Offset(tx - radius * 0.3, 0), 1.0, Paint()..color = const Color(0xFFFF1744));
+          }
+        }
+        break;
+
+      case CueAnimeConcept.cyberNeo:
+        final circuitP = Paint()
+          ..color = const Color(0xFF00E5FF).withValues(alpha: 0.85)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(Offset(handleXStart - radius * 0.5, -buttR * 0.3), Offset(buttCapX + radius * 0.5, -buttR * 0.3), circuitP);
+        canvas.drawLine(Offset(handleXStart - radius * 0.5, buttR * 0.3), Offset(buttCapX + radius * 0.5, buttR * 0.3), circuitP..color = const Color(0xFFE040FB));
+        break;
+
+      case CueAnimeConcept.mechaGundam:
+        // Sọc cảnh báo nguy hiểm EVA Cam/Đen
+        final hazardPaint = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(alpha: 0.85)
+          ..strokeWidth = 2.2;
+        for (double hx = handleXStart - radius * 0.6; hx > buttCapX + radius * 0.6; hx -= radius * 1.5) {
+          canvas.drawLine(Offset(hx, -buttR * 0.65), Offset(hx - radius * 0.5, buttR * 0.65), hazardPaint);
+        }
+        break;
+
+      case CueAnimeConcept.dragonFlame:
+        final scalePaint = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: 0.85)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        for (double sx = handleXStart - radius * 0.6; sx > buttCapX + radius * 0.6; sx -= radius * 1.1) {
+          canvas.drawLine(Offset(sx, -buttR * 0.5), Offset(sx + radius * 0.3, 0), scalePaint);
+          canvas.drawLine(Offset(sx + radius * 0.3, 0), Offset(sx, buttR * 0.5), scalePaint);
+        }
+        break;
+
+      case CueAnimeConcept.arcaneMagic:
+      case CueAnimeConcept.shadowVoid:
+      case CueAnimeConcept.sakuraZen:
+      case CueAnimeConcept.frostCryo:
+      case CueAnimeConcept.classic:
+        break;
+    }
+
+    // 6. Đệm cao su chống va đập & VIÊN NGỌC KHẢM ĐUÔI GẬY (Butt Bumper & Gemstone)
     final bumperPath = Path()
       ..moveTo(buttCapX, -buttR)
       ..arcToPoint(
@@ -7881,6 +8795,27 @@ class CueBall extends BodyComponent {
       )
       ..close();
     canvas.drawPath(bumperPath, Paint()..color = const Color(0xFF141414));
+
+    // Lv >= 5: Viên ngọc linh hồn khảm đáy chuôi cơ (Butt Gemstone Bezel)
+    if (level >= 5) {
+      final gemColor = switch (cue.animeConcept) {
+        CueAnimeConcept.katanaSamurai => const Color(0xFFFF1744), // Hồng ngọc Ruby
+        CueAnimeConcept.cyberNeo => const Color(0xFF00E5FF),      // Pha lê Cyan
+        CueAnimeConcept.dragonFlame => const Color(0xFFFF6D00),   // Hỏa ngọc
+        CueAnimeConcept.arcaneMagic => const Color(0xFFB388FF),   // Thạch anh tím
+        CueAnimeConcept.shadowVoid => const Color(0xFF6A1B9A),    // Ngọc hắc ám
+        CueAnimeConcept.mechaGundam => const Color(0xFF76FF03),   // Hạt nhân xanh
+        CueAnimeConcept.sakuraZen => const Color(0xFFFF80AB),     // Thạch anh hồng
+        CueAnimeConcept.frostCryo => const Color(0xFF80D8FF),     // Lam ngọc
+        CueAnimeConcept.classic => const Color(0xFFFFD54F),
+      };
+
+      // Đĩa kim loại đỡ ngọc
+      canvas.drawCircle(Offset(buttCapX + radius * 0.15, 0), buttR * 0.6, Paint()..color = const Color(0xFFFFD54F));
+      // Viên đá quý phát quang
+      canvas.drawCircle(Offset(buttCapX + radius * 0.15, 0), buttR * 0.42, Paint()..color = gemColor);
+      canvas.drawCircle(Offset(buttCapX + radius * 0.10, -buttR * 0.12), buttR * 0.15, Paint()..color = Colors.white.withValues(alpha: 0.90));
+    }
 
     canvas.restore();
   }

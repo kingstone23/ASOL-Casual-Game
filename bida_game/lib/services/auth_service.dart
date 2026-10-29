@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/foundation.dart';
 import 'progression_service.dart';
+import 'language_service.dart';
 
 class AuthService extends ChangeNotifier {
   static final AuthService instance = AuthService._internal();
@@ -200,6 +201,47 @@ class AuthService extends ChangeNotifier {
     }
   }
 
+  /// Kiểm tra xem tên hiển thị đã tồn tại trên hệ thống hay chưa (chống trùng lặp tên người chơi)
+  Future<bool> isDisplayNameTaken(String name) async {
+    final clean = name.trim().toLowerCase();
+    if (clean.isEmpty) return false;
+
+    if (_database != null) {
+      try {
+        // 1. Kiểm tra trong nhánh ranking
+        final rankSnap = await _database!.ref('ranking').get().timeout(const Duration(seconds: 3));
+        if (rankSnap.exists && rankSnap.value is Map) {
+          final data = Map<dynamic, dynamic>.from(rankSnap.value as Map);
+          for (final val in data.values) {
+            if (val is Map) {
+              final dName = (val['displayName'] as String?)?.trim().toLowerCase();
+              if (dName != null && dName == clean) {
+                return true;
+              }
+            }
+          }
+        }
+
+        // 2. Kiểm tra trong nhánh accounts
+        final accSnap = await _database!.ref('accounts').get().timeout(const Duration(seconds: 3));
+        if (accSnap.exists && accSnap.value is Map) {
+          final data = Map<dynamic, dynamic>.from(accSnap.value as Map);
+          for (final val in data.values) {
+            if (val is Map) {
+              final dName = (val['displayName'] as String?)?.trim().toLowerCase();
+              if (dName != null && dName == clean) {
+                return true;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error checking display name uniqueness: $e');
+      }
+    }
+    return false;
+  }
+
   /// Đăng ký tài khoản mới
   /// Người dùng được thêm trực tiếp vào Firebase Authentication và Realtime Database
   Future<String?> register({
@@ -225,6 +267,14 @@ class AuthService extends ChangeNotifier {
         _isLoading = false;
         notifyListeners();
         return 'Vui lòng nhập tên hiển thị.';
+      }
+
+      // Kiểm tra tên hiển thị không được trùng với người chơi trước
+      final isTaken = await isDisplayNameTaken(displayName.trim());
+      if (isTaken) {
+        _isLoading = false;
+        notifyListeners();
+        return 'auth_name_taken'.tr;
       }
 
       if (!_isFirebaseReady || _auth == null) {

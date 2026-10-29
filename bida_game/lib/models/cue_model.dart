@@ -8,6 +8,27 @@ enum CueRarity {
   legendary,
 }
 
+/// Hệ Concept Anime đặc trưng của cây cơ
+enum CueAnimeConcept {
+  classic('Cổ Điển', 'Classic', Icons.sports),
+  katanaSamurai('Kiếm Sĩ Nichirin', 'Nichirin Samurai', Icons.flash_on),
+  cyberNeo('Cyberpunk Neo', 'Cyberpunk Neo', Icons.memory),
+  dragonFlame('Hỏa Long Shonen', 'Dragon Flame', Icons.local_fire_department),
+  arcaneMagic('Ma Pháp Tinh Tú', 'Arcane Astral', Icons.auto_awesome),
+  shadowVoid('Quân Vương Bóng Tối', 'Shadow Monarch', Icons.dark_mode),
+  mechaGundam('Biomecha EVA', 'Biomecha Core', Icons.smart_toy),
+  sakuraZen('Hoa Anh Đào', 'Sakura Spirit', Icons.spa),
+  frostCryo('Băng Phong Bắc Cực', 'Cryo Frost', Icons.ac_unit);
+
+  final String viLabel;
+  final String enLabel;
+  final IconData icon;
+  const CueAnimeConcept(this.viLabel, this.enLabel, this.icon);
+
+  String get localizedLabel =>
+      LanguageService.instance.currentCode == 'vi' ? viLabel : enLabel;
+}
+
 extension CueRarityExt on CueRarity {
   String get displayName {
     return LanguageService.instance.localizeCueRarity(name, switch (this) {
@@ -77,6 +98,7 @@ class CueModel {
   final Color tipColor;
   final Color auraColor;
   final Color ballTrailColor;
+  final CueAnimeConcept animeConcept;
 
   const CueModel({
     required this.id,
@@ -93,6 +115,7 @@ class CueModel {
     required this.tipColor,
     required this.auraColor,
     required this.ballTrailColor,
+    this.animeConcept = CueAnimeConcept.classic,
   });
 
   bool get isFree => priceCoins == null && priceDiamonds == null;
@@ -175,6 +198,7 @@ class CueCatalog {
     tipColor: Color(0xFF5D4037),
     auraColor: Color(0x33FFFFFF),
     ballTrailColor: Color(0x44FFFFFF),
+    animeConcept: CueAnimeConcept.classic,
   );
 
   static const CueModel titanStriker = CueModel(
@@ -191,6 +215,7 @@ class CueCatalog {
     tipColor: Color(0xFF78909C),
     auraColor: Color(0x6690A4AE),
     ballTrailColor: Color(0x88CFD8DC),
+    animeConcept: CueAnimeConcept.mechaGundam,
   );
 
   static const CueModel frostbite = CueModel(
@@ -207,6 +232,7 @@ class CueCatalog {
     tipColor: Color(0xFFE1F5FE),
     auraColor: Color(0x8803A9F4),
     ballTrailColor: Color(0xAA81D4FA),
+    animeConcept: CueAnimeConcept.frostCryo,
   );
 
   static const CueModel goldenBull = CueModel(
@@ -223,6 +249,7 @@ class CueCatalog {
     tipColor: Color(0xFFFFE082),
     auraColor: Color(0x99FFC107),
     ballTrailColor: Color(0xAAFFD54F),
+    animeConcept: CueAnimeConcept.dragonFlame,
   );
 
   static const CueModel cyberNeo = CueModel(
@@ -239,6 +266,7 @@ class CueCatalog {
     tipColor: Color(0xFF00E5FF),
     auraColor: Color(0xAAAB47BC),
     ballTrailColor: Color(0xCCD500F9),
+    animeConcept: CueAnimeConcept.cyberNeo,
   );
 
   static const CueModel phoenixFlame = CueModel(
@@ -255,6 +283,7 @@ class CueCatalog {
     tipColor: Color(0xFFFFEB3B),
     auraColor: Color(0xBBFF5722),
     ballTrailColor: Color(0xDDFF3D00),
+    animeConcept: CueAnimeConcept.dragonFlame,
   );
 
   static const CueModel dragonGod = CueModel(
@@ -271,6 +300,111 @@ class CueCatalog {
     tipColor: Color(0xFFFFFFFF),
     auraColor: Color(0xCCFFD700),
     ballTrailColor: Color(0xFFFFD700),
+    animeConcept: CueAnimeConcept.dragonFlame,
+  );
+
+  // --- CÁC MẪU CƠ CONCEPT ANIME ĐỘC ĐÁO MỚI ---
+
+  static const CueModel nichirinKatana = CueModel(
+    id: 'nichirin_katana',
+    name: 'Hơi Thở Mặt Trời - Nichirin',
+    rarity: CueRarity.legendary,
+    requiredLevel: 15,
+    priceCoins: 65000,
+    description: 'Tuyệt kỹ kiếm thuật diệt quỷ, thân cơ hóa kiếm hắc kim với đường sống kiếm rực lửa và vành Tsuba hộ kiếm.',
+    passivePerk: 'Sun Slash: Đường cơ sắc bén xé gió, tăng 22% xung lực cắt góc bi.',
+    baseStats: CueStats(force: 8.5, aim: 9.0, spin: 8.5, time: 7.0),
+    shaftColors: [Color(0xFF1E1E1E), Color(0xFFD50000), Color(0xFF111111)],
+    handleColors: [Color(0xFF263238), Color(0xFFFFD54F), Color(0xFF1B0000)],
+    tipColor: Color(0xFFFF1744),
+    auraColor: Color(0xEEFF1744),
+    ballTrailColor: Color(0xFFFF5252),
+    animeConcept: CueAnimeConcept.katanaSamurai,
+  );
+
+  static const CueModel cyberRebellion = CueModel(
+    id: 'cyber_rebellion',
+    name: 'Pháo Năng Lượng Cyber Mecha',
+    rarity: CueRarity.epic,
+    requiredLevel: 18,
+    priceCoins: 55000,
+    description: 'Súng trường xung điện Neo Tokyo tích hợp vi mạch bán dẫn và bộ tản nhiệt plasma xanh neon.',
+    passivePerk: 'Overclock Pulse: Phóng điện định hướng, tia ngắm ổn định tuyệt đối.',
+    baseStats: CueStats(force: 7.8, aim: 8.8, spin: 7.0, time: 6.5),
+    shaftColors: [Color(0xFF00E5FF), Color(0xFF18FFFF), Color(0xFF00B0FF)],
+    handleColors: [Color(0xFF212121), Color(0xFF00E5FF), Color(0xFFD500F9)],
+    tipColor: Color(0xFF00E5FF),
+    auraColor: Color(0xDD00E5FF),
+    ballTrailColor: Color(0xFF18FFFF),
+    animeConcept: CueAnimeConcept.cyberNeo,
+  );
+
+  static const CueModel arcaneAstral = CueModel(
+    id: 'arcane_astral',
+    name: 'Trượng Ma Pháp Tinh Tú',
+    rarity: CueRarity.legendary,
+    requiredLevel: 28,
+    priceDiamonds: 350,
+    description: 'Pháp bảo của đại phù thủy cổ đại, kết tinh từ pha lê mana đa chiều tỏa hào quang tinh vân vũ trụ.',
+    passivePerk: 'Astral Focus: Kéo dài tia ngắm ma thuật và hiển thị vòng tròn ma pháp va chạm.',
+    baseStats: CueStats(force: 9.0, aim: 9.8, spin: 9.0, time: 8.5),
+    shaftColors: [Color(0xFFE1BEE7), Color(0xFF7C4DFF), Color(0xFF311B92)],
+    handleColors: [Color(0xFF1A237E), Color(0xFFFFD700), Color(0xFF4A148C)],
+    tipColor: Color(0xFFE040FB),
+    auraColor: Color(0xEEE040FB),
+    ballTrailColor: Color(0xFFB388FF),
+    animeConcept: CueAnimeConcept.arcaneMagic,
+  );
+
+  static const CueModel shadowMonarch = CueModel(
+    id: 'shadow_monarch',
+    name: 'Lưỡi Hái Quân Vương Bóng Tối',
+    rarity: CueRarity.legendary,
+    requiredLevel: 32,
+    priceDiamonds: 500,
+    description: 'Vũ khí thần thoại thức tỉnh từ lãnh địa hắc ám, bao phủ bởi ngọn lửa tím và sương mù linh hồn bất diệt.',
+    passivePerk: 'Shadow Extraction: Tăng vọt 30% hiệu ứng xoáy áp-phê trô lùi cực mạnh.',
+    baseStats: CueStats(force: 9.5, aim: 9.0, spin: 10.0, time: 7.5),
+    shaftColors: [Color(0xFF212121), Color(0xFF651FFF), Color(0xFF0D001A)],
+    handleColors: [Color(0xFF121212), Color(0xFF4527A0), Color(0xFF000000)],
+    tipColor: Color(0xFF7C4DFF),
+    auraColor: Color(0xEE7C4DFF),
+    ballTrailColor: Color(0xFF651FFF),
+    animeConcept: CueAnimeConcept.shadowVoid,
+  );
+
+  static const CueModel sakuraBloom = CueModel(
+    id: 'sakura_bloom',
+    name: 'Thần Kiếm Hoa Anh Đào',
+    rarity: CueRarity.epic,
+    requiredLevel: 10,
+    priceCoins: 38000,
+    description: 'Chế tác từ gỗ anh đào nghìn năm sơn mài xà cừ trắng hồng, tỏa cánh hoa rơi mỗi nhịp vung cơ.',
+    passivePerk: 'Petal Dance: Cú đánh siêu êm ái, giảm rung lắc và triệt tiêu sai lệch góc.',
+    baseStats: CueStats(force: 7.0, aim: 8.0, spin: 7.5, time: 6.0),
+    shaftColors: [Color(0xFFFCE4EC), Color(0xFFF48FB1), Color(0xFFC2185B)],
+    handleColors: [Color(0xFF880E4F), Color(0xFFFFD54F), Color(0xFF4A148C)],
+    tipColor: Color(0xFFFF80AB),
+    auraColor: Color(0xDDFF80AB),
+    ballTrailColor: Color(0xFFFF4081),
+    animeConcept: CueAnimeConcept.sakuraZen,
+  );
+
+  static const CueModel mechaEvangel = CueModel(
+    id: 'mecha_evangel',
+    name: 'Thương Phá Giáp EVA-Core',
+    rarity: CueRarity.legendary,
+    requiredLevel: 24,
+    priceCoins: 90000,
+    description: 'Mẫu cơ vũ khí nhân tạo sinh học màu tím lục neon đặc trưng cùng lá chắn năng lượng tuyệt đối.',
+    passivePerk: 'AT-Field Crash: Xung lực phá bi kinh hoàng và lực đàn hồi nảy băng vượt trội.',
+    baseStats: CueStats(force: 9.8, aim: 8.5, spin: 8.0, time: 7.5),
+    shaftColors: [Color(0xFF4A148C), Color(0xFF76FF03), Color(0xFF1B5E20)],
+    handleColors: [Color(0xFF263238), Color(0xFFFF6D00), Color(0xFF37474F)],
+    tipColor: Color(0xFF76FF03),
+    auraColor: Color(0xEE76FF03),
+    ballTrailColor: Color(0xFF64DD17),
+    animeConcept: CueAnimeConcept.mechaGundam,
   );
 
   // Aliases
@@ -282,10 +416,16 @@ class CueCatalog {
   static const List<CueModel> allCues = [
     standardCue,
     titanStriker,
+    sakuraBloom,
     frostbite,
+    nichirinKatana,
+    cyberRebellion,
     goldenBull,
+    mechaEvangel,
     cyberNeo,
     phoenixFlame,
+    arcaneAstral,
+    shadowMonarch,
     dragonGod,
   ];
 

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/progression_service.dart';
+import '../models/table_skin_model.dart';
 
 class ComboEvent {
   final int count;
@@ -141,6 +143,8 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
     final numSize = isUltraCompact ? 42.0 : (isCompact ? 54.0 : 68.0);
     final wordSize = isUltraCompact ? 32.0 : (isCompact ? 42.0 : 52.0);
 
+    final concept = ProgressionService.instance.equippedTable.animeConcept;
+
     return IgnorePointer(
       child: Center(
         child: AnimatedBuilder(
@@ -154,14 +158,23 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                   angle: _rotateAnimation.value,
                   child: Transform.scale(
                     scale: _scaleAnimation.value,
-                    child: Row(
+                    child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        _build3DNumber(count, numSize),
-                        SizedBox(width: isUltraCompact ? 4 : 8),
-                        _build3DComboWord(wordSize),
+                        if (concept != TableAnimeConcept.classic) ...[
+                          _buildAnimeConceptTag(concept, isUltraCompact ? 10.0 : 12.0),
+                          const SizedBox(height: 2),
+                        ],
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            _build3DNumber(count, numSize, concept),
+                            SizedBox(width: isUltraCompact ? 4 : 8),
+                            _build3DComboWord(wordSize, concept),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -174,10 +187,133 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
     );
   }
 
+  /// Huy hiệu Anime Concept của Combo
+  Widget _buildAnimeConceptTag(TableAnimeConcept concept, double fontSize) {
+    String tagText;
+    Color tagColor;
+    Color tagBg;
+
+    switch (concept) {
+      case TableAnimeConcept.cyberTokyo:
+        tagText = '⚡ CYBER 連撃 BURST ⚡';
+        tagColor = const Color(0xFF00E5FF);
+        tagBg = const Color(0x3300E5FF);
+        break;
+      case TableAnimeConcept.sakuraZen:
+        tagText = '🌸 華麗なる連撃 SAKURA 🌸';
+        tagColor = const Color(0xFFFF80AB);
+        tagBg = const Color(0x33FF80AB);
+        break;
+      case TableAnimeConcept.dragonLava:
+        tagText = '🔥 爆炎連撃 DRAGON FLAME 🔥';
+        tagColor = const Color(0xFFFF9100);
+        tagBg = const Color(0x33FF9100);
+        break;
+      case TableAnimeConcept.arcaneGrimoire:
+        tagText = '✨ 秘術詠唱 ARCANE ✨';
+        tagColor = const Color(0xFFB388FF);
+        tagBg = const Color(0x337C4DFF);
+        break;
+      case TableAnimeConcept.shadowVoid:
+        tagText = '🌑 影の支配 SHADOW 🌑';
+        tagColor = const Color(0xFFBA68C8);
+        tagBg = const Color(0x336A1B9A);
+        break;
+      case TableAnimeConcept.mechaEva:
+        tagText = '🛡️ 殲滅モード MECHA EVA 🛡️';
+        tagColor = const Color(0xFF76FF03);
+        tagBg = const Color(0x3376FF03);
+        break;
+      case TableAnimeConcept.classic:
+        return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+      decoration: BoxDecoration(
+        color: tagBg,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: tagColor.withValues(alpha: 0.6), width: 1),
+        boxShadow: [
+          BoxShadow(color: tagColor.withValues(alpha: 0.3), blurRadius: 6),
+        ],
+      ),
+      child: Text(
+        tagText,
+        style: TextStyle(
+          color: tagColor,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.0,
+        ),
+      ),
+    );
+  }
+
   /// Số Combo (Màu Vàng - Cam 3D viền đậm, đổ bóng khối)
-  Widget _build3DNumber(int count, double fontSize) {
+  Widget _build3DNumber(int count, double fontSize, TableAnimeConcept concept) {
     final text = '$count';
     const skew = -0.18; // Nghiêng phong cách arcade thể thao
+
+    List<Color> numberGradient;
+    switch (concept) {
+      case TableAnimeConcept.cyberTokyo:
+        numberGradient = const [
+          Color(0xFFE0F7FA),
+          Color(0xFF00E5FF),
+          Color(0xFF00B0FF),
+          Color(0xFF2979FF),
+        ];
+        break;
+      case TableAnimeConcept.sakuraZen:
+        numberGradient = const [
+          Color(0xFFFFF0F5),
+          Color(0xFFFF80AB),
+          Color(0xFFF06292),
+          Color(0xFFE91E63),
+        ];
+        break;
+      case TableAnimeConcept.dragonLava:
+        numberGradient = const [
+          Color(0xFFFFF8E1),
+          Color(0xFFFFD54F),
+          Color(0xFFFF6D00),
+          Color(0xFFDD2C00),
+        ];
+        break;
+      case TableAnimeConcept.arcaneGrimoire:
+        numberGradient = const [
+          Color(0xFFEDE7F6),
+          Color(0xFFB388FF),
+          Color(0xFF7C4DFF),
+          Color(0xFF512DA8),
+        ];
+        break;
+      case TableAnimeConcept.shadowVoid:
+        numberGradient = const [
+          Color(0xFFF3E5F5),
+          Color(0xFFCE93D8),
+          Color(0xFFAB47BC),
+          Color(0xFF6A1B9A),
+        ];
+        break;
+      case TableAnimeConcept.mechaEva:
+        numberGradient = const [
+          Color(0xFFF1F8E9),
+          Color(0xFFB2FF59),
+          Color(0xFF76FF03),
+          Color(0xFF64DD17),
+        ];
+        break;
+      case TableAnimeConcept.classic:
+        numberGradient = const [
+          Color(0xFFFFF9C4),
+          Color(0xFFFFEA00),
+          Color(0xFFFFB300),
+          Color(0xFFFF6D00),
+        ];
+        break;
+    }
 
     return Transform(
       transform: Matrix4.skewX(skew),
@@ -191,7 +327,7 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
               fontSize: fontSize,
               fontWeight: FontWeight.w900,
               fontStyle: FontStyle.italic,
-              color: const Color(0xFF331400),
+              color: const Color(0xFF1A1A1A),
               shadows: const [
                 Shadow(
                   color: Colors.black87,
@@ -199,7 +335,7 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                   blurRadius: 10,
                 ),
                 Shadow(
-                  color: Color(0xFF552000),
+                  color: Colors.black54,
                   offset: Offset(-2, 4),
                   blurRadius: 0,
                 ),
@@ -218,21 +354,16 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                 ..strokeWidth = fontSize * 0.16
                 ..strokeCap = StrokeCap.round
                 ..strokeJoin = StrokeJoin.round
-                ..color = const Color(0xFF4A1A00),
+                ..color = const Color(0xFF1E1E1E),
             ),
           ),
-          // Lớp 3: Màu Gradient Vàng Chanh -> Vàng Cam -> Cam Đỏ rực lửa
+          // Lớp 3: Màu Gradient theo Anime Concept
           ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
+            shaderCallback: (bounds) => LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFFFF9C4), // Vàng sáng trên đỉnh
-                Color(0xFFFFEA00), // Vàng rực
-                Color(0xFFFFB300), // Vàng cam
-                Color(0xFFFF6D00), // Cam đậm ở đáy
-              ],
-              stops: [0.0, 0.25, 0.65, 1.0],
+              colors: numberGradient,
+              stops: const [0.0, 0.25, 0.65, 1.0],
             ).createShader(bounds),
             child: Text(
               text,
@@ -249,9 +380,85 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
     );
   }
 
-  /// Chữ "COMBO" (Màu Xanh Dương Điện Tử 3D viền trắng nổi)
-  Widget _build3DComboWord(double fontSize) {
-    const text = 'COMBO';
+  /// Chữ "COMBO" độc quyền theo Concept Anime
+  Widget _build3DComboWord(double fontSize, TableAnimeConcept concept) {
+    String text;
+    List<Color> wordGradient;
+    Color innerStrokeColor;
+
+    switch (concept) {
+      case TableAnimeConcept.cyberTokyo:
+        text = 'CYBER 連撃';
+        wordGradient = const [
+          Color(0xFFE0F7FA),
+          Color(0xFF00E5FF),
+          Color(0xFFE040FB),
+          Color(0xFF7C4DFF),
+        ];
+        innerStrokeColor = const Color(0xFF00B0FF);
+        break;
+      case TableAnimeConcept.sakuraZen:
+        text = 'ISSEN 一閃';
+        wordGradient = const [
+          Color(0xFFFFF0F5),
+          Color(0xFFFF80AB),
+          Color(0xFFF06292),
+          Color(0xFF880E4F),
+        ];
+        innerStrokeColor = const Color(0xFFC2185B);
+        break;
+      case TableAnimeConcept.dragonLava:
+        text = 'BURNING 爆炎';
+        wordGradient = const [
+          Color(0xFFFFF8E1),
+          Color(0xFFFFD54F),
+          Color(0xFFFF6D00),
+          Color(0xFFB71C1C),
+        ];
+        innerStrokeColor = const Color(0xFFBF360C);
+        break;
+      case TableAnimeConcept.arcaneGrimoire:
+        text = 'ARCANE 詠唱';
+        wordGradient = const [
+          Color(0xFFEDE7F6),
+          Color(0xFFB388FF),
+          Color(0xFF7C4DFF),
+          Color(0xFF311B92),
+        ];
+        innerStrokeColor = const Color(0xFF512DA8);
+        break;
+      case TableAnimeConcept.shadowVoid:
+        text = 'SHADOW 支配';
+        wordGradient = const [
+          Color(0xFFF3E5F5),
+          Color(0xFFCE93D8),
+          Color(0xFF8E24AA),
+          Color(0xFF1A002C),
+        ];
+        innerStrokeColor = const Color(0xFF4A148C);
+        break;
+      case TableAnimeConcept.mechaEva:
+        text = 'CRITICAL 殲滅';
+        wordGradient = const [
+          Color(0xFFF1F8E9),
+          Color(0xFF76FF03),
+          Color(0xFFFF9100),
+          Color(0xFFBF360C),
+        ];
+        innerStrokeColor = const Color(0xFF33691E);
+        break;
+      case TableAnimeConcept.classic:
+        text = 'COMBO';
+        wordGradient = const [
+          Color(0xFFE0F7FA),
+          Color(0xFF00E5FF),
+          Color(0xFF0091EA),
+          Color(0xFF0D47A1),
+        ];
+        innerStrokeColor = const Color(0xFF01579B);
+        break;
+    }
+
     const skew = -0.18; // Đồng bộ góc nghiêng với số
 
     return Transform(
@@ -267,7 +474,7 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
               fontWeight: FontWeight.w900,
               fontStyle: FontStyle.italic,
               letterSpacing: 1.5,
-              color: const Color(0xFF001F3F),
+              color: const Color(0xFF0A0A0A),
               shadows: const [
                 Shadow(
                   color: Colors.black87,
@@ -275,7 +482,7 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                   blurRadius: 10,
                 ),
                 Shadow(
-                  color: Color(0xFF002244),
+                  color: Colors.black54,
                   offset: Offset(-2, 4),
                   blurRadius: 0,
                 ),
@@ -298,7 +505,7 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                 ..color = Colors.white,
             ),
           ),
-          // Lớp 3: Viền Xanh Đậm Nhẹ bên trong viền trắng để tạo độ nét viền
+          // Lớp 3: Viền màu đậm bên trong viền trắng để tạo độ nét viền
           Text(
             text,
             style: TextStyle(
@@ -311,21 +518,16 @@ class _ComboBannerOverlayState extends State<ComboBannerOverlay>
                 ..strokeWidth = fontSize * 0.08
                 ..strokeCap = StrokeCap.round
                 ..strokeJoin = StrokeJoin.round
-                ..color = const Color(0xFF01579B),
+                ..color = innerStrokeColor,
             ),
           ),
-          // Lớp 4: Màu Gradient Xanh Cyan -> Xanh Dương Điện Tử -> Xanh Navy
+          // Lớp 4: Màu Gradient Concept Anime
           ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
+            shaderCallback: (bounds) => LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: [
-                Color(0xFFE0F7FA), // Xanh ngọc rất sáng ở mép trên
-                Color(0xFF00E5FF), // Xanh Cyan rực rỡ
-                Color(0xFF0091EA), // Xanh da trời sâu
-                Color(0xFF0D47A1), // Xanh hoàng gia ở đáy
-              ],
-              stops: [0.0, 0.28, 0.68, 1.0],
+              colors: wordGradient,
+              stops: const [0.0, 0.28, 0.68, 1.0],
             ).createShader(bounds),
             child: Text(
               text,

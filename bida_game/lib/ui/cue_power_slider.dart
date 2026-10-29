@@ -434,60 +434,143 @@ class _RealisticCapsuleCuePainter extends CustomPainter {
     final stickLeft = centerX - halfStick;
     final stickRight = centerX + halfStick;
 
-    // 1. Thân cơ gỗ phong 3D (Shaft & Handle)
-    final cueBodyRect = Rect.fromLTWH(stickLeft, 0, stickWidth, h);
-    final cueBodyPath = Path()
-      ..moveTo(stickLeft, halfStick)
+    // 1. Thân cơ 3D chia 2 phần: Ngọn cơ (Shaft) phía trên và Chuôi cơ (Handle) phía dưới
+    final ferruleHeight = 9.0;
+    final shaftStartY = 6.0 + ferruleHeight;
+    final ringY = h * 0.48;
+
+    // Ngọn cơ (Shaft)
+    final shaftRect = Rect.fromLTRB(stickLeft, shaftStartY, stickRight, ringY);
+    final baseShaftColors = cue.shaftColors.isNotEmpty ? cue.shaftColors : const [Color(0xFFDF9E52), Color(0xFFC78438)];
+    final shaftGradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        baseShaftColors[0],
+        baseShaftColors.length > 1 ? baseShaftColors[1] : baseShaftColors[0],
+        Colors.white.withValues(alpha: 0.65), // Vệt bóng sáng trắng phản chiếu
+        baseShaftColors.last,
+        const Color(0xFF3E2723),
+      ],
+      stops: const [0.0, 0.28, 0.50, 0.78, 1.0],
+    );
+    canvas.drawRect(shaftRect, Paint()..shader = shaftGradient.createShader(shaftRect));
+
+    // Họa tiết Concept Anime trên ngọn cơ trong Slider
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        final hamonPaint = Paint()
+          ..color = const Color(0xFFFF1744).withValues(alpha: level >= 6 ? 0.95 : 0.80)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        final hamonPath = Path()..moveTo(centerX, shaftStartY + 2);
+        for (double hy = shaftStartY + 2; hy < ringY - 4; hy += 10) {
+          hamonPath.quadraticBezierTo(centerX - 1.5, hy + 2.5, centerX, hy + 5);
+          hamonPath.quadraticBezierTo(centerX + 1.5, hy + 7.5, centerX, hy + 10);
+        }
+        canvas.drawPath(hamonPath, hamonPaint);
+        if (level >= 5) {
+          // Habaki mạ vàng
+          canvas.drawRect(Rect.fromLTWH(stickLeft, ringY - 6, stickWidth, 6), Paint()..color = const Color(0xFFFFD54F));
+        }
+        break;
+
+      case CueAnimeConcept.cyberNeo:
+        final beamPaint = Paint()
+          ..color = const Color(0xFF00E5FF).withValues(alpha: 0.90)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(Offset(centerX, shaftStartY), Offset(centerX, ringY), beamPaint);
+        break;
+
+      case CueAnimeConcept.dragonFlame:
+        final flamePaint = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(alpha: 0.85)
+          ..strokeWidth = 1.2;
+        canvas.drawLine(Offset(centerX, shaftStartY), Offset(centerX, ringY), flamePaint);
+        break;
+
+      default:
+        break;
+    }
+
+    // Chuôi cơ (Handle)
+    final handleRect = Rect.fromLTRB(stickLeft, ringY + 4, stickRight, h - 8);
+    final baseHandleColors = cue.handleColors.isNotEmpty ? cue.handleColors : const [Color(0xFF263238), Color(0xFF1B0000)];
+    final handleGradient = LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [
+        baseHandleColors[0],
+        baseHandleColors.length > 1 ? baseHandleColors[1] : baseHandleColors[0],
+        Colors.white.withValues(alpha: 0.55),
+        baseHandleColors.last,
+        Colors.black87,
+      ],
+      stops: const [0.0, 0.28, 0.50, 0.78, 1.0],
+    );
+
+    final handleBodyPath = Path()
+      ..moveTo(stickLeft, ringY + 4)
       ..lineTo(stickLeft, h - 8)
       ..arcToPoint(
         Offset(stickRight, h - 8),
         radius: Radius.circular(halfStick),
         clockwise: false,
       )
-      ..lineTo(stickRight, halfStick)
+      ..lineTo(stickRight, ringY + 4)
       ..close();
+    canvas.drawPath(handleBodyPath, Paint()..shader = handleGradient.createShader(handleRect));
 
-    // Dải gradient màu gỗ tự nhiên hoặc màu skin cơ trang bị
-    final baseWoodColors = cue.shaftColors.isNotEmpty
-        ? cue.shaftColors
-        : const [
-            Color(0xFF8D5322),
-            Color(0xFFDF9E52),
-            Color(0xFFFBE4C2),
-            Color(0xFFC78438),
-            Color(0xFF754013),
-          ];
+    // Họa tiết Anime trên chuôi cơ
+    switch (cue.animeConcept) {
+      case CueAnimeConcept.katanaSamurai:
+        final tsukaPaint = Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: level >= 6 ? 0.90 : 0.75)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0;
+        for (double ty = ringY + 10; ty < h - 16; ty += 12) {
+          final p = Path()
+            ..moveTo(centerX, ty)
+            ..lineTo(centerX - 3.5, ty + 4)
+            ..lineTo(centerX, ty + 8)
+            ..lineTo(centerX + 3.5, ty + 4)
+            ..close();
+          canvas.drawPath(p, tsukaPaint);
+        }
+        break;
 
-    final woodGradient = LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
-      colors: [
-        baseWoodColors[0],
-        baseWoodColors[baseWoodColors.length > 2 ? 1 : 0],
-        const Color(0xFFFDF0D8), // Ánh sáng bóng trụ ở giữa
-        baseWoodColors[baseWoodColors.length > 2 ? 2 : baseWoodColors.length - 1],
-        const Color(0xFF5A310C), // Đổ bóng cạnh phải
-      ],
-      stops: const [0.0, 0.28, 0.50, 0.76, 1.0],
-    );
+      case CueAnimeConcept.mechaGundam:
+        final hazardP = Paint()
+          ..color = const Color(0xFFFF6D00).withValues(alpha: 0.85)
+          ..strokeWidth = 2.0;
+        for (double hy = ringY + 12; hy < h - 16; hy += 14) {
+          canvas.drawLine(Offset(stickLeft + 2, hy), Offset(stickRight - 2, hy + 5), hazardP);
+        }
+        break;
 
-    canvas.drawPath(
-      cueBodyPath,
-      Paint()..shader = woodGradient.createShader(cueBodyRect),
-    );
+      default:
+        break;
+    }
 
-    // 2. Vòng đệm ren kim loại & họa tiết chuôi gậy
-    final ringY = h * 0.48;
-    final ringPaint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [Color(0xFF8A7320), Color(0xFFFFE082), Color(0xFF6B5510)],
-      ).createShader(Rect.fromLTWH(stickLeft, ringY, stickWidth, 5.0));
-    canvas.drawRect(Rect.fromLTWH(stickLeft, ringY, stickWidth, 3.5), ringPaint);
+    // 2. Vòng đệm ren kim loại hoặc Vành Tsuba tại ringY
+    if (cue.animeConcept == CueAnimeConcept.katanaSamurai) {
+      // Tsuba kiếm Nhật Bản
+      final tsubaRect = Rect.fromLTWH(stickLeft - 2.5, ringY - 1.5, stickWidth + 5.0, 5.0);
+      canvas.drawRRect(RRect.fromRectAndRadius(tsubaRect, const Radius.circular(2)), Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawRRect(RRect.fromRectAndRadius(tsubaRect, const Radius.circular(2)), Paint()..color = Colors.black87..style = PaintingStyle.stroke..strokeWidth = 0.8);
+    } else {
+      final ringPaint = Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+          colors: level >= 5
+              ? const [Color(0xFFFFD54F), Color(0xFFFFF9C4), Color(0xFFB8860B)]
+              : const [Color(0xFF8A7320), Color(0xFFFFE082), Color(0xFF6B5510)],
+        ).createShader(Rect.fromLTWH(stickLeft, ringY, stickWidth, 4.5));
+      canvas.drawRect(Rect.fromLTWH(stickLeft, ringY, stickWidth, 4.0), ringPaint);
+    }
 
     // 3. Phíp cơ trắng (Ferrule)
-    final ferruleHeight = 9.0;
     final ferruleRect = Rect.fromLTWH(stickLeft, 6.0, stickWidth, ferruleHeight);
     final ferrulePaint = Paint()
       ..shader = const LinearGradient(
@@ -503,16 +586,16 @@ class _RealisticCapsuleCuePainter extends CustomPainter {
       ).createShader(ferruleRect);
     canvas.drawRect(ferruleRect, ferrulePaint);
 
-    // Viền kim loại mỏng ngăn giữa phíp và thân gỗ
+    // Viền vàng nẹp chân phíp nếu Lv >= 5
     canvas.drawLine(
       Offset(stickLeft, 6.0 + ferruleHeight),
       Offset(stickRight, 6.0 + ferruleHeight),
       Paint()
-        ..color = const Color(0xFF424242)
-        ..strokeWidth = 0.8,
+        ..color = level >= 5 ? const Color(0xFFFFD54F) : const Color(0xFF424242)
+        ..strokeWidth = level >= 5 ? 1.0 : 0.8,
     );
 
-    // 4. Đầu lơ xanh phấn (Chalk-blue tip) dạng vòm cong ở đỉnh
+    // 4. Đầu lơ (Tip) dạng vòm cong ở đỉnh
     final tipPath = Path()
       ..moveTo(stickLeft, 6.0)
       ..lineTo(stickRight, 6.0)
@@ -524,33 +607,56 @@ class _RealisticCapsuleCuePainter extends CustomPainter {
       ..close();
 
     final tipPaint = Paint()
-      ..shader = const RadialGradient(
-        center: Alignment(-0.2, -0.3),
+      ..shader = RadialGradient(
+        center: const Alignment(-0.2, -0.3),
         radius: 0.9,
         colors: [
-          Color(0xFF40C4FF), // Xanh lơ sáng (Chalk blue)
-          Color(0xFF0091EA),
-          Color(0xFF01579B),
+          Color.lerp(cue.tipColor, Colors.white, 0.4) ?? cue.tipColor,
+          cue.tipColor,
+          Color.lerp(cue.tipColor, Colors.black, 0.3) ?? cue.tipColor,
         ],
       ).createShader(Rect.fromLTWH(stickLeft, 0, stickWidth, halfStick * 2));
     canvas.drawPath(tipPath, tipPaint);
 
-    // Viền đen phân tách đầu cơ và phíp
-    canvas.drawLine(
-      Offset(stickLeft, 6.0),
-      Offset(stickRight, 6.0),
-      Paint()
-        ..color = const Color(0xFF1A1A1A)
-        ..strokeWidth = 1.0,
-    );
+    // 5. Đệm cao su & VIÊN NGỌC KHẢM ĐUÔI CHUÔI CƠ (Butt Gemstone Bezel)
+    final bumperPath = Path()
+      ..moveTo(stickLeft, h - 8)
+      ..arcToPoint(
+        Offset(stickRight, h - 8),
+        radius: Radius.circular(halfStick),
+        clockwise: false,
+      )
+      ..close();
+    canvas.drawPath(bumperPath, Paint()..color = const Color(0xFF141414));
 
-    // 5. Hào quang tỏa sáng nếu gậy cấp cao (Level >= 7)
-    if (level >= 7) {
+    // Lv >= 5: Khảm đá quý ở đế gậy slider
+    if (level >= 5) {
+      final gemColor = switch (cue.animeConcept) {
+        CueAnimeConcept.katanaSamurai => const Color(0xFFFF1744),
+        CueAnimeConcept.cyberNeo => const Color(0xFF00E5FF),
+        CueAnimeConcept.dragonFlame => const Color(0xFFFF6D00),
+        CueAnimeConcept.arcaneMagic => const Color(0xFFB388FF),
+        CueAnimeConcept.shadowVoid => const Color(0xFF7C4DFF),
+        CueAnimeConcept.mechaGundam => const Color(0xFF76FF03),
+        CueAnimeConcept.sakuraZen => const Color(0xFFFF80AB),
+        CueAnimeConcept.frostCryo => const Color(0xFF80D8FF),
+        CueAnimeConcept.classic => const Color(0xFFFFD54F),
+      };
+
+      // Đĩa vàng và ngọc
+      canvas.drawCircle(Offset(centerX, h - 5.5), 3.2, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawCircle(Offset(centerX, h - 5.5), 2.2, Paint()..color = gemColor);
+      canvas.drawCircle(Offset(centerX - 0.6, h - 6.2), 0.8, Paint()..color = Colors.white);
+    }
+
+    // 6. Hào quang tỏa sáng hai bên gậy (Level >= 6)
+    if (level >= 6) {
+      final isMax = level == 10;
       final auraPaint = Paint()
-        ..color = cue.auraColor.withValues(alpha: 0.35)
-        ..strokeWidth = 2.5
+        ..color = cue.auraColor.withValues(alpha: isMax ? 0.60 : 0.40)
+        ..strokeWidth = isMax ? 3.0 : 2.0
         ..style = PaintingStyle.stroke
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, isMax ? 4 : 2.5);
       canvas.drawLine(Offset(stickLeft - 1, 10), Offset(stickLeft - 1, h - 10), auraPaint);
       canvas.drawLine(Offset(stickRight + 1, 10), Offset(stickRight + 1, h - 10), auraPaint);
     }
