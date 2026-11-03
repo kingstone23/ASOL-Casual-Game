@@ -25,8 +25,83 @@ enum CueAnimeConcept {
   final IconData icon;
   const CueAnimeConcept(this.viLabel, this.enLabel, this.icon);
 
-  String get localizedLabel =>
-      LanguageService.instance.currentCode == 'vi' ? viLabel : enLabel;
+  String get localizedLabel {
+    final code = LanguageService.instance.currentCode;
+    switch (this) {
+      case CueAnimeConcept.classic:
+        return switch (code) {
+          'zh' => '经典复古',
+          'ja' => 'クラシック',
+          'ko' => '클래식',
+          'en' => 'Classic',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.katanaSamurai:
+        return switch (code) {
+          'zh' => '日轮武士',
+          'ja' => '日輪侍',
+          'ko' => '일륜 사무라이',
+          'en' => 'Nichirin Samurai',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.cyberNeo:
+        return switch (code) {
+          'zh' => '赛博霓虹',
+          'ja' => 'サイバーネオ',
+          'ko' => '사이버 네오',
+          'en' => 'Cyberpunk Neo',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.dragonFlame:
+        return switch (code) {
+          'zh' => '炎龙少年',
+          'ja' => '炎竜',
+          'ko' => '화룡 소년',
+          'en' => 'Dragon Flame',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.arcaneMagic:
+        return switch (code) {
+          'zh' => '秘术魔法',
+          'ja' => '秘術魔法',
+          'ko' => '아케인 마법',
+          'en' => 'Arcane Magic',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.sakuraZen:
+        return switch (code) {
+          'zh' => '樱花之魂',
+          'ja' => '桜の精神',
+          'ko' => '사쿠라 스피릿',
+          'en' => 'Sakura Spirit',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.shadowVoid:
+        return switch (code) {
+          'zh' => '暗影君王',
+          'ja' => '影の君主',
+          'ko' => '그림자 군주',
+          'en' => 'Shadow Monarch',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.mechaGundam:
+        return switch (code) {
+          'zh' => '机甲核心',
+          'ja' => '生体メカ',
+          'ko' => '바이오메카',
+          'en' => 'Biomecha Core',
+          _ => viLabel,
+        };
+      case CueAnimeConcept.frostCryo:
+        return switch (code) {
+          'zh' => '北极霜冻',
+          'ja' => '極寒フロスト',
+          'ko' => '극지 프로스트',
+          'en' => 'Cryo Frost',
+          _ => viLabel,
+        };
+    }
+  }
 }
 
 extension CueRarityExt on CueRarity {

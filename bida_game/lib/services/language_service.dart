@@ -105,6 +105,9 @@ class LanguageService extends ChangeNotifier {
   String localizeMedalRarity(String key, [String fallback = '']) =>
       GameContentLocalization.getMedalRarity(key, _currentLanguage.code, fallback);
 
+  String localizeTableRarity(String key, [String fallback = '']) =>
+      GameContentLocalization.getTableRarity(key, _currentLanguage.code, fallback);
+
   String localizeTableSkinName(String id, [String fallback = '']) =>
       GameContentLocalization.getTableSkinName(id, _currentLanguage.code, fallback);
 
@@ -1521,6 +1524,189 @@ class LanguageService extends ChangeNotifier {
   };
 
   static final Map<String, Map<String, String>> _translations = {
+    // Quản lý Bàn Đấu (Table Shop) & Profile Localization
+    'concept_label': {
+      'vi': 'Chủ Đề',
+      'en': 'Theme',
+      'zh': '主题风格',
+      'ja': 'テーマ',
+      'ko': '테마',
+    },
+    'diamonds_unit': {
+      'vi': 'KC',
+      'en': 'Diamonds',
+      'zh': '钻石',
+      'ja': 'ダイヤ',
+      'ko': '다이아',
+    },
+    'table_shop': {
+      'vi': 'BÀN ĐẤU',
+      'en': 'TABLES',
+      'zh': '球桌',
+      'ja': 'テーブル',
+      'ko': '테이블',
+    },
+    'table_shop_title': {
+      'vi': 'CỬA HÀNG BÀN BIDA',
+      'en': 'POOL TABLE SHOP',
+      'zh': '台球桌商城',
+      'ja': 'テーブルショップ',
+      'ko': '당구대 상점',
+    },
+    'table_shop_subtitle': {
+      'vi': '20 Mẫu Bàn Độc Quyền • Thay Đổi Diện Mạo Bàn Đấu',
+      'en': '20 Exclusive Tables • Customize Table Appearance',
+      'zh': '20款专属球桌 • 自由定制球台外观',
+      'ja': '20種類の限定テーブル • 外観を自由に変更',
+      'ko': '20가지 전용 당구대 스킨 • 테이블 외형 변경',
+    },
+    'all_tables_filter': {
+      'vi': 'Tất cả (20)',
+      'en': 'All (20)',
+      'zh': '全部 (20)',
+      'ja': 'すべて (20)',
+      'ko': '전체 (20)',
+    },
+    'table_in_use': {
+      'vi': '✓ Đang dùng',
+      'en': '✓ In Use',
+      'zh': '✓ 使用中',
+      'ja': '✓ 使用中',
+      'ko': '✓ 사용 중',
+    },
+    'table_owned': {
+      'vi': '✓ Đã sở hữu',
+      'en': '✓ Owned',
+      'zh': '✓ 已拥有',
+      'ja': '✓ 獲得済み',
+      'ko': '✓ 보유 중',
+    },
+    'table_equipped_banner': {
+      'vi': 'ĐANG TRANG BỊ TRÊN BÀN ĐẤU',
+      'en': 'CURRENTLY EQUIPPED ON TABLE',
+      'zh': '当前已装备在球桌上',
+      'ja': 'テーブルに装備中',
+      'ko': '현재 당구대에 장착 중',
+    },
+    'equip_table_btn': {
+      'vi': 'TRANG BỊ BÀN NÀY',
+      'en': 'EQUIP THIS TABLE',
+      'zh': '装备此球桌',
+      'ja': 'このテーブルを装備',
+      'ko': '이 당구대 장착',
+    },
+    'unlock_table_level': {
+      'vi': 'MỞ KHÓA Ở CẤP {level}',
+      'en': 'UNLOCKED AT LEVEL {level}',
+      'zh': '达到等级 {level} 解锁',
+      'ja': 'レベル {level} で解放',
+      'ko': '레벨 {level} 에서 잠금 해제',
+    },
+    'buy_with_diamonds': {
+      'vi': 'MUA BẰNG {price} KIM CƯƠNG',
+      'en': 'BUY FOR {price} DIAMONDS',
+      'zh': '使用 {price} 钻石购买',
+      'ja': 'ダイヤ {price} 個で購入',
+      'ko': '다이아 {price}개로 구매',
+    },
+    'buy_with_coins': {
+      'vi': 'MUA BẰNG {price} VÀNG',
+      'en': 'BUY FOR {price} COINS',
+      'zh': '使用 {price} 金币购买',
+      'ja': 'コイン {price} 枚で購入',
+      'ko': '코인 {price}개로 구매',
+    },
+    'table_cushion_bounce': {
+      'vi': 'Độ Nảy Băng',
+      'en': 'Cushion Bounce',
+      'zh': '库边弹性',
+      'ja': 'クッション弾性',
+      'ko': '쿠션 탄성',
+    },
+    'table_cloth_felt': {
+      'vi': 'Mặt Vải Nỉ',
+      'en': 'Cloth Felt',
+      'zh': '台呢材质',
+      'ja': 'ラシャ布',
+      'ko': '당구 천(나사)',
+    },
+    'tour_standard': {
+      'vi': 'Chuẩn Tour',
+      'en': 'Tour Grade',
+      'zh': '职业巡回级',
+      'ja': 'プロ基準',
+      'ko': '투어 표준',
+    },
+    'ultra_smooth': {
+      'vi': 'Siêu Mịn',
+      'en': 'Ultra Smooth',
+      'zh': '超顺滑',
+      'ja': '超スムーズ',
+      'ko': '초극세사 매끄러움',
+    },
+    'table_applied_toast': {
+      'vi': 'Đã áp dụng {name} cho bàn thi đấu!',
+      'en': 'Applied {name} to the match table!',
+      'zh': '已为比赛球桌应用 {name}!',
+      'ja': '試合用テーブルに {name} を適用しました!',
+      'ko': '경기 테이블에 {name} 적용 완료!',
+    },
+    'table_bought_toast': {
+      'vi': 'Đã mua thành công và trang bị {name}!',
+      'en': 'Successfully purchased and equipped {name}!',
+      'zh': '成功购买并装备 {name}!',
+      'ja': '{name} を購入して装備しました!',
+      'ko': '{name} 구매 및 장착 성공!',
+    },
+    'table_buy_error_toast': {
+      'vi': 'Không thể mua bàn bida!',
+      'en': 'Cannot purchase table!',
+      'zh': '无法购买球桌!',
+      'ja': 'テーブルを購入できません!',
+      'ko': '당구대를 구매할 수 없습니다!',
+    },
+    'not_enough_coins': {
+      'vi': 'Bạn không đủ Vàng!',
+      'en': 'Not enough Coins!',
+      'zh': '金币不足!',
+      'ja': 'コインが不足しています!',
+      'ko': '코인이 부족합니다!',
+    },
+    'guest_player': {
+      'vi': 'Cơ Thủ Khách',
+      'en': 'Guest Player',
+      'zh': '游客选手',
+      'ja': 'ゲストプレイヤー',
+      'ko': '게스트 플레이어',
+    },
+    'cue_perk_max_state': {
+      'vi': '★ Cảnh giới Tối Thượng: Đầy đủ Hào Quang & Kim Cương Khảm Chuôi',
+      'en': '★ Supreme Tier: Full Aura & Diamond Inlaid Butt',
+      'zh': '★ 至尊境界: 专属炫彩光环与握把钻石镶嵌',
+      'ja': '★ 至高の境地: オーラ全開＆ダイヤモンドインレイ',
+      'ko': '★ 최상의 경지: 풀 아우라 & 다이아몬드 인레이 그립',
+    },
+    'cue_perk_unlocked_state': {
+      'vi': '✓ Đã mở khóa: Dát Vàng 24K & Khảm Ngọc Chuôi (Cấp 10: Tối Thượng)',
+      'en': '✓ Unlocked: 24K Gold Plated & Gem Inlay (Lv.10: Supreme)',
+      'zh': '✓ 已解锁: 24K镀金与宝石镶嵌 (10级: 至尊)',
+      'ja': '✓ 解放済み: 24K金メッキ＆宝石インレイ (Lv.10: 至高)',
+      'ko': '✓ 해금됨: 24K 금도금 & 보석 인레이 (Lv.10: 최상)',
+    },
+    'cue_perk_level5_req': {
+      'vi': '• Nâng lên Cấp 5: Mở khóa Dát Vàng 24K & Khảm Ngọc Chuôi',
+      'en': '• Upgrade to Lv.5: Unlock 24K Gold Plated & Gem Inlay',
+      'zh': '• 升级至5级: 解锁24K镀金与宝石镶嵌',
+      'ja': '• Lv.5にアップグレード: 24K金メッキ＆宝石インレイ解放',
+      'ko': '• 레벨 5로 업그레이드: 24K 금도금 & 보석 인레이 해금',
+    },
+    'auth_tagline': {
+      'vi': 'BIDA 8 LỖ CASUAL • MULTIPLAYER',
+      'en': 'CASUAL 8-BALL • MULTIPLAYER',
+      'zh': '休闲8球台球 • 多人对战',
+      'ja': 'カジュアル8ボール • マルチプレイヤー',
+      'ko': '캐주얼 8볼 당구 • 멀티플레이어',
+    },
     // Menu & Chế độ chơi
     'app_title': {
       'vi': '8 POOL BILLIARDS',

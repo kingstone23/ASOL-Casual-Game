@@ -224,8 +224,8 @@ class _AuthScreenState extends State<AuthScreen> {
                       color: const Color(0xFF00E676).withValues(alpha: 0.4),
                     ),
                   ),
-                  child: const Text(
-                    'BIDA 8 LỖ CASUAL • MULTIPLAYER',
+                  child: Text(
+                    'auth_tagline'.tr,
                     style: TextStyle(
                       color: Color(0xFF69F0AE),
                       fontSize: 9,

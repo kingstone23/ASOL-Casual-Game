@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/tournament_model.dart';
 // import '../services/online_multiplayer_service.dart';
@@ -46,7 +47,7 @@ class _TournamentDialogState extends State<TournamentDialog> {
         ]),
         builder: (context, _) {
           return Container(
-            width: 860,
+            width: math.min(screenSize.width * 0.95, 880.0),
             height: screenSize.height * 0.92,
             decoration: BoxDecoration(
               color: const Color(0xFF0D1D17),

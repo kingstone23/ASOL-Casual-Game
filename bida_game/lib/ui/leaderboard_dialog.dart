@@ -63,8 +63,8 @@ class _LeaderboardDialogState extends State<LeaderboardDialog> with SingleTicker
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: 620,
-          maxHeight: math.min(screenHeight * 0.94, 460.0),
+          maxWidth: math.min(MediaQuery.of(context).size.width * 0.94, 680.0),
+          maxHeight: math.min(screenHeight * 0.94, 600.0),
         ),
         decoration: BoxDecoration(
           gradient: const LinearGradient(

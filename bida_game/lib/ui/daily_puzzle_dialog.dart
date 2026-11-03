@@ -34,8 +34,10 @@ class DailyPuzzleDialog extends StatelessWidget {
         builder: (context, _) {
           return Container(
         constraints: BoxConstraints(
-          maxWidth: isLandscape ? 680 : 440,
-          maxHeight: math.min(screenHeight * 0.94, 480.0),
+          maxWidth: isLandscape
+              ? math.min(MediaQuery.of(context).size.width * 0.95, 780.0)
+              : 440,
+          maxHeight: math.min(screenHeight * 0.94, 620.0),
         ),
         decoration: BoxDecoration(
           gradient: const LinearGradient(

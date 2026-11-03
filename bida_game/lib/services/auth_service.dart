@@ -94,10 +94,23 @@ class AuthService extends ChangeNotifier {
   bool get isAdmin =>
       _role == 'admin' ||
       adminEmails.contains(currentUser?.email?.toLowerCase().trim());
-  String get displayName =>
-      _displayName ??
-      currentUser?.displayName ??
-      (currentUser?.email?.split('@').first ?? (_isGuest ? 'Cơ Thủ Khách' : 'Khách'));
+  String get displayName {
+    if (isAdmin) {
+      return 'admin_role'.tr;
+    }
+    if (_isGuest) {
+      if (_displayName != null && _displayName!.contains('#')) {
+        final match = RegExp(r'#\d+').firstMatch(_displayName!);
+        if (match != null) {
+          return '${'guest_player'.tr} ${match.group(0)}';
+        }
+      }
+      return 'guest_player'.tr;
+    }
+    return _displayName ??
+        currentUser?.displayName ??
+        (currentUser?.email?.split('@').first ?? 'guest_player'.tr);
+  }
   String get role => _role;
   bool get isLoading => _isLoading;
 

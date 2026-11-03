@@ -353,7 +353,7 @@ class PlayerProfileBar extends StatelessWidget {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          'BÀN ĐẤU',
+                          'table_shop'.tr.toUpperCase(),
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w900,

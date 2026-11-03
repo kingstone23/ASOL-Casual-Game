@@ -12,18 +12,13 @@ enum TableRarity {
 
 extension TableRarityExt on TableRarity {
   String get label {
-    switch (this) {
-      case TableRarity.standard:
-        return 'Tiêu Chuẩn';
-      case TableRarity.rare:
-        return 'Hiếm';
-      case TableRarity.epic:
-        return 'Sử Thi';
-      case TableRarity.legendary:
-        return 'Huyền Thoại';
-      case TableRarity.mythic:
-        return 'Thần Thoại';
-    }
+    return LanguageService.instance.localizeTableRarity(name, switch (this) {
+      TableRarity.standard => 'Tiêu Chuẩn',
+      TableRarity.rare => 'Hiếm',
+      TableRarity.epic => 'Sử Thi',
+      TableRarity.legendary => 'Huyền Thoại',
+      TableRarity.mythic => 'Thần Thoại',
+    });
   }
 
   Color get glowColor {
@@ -72,8 +67,67 @@ enum TableAnimeConcept {
   final IconData icon;
   const TableAnimeConcept(this.viLabel, this.enLabel, this.icon);
 
-  String get localizedLabel =>
-      LanguageService.instance.currentCode == 'vi' ? viLabel : enLabel;
+  String get localizedLabel {
+    final code = LanguageService.instance.currentCode;
+    switch (this) {
+      case TableAnimeConcept.classic:
+        return switch (code) {
+          'zh' => '经典复古',
+          'ja' => 'クラシック',
+          'ko' => '클래식',
+          'en' => 'Classic',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.sakuraZen:
+        return switch (code) {
+          'zh' => '樱花和风',
+          'ja' => '桜の禅',
+          'ko' => '사쿠라 젠',
+          'en' => 'Sakura Zen',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.cyberTokyo:
+        return switch (code) {
+          'zh' => '赛博新东京',
+          'ja' => 'サイバーネオ東京',
+          'ko' => '사이버 네오 도쿄',
+          'en' => 'Cyber Neo Tokyo',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.dragonLava:
+        return switch (code) {
+          'zh' => '龙神熔岩',
+          'ja' => '竜神マグマ',
+          'ko' => '용신 용암',
+          'en' => 'Dragon Magma',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.arcaneGrimoire:
+        return switch (code) {
+          'zh' => '奥术魔导阵',
+          'ja' => '秘術の魔導書',
+          'ko' => '비전 마법진',
+          'en' => 'Arcane Grimoire',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.shadowVoid:
+        return switch (code) {
+          'zh' => '暗影虚空',
+          'ja' => 'シャドウヴォイド',
+          'ko' => '그림자 공허',
+          'en' => 'Shadow Void',
+          _ => viLabel,
+        };
+      case TableAnimeConcept.mechaEva:
+        return switch (code) {
+          'zh' => '机甲要塞',
+          'ja' => 'メカ要塞',
+          'ko' => '메카 요새',
+          'en' => 'Mecha Citadel',
+          _ => viLabel,
+        };
+    }
+  }
 }
 
 /// Đại diện cho một mẫu Skin Bàn Bida tùy chỉnh

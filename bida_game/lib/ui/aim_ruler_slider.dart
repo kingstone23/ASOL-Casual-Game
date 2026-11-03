@@ -13,6 +13,7 @@ class AimRulerSliderControl extends StatefulWidget {
   final BilliardGame game;
   final bool compact;
   final bool ultraCompact;
+  final double upscaleFactor;
   final VoidCallback? onOpenSpinDialog;
 
   const AimRulerSliderControl({
@@ -20,6 +21,7 @@ class AimRulerSliderControl extends StatefulWidget {
     required this.game,
     this.compact = false,
     this.ultraCompact = false,
+    this.upscaleFactor = 1.0,
     this.onOpenSpinDialog,
   });
 
@@ -50,9 +52,10 @@ class _AimRulerSliderControlState extends State<AimRulerSliderControl> {
   Widget build(BuildContext context) {
     final ultraCompact = widget.ultraCompact;
     final compact = widget.compact;
-    final controlWidth = ultraCompact ? 34.0 : (compact ? 40.0 : 46.0);
-    final capsuleWidth = ultraCompact ? 22.0 : (compact ? 26.0 : 30.0);
-    final bottomButtonSize = ultraCompact ? 28.0 : (compact ? 34.0 : 38.0);
+    final scale = widget.upscaleFactor;
+    final controlWidth = (ultraCompact ? 34.0 : (compact ? 40.0 : 46.0)) * scale;
+    final capsuleWidth = (ultraCompact ? 22.0 : (compact ? 26.0 : 30.0)) * scale;
+    final bottomButtonSize = (ultraCompact ? 28.0 : (compact ? 34.0 : 38.0)) * scale;
 
     return SizedBox(
       width: controlWidth,
@@ -61,7 +64,7 @@ class _AimRulerSliderControlState extends State<AimRulerSliderControl> {
         children: [
           // 1. Chữ số góc độ màu vàng kim rực rỡ phía trên thước (ví dụ 0°)
           _buildYellowDegreeHeader(ultraCompact, compact),
-          SizedBox(height: ultraCompact ? 3.0 : 5.0),
+          SizedBox(height: (ultraCompact ? 3.0 : 5.0) * scale),
 
           // 2. Rãnh con nhộng kim loại 3D chứa thước ngắm vạch chia độ và mũi tên đỏ
           Expanded(

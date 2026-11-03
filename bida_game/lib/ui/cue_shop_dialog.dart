@@ -48,11 +48,12 @@ class _CueShopDialogState extends State<CueShopDialog> {
           final isUnlocked = service.canUnlockCue(selectedCue);
           final currentLevel = service.getCueLevel(selectedCue.id);
           final screenHeight = MediaQuery.of(context).size.height;
+          final screenWidth = MediaQuery.of(context).size.width;
 
           return Container(
             constraints: BoxConstraints(
-              maxWidth: 880,
-              maxHeight: math.min(screenHeight * 0.94, 480.0),
+              maxWidth: math.min(screenWidth * 0.95, 920.0),
+              maxHeight: math.min(screenHeight * 0.94, 620.0),
             ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -634,10 +635,10 @@ class _CueShopDialogState extends State<CueShopDialog> {
                 Expanded(
                   child: Text(
                     effectiveLevel == 10
-                        ? '✨ Cảnh giới Tối Thượng: Đầy đủ Hào Quang & Kim Cương Khảm Chuôi'
+                        ? 'cue_perk_max_state'.tr
                         : (effectiveLevel >= 5
-                            ? '⚡ Đã mở khóa: Giác Vàng 24K & Khảm Ngọc Chuôi (Cấp 10: Tối Thượng)'
-                            : '💡 Nâng lên Cấp 5: Mở khóa Giác Vàng 24K & Khảm Ngọc Chuôi'),
+                            ? 'cue_perk_unlocked_state'.tr
+                            : 'cue_perk_level5_req'.tr),
                     style: TextStyle(
                       color: effectiveLevel == 10
                           ? const Color(0xFFFFD54F)

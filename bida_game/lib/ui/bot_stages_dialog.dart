@@ -27,8 +27,8 @@ class BotStagesDialog extends StatelessWidget {
 
           return Container(
             constraints: BoxConstraints(
-              maxWidth: 820,
-              maxHeight: math.min(screenHeight * 0.94, 480.0),
+              maxWidth: math.min(MediaQuery.of(context).size.width * 0.95, 860.0),
+              maxHeight: math.min(screenHeight * 0.94, 620.0),
             ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(

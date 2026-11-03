@@ -1518,6 +1518,51 @@ class GameContentLocalization {
     return medalRequirements[id]?[lang] ?? medalRequirements[id]?['en'] ?? medalRequirements[id]?['vi'] ?? fallback;
   }
 
+  // =========================================================================
+  // 13. PHẨM CẤP BÀN BIDA (TABLE RARITY)
+  // =========================================================================
+  static const Map<String, Map<String, String>> tableRarities = {
+    'standard': {
+      'vi': 'Tiêu Chuẩn',
+      'en': 'Standard',
+      'zh': '标准',
+      'ja': '標準',
+      'ko': '표준',
+    },
+    'rare': {
+      'vi': 'Hiếm',
+      'en': 'Rare',
+      'zh': '稀有',
+      'ja': 'レア',
+      'ko': '희귀',
+    },
+    'epic': {
+      'vi': 'Sử Thi',
+      'en': 'Epic',
+      'zh': '史诗',
+      'ja': 'エピック',
+      'ko': '에픽',
+    },
+    'legendary': {
+      'vi': 'Huyền Thoại',
+      'en': 'Legendary',
+      'zh': '传奇',
+      'ja': 'レジェンド',
+      'ko': '전설',
+    },
+    'mythic': {
+      'vi': 'Thần Thoại',
+      'en': 'Mythic',
+      'zh': '神话',
+      'ja': 'ミシック',
+      'ko': '신화',
+    },
+  };
+
+  static String getTableRarity(String key, String lang, [String fallback = '']) {
+    return tableRarities[key]?[lang] ?? tableRarities[key]?['en'] ?? tableRarities[key]?['vi'] ?? fallback;
+  }
+
   static String getMedalRarity(String key, String lang, [String fallback = '']) {
     return medalRarities[key]?[lang] ?? medalRarities[key]?['en'] ?? medalRarities[key]?['vi'] ?? fallback;
   }

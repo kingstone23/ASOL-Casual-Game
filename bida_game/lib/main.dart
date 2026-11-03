@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:async' as async;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,6 +36,7 @@ import 'services/language_service.dart';
 import 'ui/language_selector_dialog.dart';
 import 'models/table_skin_model.dart';
 import 'ui/table_skin_component.dart';
+import 'ui/responsive_layout_helper.dart';
 
 enum BallGroup { solids, stripes }
 
@@ -294,8 +296,10 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                       child: SafeArea(
                         child: LayoutBuilder(
                           builder: (context, constraints) {
+                            final layout = ResponsiveLayoutHelper.of(context, constraints);
                             final isLandscape = constraints.maxWidth >= 540;
-                            final compact = constraints.maxHeight < 420 || constraints.maxWidth < 700;
+                            final compact = layout.isCompact;
+                                                        final upscale = layout.upscaleFactor;
 
                             return Column(
                               children: [
@@ -387,7 +391,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                                       ),
                                       child: Container(
                                         constraints: BoxConstraints(
-                                          maxWidth: isLandscape ? 720 : 440,
+                                          maxWidth: isLandscape
+                                              ? math.min(constraints.maxWidth * 0.92, 860.0)
+                                              : 440,
                                         ),
                                         padding: EdgeInsets.symmetric(
                                           horizontal: compact ? 14 : 24,
@@ -409,8 +415,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                                           ],
                                         ),
                                         child: isLandscape
-                                            ? _buildLandscapeMenuContent(compact)
-                                            : _buildPortraitMenuContent(compact),
+                                            ? _buildLandscapeMenuContent(compact, upscale)
+                                            : _buildPortraitMenuContent(compact, upscale),
                                       ),
                                     ),
                                   ),
@@ -574,50 +580,50 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
   //   );
   // }
 
-  /// NỘI DUNG GIAO DIỆN NGANG (LANDSCAPE - CHUẨN ĐIỆN THOẠI KHÔNG CUỘN)
-  Widget _buildLandscapeMenuContent(bool compact) {
+  /// NỘI DUNG GIAO DIỆN NGANG (LANDSCAPE - CHUẨN ĐIỆN THOẠI KHÔNG CUỘN & FLEXFI UPSCALE)
+  Widget _buildLandscapeMenuContent(bool compact, [double upscaleFactor = 1.0]) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         // Cột Trái: Logo Bi 8 + Tên Game + Subtitle
         SizedBox(
-          width: compact ? 190 : 225,
+          width: (compact ? 190.0 : 225.0) * upscaleFactor,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: compact ? 52 : 68,
-                height: compact ? 52 : 68,
-                padding: const EdgeInsets.all(5),
+                width: (compact ? 52.0 : 68.0) * upscaleFactor,
+                height: (compact ? 52.0 : 68.0) * upscaleFactor,
+                padding: EdgeInsets.all(5 * upscaleFactor),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.black,
-                  border: Border.all(color: Colors.white70, width: 2),
+                  border: Border.all(color: Colors.white70, width: 2 * upscaleFactor),
                   boxShadow: const [
                     BoxShadow(color: Colors.black45, blurRadius: 10),
                   ],
                 ),
                 child: Image.asset('assets/images/ball_8.png'),
               ),
-              SizedBox(height: compact ? 6 : 10),
+              SizedBox(height: (compact ? 6.0 : 10.0) * upscaleFactor),
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
                   '8 POOL BILLIARDS',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: compact ? 18 : 22,
+                    fontSize: (compact ? 18.0 : 22.0) * upscaleFactor,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.8,
+                    letterSpacing: 1.8 * upscaleFactor,
                   ),
                 ),
               ),
-              const SizedBox(height: 3),
+              SizedBox(height: 3 * upscaleFactor),
               Text(
                 'choose_match'.tr,
-                style: const TextStyle(
-                  color: Color(0xFFFFD166),
-                  fontSize: 10.5,
+                style: TextStyle(
+                  color: const Color(0xFFFFD166),
+                  fontSize: 10.5 * upscaleFactor,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.5,
                 ),
@@ -625,7 +631,7 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             ],
           ),
         ),
-        SizedBox(width: compact ? 12 : 20),
+        SizedBox(width: (compact ? 12.0 : 20.0) * upscaleFactor),
 
         // Cột Phải: Các Nút chế độ xếp dạng Grid vừa vặn tuyệt đối
         Expanded(
@@ -643,9 +649,10 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                       background: const Color(0xFF1D4ED8),
                       onPressed: _startPlayerMatch,
                       compact: compact,
+                      upscaleFactor: upscaleFactor,
                     ),
                   ),
-                  SizedBox(width: compact ? 8 : 12),
+                  SizedBox(width: (compact ? 8.0 : 12.0) * upscaleFactor),
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.wifi_tethering,
@@ -661,11 +668,12 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                         );
                       },
                       compact: compact,
+                      upscaleFactor: upscaleFactor,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: compact ? 6 : 8),
+              SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
               // Hàng 2: 10 Ải Thử Thách Bot & Thế Bi Hàng Ngày
               Row(
                 children: [
@@ -684,9 +692,10 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                         );
                       },
                       compact: compact,
+                      upscaleFactor: upscaleFactor,
                     ),
                   ),
-                  SizedBox(width: compact ? 8 : 12),
+                  SizedBox(width: (compact ? 8.0 : 12.0) * upscaleFactor),
                   Expanded(
                     child: _buildMenuButton(
                       icon: Icons.event_note,
@@ -702,11 +711,12 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                         );
                       },
                       compact: compact,
+                      upscaleFactor: upscaleFactor,
                     ),
                   ),
                 ],
               ),
-              SizedBox(height: compact ? 6 : 8),
+              SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
               // Hàng 3: Thế Đánh Huyền Thoại (Nổi Bật Toàn Chiều Ngang)
               _buildMenuButton(
                 icon: Icons.auto_awesome,
@@ -722,6 +732,7 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
                   );
                 },
                 compact: compact,
+                upscaleFactor: upscaleFactor,
               ),
             ],
           ),
@@ -730,49 +741,49 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
     );
   }
 
-  /// NỘI DUNG GIAO DIỆN DỌC (PORTRAIT)
-  Widget _buildPortraitMenuContent(bool compact) {
+  /// NỘI DUNG GIAO DIỆN DỌC (PORTRAIT - FLEXFI UPSCALE)
+  Widget _buildPortraitMenuContent(bool compact, [double upscaleFactor = 1.0]) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 52,
-          height: 52,
-          padding: const EdgeInsets.all(5),
+          width: (compact ? 52.0 : 64.0) * upscaleFactor,
+          height: (compact ? 52.0 : 64.0) * upscaleFactor,
+          padding: EdgeInsets.all(5 * upscaleFactor),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.black,
-            border: Border.all(color: Colors.white70, width: 2),
+            border: Border.all(color: Colors.white70, width: 2 * upscaleFactor),
             boxShadow: const [
               BoxShadow(color: Colors.black45, blurRadius: 10),
             ],
           ),
           child: Image.asset('assets/images/ball_8.png'),
         ),
-        const SizedBox(height: 8),
-        const FittedBox(
+        SizedBox(height: 8 * upscaleFactor),
+        FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             '8 POOL BILLIARDS',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 22,
+              fontSize: (compact ? 18.0 : 22.0) * upscaleFactor,
               fontWeight: FontWeight.w900,
               letterSpacing: 2.0,
             ),
           ),
         ),
-        const SizedBox(height: 2),
+        SizedBox(height: 2 * upscaleFactor),
         Text(
           'choose_match'.tr,
-          style: const TextStyle(
-            color: Color(0xFFFFD166),
-            fontSize: 11,
+          style: TextStyle(
+            color: const Color(0xFFFFD166),
+            fontSize: (compact ? 10.0 : 11.5) * upscaleFactor,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: (compact ? 8.0 : 12.0) * upscaleFactor),
         _buildMenuButton(
           icon: Icons.auto_awesome,
           label: '⭐ ${'legendary_trickshot'.tr.toUpperCase()} ${'legendary_trickshot_count_badge'.tr}',
@@ -787,8 +798,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             );
           },
           compact: compact,
+          upscaleFactor: upscaleFactor,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
         _buildMenuButton(
           icon: Icons.people,
           label: 'p1_vs_p2'.tr,
@@ -796,8 +808,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
           background: const Color(0xFF1D4ED8),
           onPressed: _startPlayerMatch,
           compact: compact,
+          upscaleFactor: upscaleFactor,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
         _buildMenuButton(
           icon: Icons.military_tech,
           label: 'bot_stages'.tr,
@@ -812,8 +825,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             );
           },
           compact: compact,
+          upscaleFactor: upscaleFactor,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
         _buildMenuButton(
           icon: Icons.event_note,
           label: 'daily_puzzle'.tr,
@@ -828,8 +842,9 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             );
           },
           compact: compact,
+          upscaleFactor: upscaleFactor,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: (compact ? 6.0 : 8.0) * upscaleFactor),
         _buildMenuButton(
           icon: Icons.wifi_tethering,
           label: 'local_wifi'.tr,
@@ -844,13 +859,14 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
             );
           },
           compact: compact,
+          upscaleFactor: upscaleFactor,
         ),
       ],
     );
   }
 }
 
-/// Nút menu 4 màu phong cách cổ điển, co giãn tối ưu cho Mobile
+/// Nút menu 4 màu phong cách cổ điển, co giãn tối ưu cho Mobile & Flexfi Upscale
 Widget _buildMenuButton({
   required IconData icon,
   required String label,
@@ -858,6 +874,7 @@ Widget _buildMenuButton({
   required Color background,
   required VoidCallback onPressed,
   bool compact = false,
+  double upscaleFactor = 1.0,
 }) {
   return SizedBox(
     width: double.infinity,
@@ -867,16 +884,16 @@ Widget _buildMenuButton({
         backgroundColor: background,
         foregroundColor: Colors.white,
         padding: EdgeInsets.symmetric(
-          horizontal: compact ? 10 : 14,
-          vertical: compact ? 8 : 12,
+          horizontal: (compact ? 10.0 : 14.0) * upscaleFactor,
+          vertical: (compact ? 8.0 : 12.0) * upscaleFactor,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10 * upscaleFactor)),
         elevation: 3,
       ),
       child: Row(
         children: [
-          Icon(icon, size: compact ? 22 : 26),
-          SizedBox(width: compact ? 8 : 12),
+          Icon(icon, size: (compact ? 22.0 : 26.0) * upscaleFactor),
+          SizedBox(width: (compact ? 8.0 : 12.0) * upscaleFactor),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -888,7 +905,7 @@ Widget _buildMenuButton({
                   child: Text(
                     label,
                     style: TextStyle(
-                      fontSize: compact ? 13 : 15,
+                      fontSize: (compact ? 13.0 : 15.0) * upscaleFactor,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.3,
                     ),
@@ -899,7 +916,7 @@ Widget _buildMenuButton({
                   detail,
                   style: TextStyle(
                     color: Colors.white70,
-                    fontSize: compact ? 9.5 : 11,
+                    fontSize: (compact ? 9.5 : 11.0) * upscaleFactor,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -907,7 +924,7 @@ Widget _buildMenuButton({
               ],
             ),
           ),
-          Icon(Icons.chevron_right, size: compact ? 18 : 22),
+          Icon(Icons.chevron_right, size: (compact ? 18.0 : 22.0) * upscaleFactor),
         ],
       ),
     ),
@@ -920,16 +937,16 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
     body: SafeArea(
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final screenWidth = constraints.maxWidth;
-          final screenHeight = constraints.maxHeight;
-          final compactLayout = screenWidth < 900 || screenHeight < 520;
-          final ultraCompact = screenWidth < 720 || screenHeight < 390;
+          final layout = ResponsiveLayoutHelper.of(context, constraints);
+          final compactLayout = layout.isCompact;
+          final ultraCompact = layout.isUltraCompact;
+          final upscale = layout.upscaleFactor;
 
-          final screenPadding = (screenWidth * 0.012).clamp(
+          final screenPadding = (layout.screenWidth * 0.012).clamp(
             ultraCompact ? 3.0 : 5.0,
-            12.0,
+            12.0 * upscale,
           );
-          final topBarSpacing = ultraCompact ? 3.0 : (compactLayout ? 5.0 : 8.0);
+          final topBarSpacing = ultraCompact ? 2.5 : (compactLayout ? 4.0 : 6.0);
 
           return Center(
             child: Padding(
@@ -942,263 +959,125 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
                         context,
                         compact: compactLayout,
                         ultraCompact: ultraCompact,
+                        upscaleFactor: upscale,
                         onHome: onHome,
                       ),
                       SizedBox(height: topBarSpacing),
                       Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            ListenableBuilder(
-                              listenable: Listenable.merge([
-                                gameInstance.currentTurn,
-                                gameInstance.isLocalMultiplayer,
-                                gameInstance.isOnlineMultiplayer,
-                                LocalMultiplayerService.instance,
-                                OnlineMultiplayerService.instance,
-                              ]),
-                              builder: (context, child) {
-                                final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-                                final isLocked = isMultiplayer && !gameInstance.isMyTurn;
-                                return IgnorePointer(
-                                  ignoring: isLocked,
-                                  child: AnimatedOpacity(
-                                    opacity: isLocked ? 0.35 : 1.0,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: child,
+                        child: LayoutBuilder(
+                          builder: (context, rowConstraints) {
+                            final rowWidth = rowConstraints.maxWidth;
+                            final rowHeight = rowConstraints.maxHeight;
+
+                            // 1. Surface Duo với bản lề vật lý dọc (Vertical Hinge / Dual Screen)
+                            if (layout.isVerticalHinge && layout.hingeBounds != null) {
+                              final hinge = layout.hingeBounds!;
+                              final leftWidth = math.max(120.0, hinge.left - screenPadding);
+                              final tableH = math.min(rowHeight, leftWidth / 2.0);
+                              final tableW = tableH * 2.0;
+
+                              return Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  // Màn hình trái: Bàn bida 2:1
+                                  SizedBox(
+                                    width: leftWidth,
+                                    child: Center(
+                                      child: SizedBox(
+                                        width: tableW,
+                                        height: tableH,
+                                        child: _buildTableDecoratedBox(
+                                          ultraCompact: ultraCompact,
+                                          upscale: upscale,
+                                          onHome: onHome,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
-                              child: _buildPowerControl(
-                                compact: compactLayout,
-                                ultraCompact: ultraCompact,
-                              ),
-                            ),
-                            SizedBox(width: ultraCompact ? 4 : (compactLayout ? 6 : 10)),
-                            Expanded(
-                              child: Center(
-                                child: AspectRatio(
-                                  aspectRatio: 2 / 1,
-                                  child: Stack(
-                                    children: [
-                                      DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            ultraCompact ? 12 : 20,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(alpha: 0.65),
-                                              blurRadius: 18,
-                                              spreadRadius: 2,
-                                              offset: const Offset(0, 4),
+                                  // Khoảng trống an toàn của bản lề vật lý
+                                  SizedBox(width: math.max(10.0, hinge.width)),
+                                  // Màn hình phải: Bàn điều khiển chuyên dụng
+                                  Expanded(
+                                    child: Center(
+                                      child: SizedBox(
+                                        height: tableH,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            _buildInteractivePowerControl(
+                                              compact: compactLayout,
+                                              ultraCompact: ultraCompact,
+                                              upscale: upscale,
+                                            ),
+                                            const SizedBox(width: 14),
+                                            _buildInteractiveRightControls(
+                                              context,
+                                              compact: compactLayout,
+                                              ultraCompact: ultraCompact,
+                                              upscale: upscale,
                                             ),
                                           ],
                                         ),
-                                        child: ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            ultraCompact ? 12 : 20,
-                                          ),
-                                          child: ListenableBuilder(
-                                            listenable: Listenable.merge([
-                                              gameInstance.currentTurn,
-                                              gameInstance.isLocalMultiplayer,
-                                              gameInstance.isOnlineMultiplayer,
-                                              LocalMultiplayerService.instance,
-                                              OnlineMultiplayerService.instance,
-                                            ]),
-                                            builder: (context, child) {
-                                              final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-                                              final isLocked = isMultiplayer && !gameInstance.isMyTurn;
-                                              return IgnorePointer(
-                                                ignoring: isLocked,
-                                                child: child,
-                                              );
-                                            },
-                                            child: GameWidget(game: gameInstance),
-                                          ),
-                                        ),
                                       ),
-                                      ComboBannerOverlay(
-                                        comboNotifier: gameInstance.comboNotifier,
-                                      ),
-                                      _buildRackOverlay(onHome: onHome),
-                                      // Banner khoá lượt và hiển thị trạng thái chờ đối thủ (Online & WiFi)
-                                      ListenableBuilder(
-                                        listenable: Listenable.merge([
-                                          gameInstance.currentTurn,
-                                          gameInstance.isLocalMultiplayer,
-                                          gameInstance.isOnlineMultiplayer,
-                                          LocalMultiplayerService.instance,
-                                          OnlineMultiplayerService.instance,
-                                           LanguageService.instance,
-                                        ]),
-                                        builder: (context, _) {
-                                          final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-                                          if (!isMultiplayer ||
-                                              gameInstance.isMyTurn ||
-                                              gameInstance.rackOver) {
-                                            return const SizedBox.shrink();
-                                          }
-                                          final oppName = gameInstance.isOnlineMultiplayer.value
-                                              ? OnlineMultiplayerService.instance.opponentName
-                                              : (LocalMultiplayerService.instance.opponentName.isNotEmpty
-                                                  ? LocalMultiplayerService.instance.opponentName
-                                                  : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr));
-
-                                          final isBallInHand = gameInstance.ballInHand;
-                                          return Positioned(
-                                            top: ultraCompact ? 8 : 14,
-                                            left: 0,
-                                            right: 0,
-                                            child: Center(
-                                              child: Container(
-                                                padding: EdgeInsets.symmetric(
-                                                  horizontal: ultraCompact ? 10 : 16,
-                                                  vertical: ultraCompact ? 4 : 7,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  gradient: const LinearGradient(
-                                                    colors: [Color(0xE6B91C1C), Color(0xE67F1D1D)],
-                                                  ),
-                                                  borderRadius: BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                    color: Colors.redAccent.withValues(alpha: 0.8),
-                                                    width: 1.5,
-                                                  ),
-                                                  boxShadow: const [
-                                                    BoxShadow(
-                                                      color: Colors.black54,
-                                                      blurRadius: 10,
-                                                      offset: Offset(0, 3),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    const SizedBox(
-                                                      width: 12,
-                                                      height: 12,
-                                                      child: CircularProgressIndicator(
-                                                        strokeWidth: 2,
-                                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    const Icon(Icons.lock, color: Colors.white, size: 14),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                       isBallInHand
-                                                           ? (switch (LanguageService.instance.currentCode) {
-                                                               'zh' => '对手 $oppName 正在自由摆球...',
-                                                               'ja' => '相手 $oppName がボールを配置中...',
-                                                               'ko' => '상대 $oppName 님이 공을 배치 중...',
-                                                               'en' => 'OPPONENT $oppName IS PLACING BALL...',
-                                                               _ => 'ĐỐI THỦ $oppName ĐANG ĐẶT BI...',
-                                                             })
-                                                           : (switch (LanguageService.instance.currentCode) {
-                                                               'zh' => '轮到 $oppName（等待中...）',
-                                                               'ja' => '$oppName のターン（待機中...）',
-                                                               'ko' => '$oppName 님의 턴 (대기 중...)',
-                                                               'en' => "$oppName'S TURN (WAITING...)",
-                                                               _ => 'LƯỢT CỦA $oppName (ĐANG CHỜ...)',
-                                                             }),
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: ultraCompact ? 10 : 12,
-                                                        letterSpacing: 0.5,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      Positioned(
-                                        bottom: ultraCompact ? 5 : 10,
-                                        left: 0,
-                                        right: 0,
-                                        child: ValueListenableBuilder<int>(
-                                          valueListenable:
-                                              gameInstance.matchVersion,
-                                          builder: (context, _, child) {
-                                            if (gameInstance.rackOver) {
-                                              return const SizedBox.shrink();
-                                            }
-                                            return ListenableBuilder(
-                                              listenable: Listenable.merge([
-                                                gameInstance.ruleMessage,
-                                                LanguageService.instance,
-                                              ]),
-                                              builder: (context, child) {
-                                                final rawMessage = gameInstance.ruleMessage.value;
-                                                final message = LanguageService.instance.localizeRuleMessage(rawMessage);
-                                                if (message.isEmpty) return const SizedBox.shrink();
-                                                return Center(
-                                                  child: DecoratedBox(
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.black
-                                                          .withValues(alpha: 0.72),
-                                                      borderRadius:
-                                                          BorderRadius.circular(6),
-                                                    ),
-                                                    child: Padding(
-                                                      padding:
-                                                          EdgeInsets.symmetric(
-                                                            horizontal: ultraCompact ? 8 : 12,
-                                                            vertical: ultraCompact ? 3 : 6,
-                                                          ),
-                                                      child: Text(
-                                                        message,
-                                                        style: TextStyle(
-                                                          color: Colors.white,
-                                                          fontSize: ultraCompact ? 10.5 : 12.5,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                );
-                                              },
-                                            );
-                                          },
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
+                                ],
+                              );
+                            }
+
+                            // 2. Chế độ Flexfi Upscale Thích Ứng Toàn Diện (Z Fold, Duo, Tablet, Mobile)
+                            final metrics = layout.computeTableMetrics(
+                              availableWidth: rowWidth,
+                              availableHeight: rowHeight,
+                            );
+
+                            return Center(
+                              child: SizedBox(
+                                width: metrics.stationWidth,
+                                height: metrics.stationHeight,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    // Cột trái: Thanh kéo lực cơ (Khớp hoàn hảo với chiều cao bàn)
+                                    SizedBox(
+                                      width: metrics.powerControlWidth,
+                                      child: _buildInteractivePowerControl(
+                                        compact: compactLayout,
+                                        ultraCompact: ultraCompact,
+                                        upscale: upscale,
+                                      ),
+                                    ),
+                                    SizedBox(width: metrics.sideSpacing),
+
+                                    // Cột giữa: Bàn bida hiển thị tối đa (2:1)
+                                    SizedBox(
+                                      width: metrics.tableWidth,
+                                      height: metrics.tableHeight,
+                                      child: _buildTableDecoratedBox(
+                                        ultraCompact: ultraCompact,
+                                        upscale: upscale,
+                                        onHome: onHome,
+                                      ),
+                                    ),
+                                    SizedBox(width: metrics.sideSpacing),
+
+                                    // Cột phải: Thước ngắm & Áp-phê (Khớp hoàn hảo với chiều cao bàn)
+                                    SizedBox(
+                                      width: metrics.aimControlWidth,
+                                      child: _buildInteractiveRightControls(
+                                        context,
+                                        compact: compactLayout,
+                                        ultraCompact: ultraCompact,
+                                        upscale: upscale,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
-                            SizedBox(width: ultraCompact ? 4 : (compactLayout ? 6 : 10)),
-                            ListenableBuilder(
-                              listenable: Listenable.merge([
-                                gameInstance.currentTurn,
-                                gameInstance.isLocalMultiplayer,
-                                LocalMultiplayerService.instance,
-                              ]),
-                              builder: (context, child) {
-                                final isLocked = gameInstance.isLocalMultiplayer.value && !gameInstance.isMyTurn;
-                                return IgnorePointer(
-                                  ignoring: isLocked,
-                                  child: AnimatedOpacity(
-                                    opacity: isLocked ? 0.35 : 1.0,
-                                    duration: const Duration(milliseconds: 200),
-                                    child: child,
-                                  ),
-                                );
-                              },
-                              child: _buildRightSideControls(
-                                context,
-                                compact: compactLayout,
-                                ultraCompact: ultraCompact,
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
                       ),
                     ],
@@ -1213,16 +1092,453 @@ Widget _buildGameScreen(BuildContext context, {required VoidCallback onHome}) {
   );
 }
 
-// Widget tổ hợp cột điều khiển bên phải: Thanh Trượt Thước Đo Vi Chỉnh Góc Bắn + Nút Áp-phê Xoáy Chuẩn 8 Ball Pool
+Widget _buildInteractivePowerControl({
+  required bool compact,
+  required bool ultraCompact,
+  required double upscale,
+}) {
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.currentTurn,
+      gameInstance.isLocalMultiplayer,
+      gameInstance.isOnlineMultiplayer,
+      LocalMultiplayerService.instance,
+      OnlineMultiplayerService.instance,
+    ]),
+    builder: (context, child) {
+      final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
+      final isLocked = isMultiplayer && !gameInstance.isMyTurn;
+      return IgnorePointer(
+        ignoring: isLocked,
+        child: AnimatedOpacity(
+          opacity: isLocked ? 0.35 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: child,
+        ),
+      );
+    },
+    child: _buildPowerControl(
+      compact: compact,
+      ultraCompact: ultraCompact,
+      upscaleFactor: upscale,
+    ),
+  );
+}
+
+Widget _buildInteractiveRightControls(
+  BuildContext context, {
+  required bool compact,
+  required bool ultraCompact,
+  required double upscale,
+}) {
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.currentTurn,
+      gameInstance.isLocalMultiplayer,
+      LocalMultiplayerService.instance,
+    ]),
+    builder: (context, child) {
+      final isLocked = gameInstance.isLocalMultiplayer.value && !gameInstance.isMyTurn;
+      return IgnorePointer(
+        ignoring: isLocked,
+        child: AnimatedOpacity(
+          opacity: isLocked ? 0.35 : 1.0,
+          duration: const Duration(milliseconds: 200),
+          child: child,
+        ),
+      );
+    },
+    child: _buildRightSideControls(
+      context,
+      compact: compact,
+      ultraCompact: ultraCompact,
+      upscaleFactor: upscale,
+    ),
+  );
+}
+
+Widget _buildTableDecoratedBox({
+  required bool ultraCompact,
+  required double upscale,
+  required VoidCallback onHome,
+}) {
+  return Stack(
+    children: [
+      DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(
+            (ultraCompact ? 12 : 20) * upscale,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.65),
+              blurRadius: 18 * upscale,
+              spreadRadius: 2 * upscale,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(
+            (ultraCompact ? 12 : 20) * upscale,
+          ),
+          child: ListenableBuilder(
+            listenable: Listenable.merge([
+              gameInstance.currentTurn,
+              gameInstance.isLocalMultiplayer,
+              gameInstance.isOnlineMultiplayer,
+              LocalMultiplayerService.instance,
+              OnlineMultiplayerService.instance,
+            ]),
+            builder: (context, child) {
+              final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
+              final isLocked = isMultiplayer && !gameInstance.isMyTurn;
+              return IgnorePointer(
+                ignoring: isLocked,
+                child: child,
+              );
+            },
+            child: GameWidget(game: gameInstance),
+          ),
+        ),
+      ),
+      ComboBannerOverlay(
+        comboNotifier: gameInstance.comboNotifier,
+      ),
+      _buildRackOverlay(onHome: onHome),
+      _buildLockedOpponentBanner(ultraCompact: ultraCompact, upscale: upscale),
+      _buildRuleMessageBanner(ultraCompact: ultraCompact, upscale: upscale),
+    ],
+  );
+}
+
+Widget _buildLockedOpponentBanner({
+  required bool ultraCompact,
+  required double upscale,
+}) {
+  return ListenableBuilder(
+    listenable: Listenable.merge([
+      gameInstance.currentTurn,
+      gameInstance.isLocalMultiplayer,
+      gameInstance.isOnlineMultiplayer,
+      LocalMultiplayerService.instance,
+      OnlineMultiplayerService.instance,
+      LanguageService.instance,
+    ]),
+    builder: (context, _) {
+      final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
+      if (!isMultiplayer ||
+          gameInstance.isMyTurn ||
+          gameInstance.rackOver) {
+        return const SizedBox.shrink();
+      }
+      final oppName = gameInstance.isOnlineMultiplayer.value
+          ? OnlineMultiplayerService.instance.opponentName
+          : (LocalMultiplayerService.instance.opponentName.isNotEmpty
+              ? LocalMultiplayerService.instance.opponentName
+              : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr));
+
+      final isBallInHand = gameInstance.ballInHand;
+      return Positioned(
+        top: (ultraCompact ? 8.0 : 14.0) * upscale,
+        left: 0,
+        right: 0,
+        child: Center(
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: (ultraCompact ? 10.0 : 16.0) * upscale,
+              vertical: (ultraCompact ? 4.0 : 7.0) * upscale,
+            ),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xE6B91C1C), Color(0xE67F1D1D)],
+              ),
+              borderRadius: BorderRadius.circular(20 * upscale),
+              border: Border.all(
+                color: Colors.redAccent.withValues(alpha: 0.8),
+                width: 1.5,
+              ),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black54,
+                  blurRadius: 10,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 12 * upscale,
+                  height: 12 * upscale,
+                  child: const CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+                SizedBox(width: 8 * upscale),
+                Icon(Icons.lock, color: Colors.white, size: 14 * upscale),
+                SizedBox(width: 4 * upscale),
+                Text(
+                  isBallInHand
+                      ? (switch (LanguageService.instance.currentCode) {
+                          'zh' => '对手 $oppName 正在自由摆球...',
+                          'ja' => '相手 $oppName がボールを配置中...',
+                          'ko' => '상대 $oppName 님이 공을 배치 중...',
+                          'en' => 'OPPONENT $oppName IS PLACING BALL...',
+                          _ => 'ĐỐI THỦ $oppName ĐANG ĐẶT BI...',
+                        })
+                      : (switch (LanguageService.instance.currentCode) {
+                          'zh' => '轮到 $oppName（等待中...）',
+                          'ja' => '$oppName のターン（待機中...）',
+                          'ko' => '$oppName 님의 턴 (대기 중...)',
+                          'en' => "$oppName'S TURN (WAITING...)",
+                          _ => 'LƯỢT CỦA $oppName (ĐANG CHỜ...)',
+                        }),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: (ultraCompact ? 10.0 : 12.0) * upscale,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Thanh thông báo popup mờ dần rồi biến mất:
+/// Mỗi thông báo luật chơi/lượt đánh xuất hiện dạng popup nảy nhẹ, duy trì trong 2.0 giây
+/// rồi mờ dần (fade-out) cho đến khi biến mất hoàn toàn, giải phóng tầm nhìn bàn đấu.
+class RuleMessagePopupBanner extends StatefulWidget {
+  final bool ultraCompact;
+  final double upscale;
+
+  const RuleMessagePopupBanner({
+    super.key,
+    required this.ultraCompact,
+    required this.upscale,
+  });
+
+  @override
+  State<RuleMessagePopupBanner> createState() => _RuleMessagePopupBannerState();
+}
+
+class _RuleMessagePopupBannerState extends State<RuleMessagePopupBanner>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<Offset> _slideAnimation;
+
+  async.Timer? _dismissTimer;
+  String _currentMessage = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+      reverseDuration: const Duration(milliseconds: 550),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutBack,
+        reverseCurve: Curves.easeIn,
+      ),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.25),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      ),
+    );
+
+    gameInstance.ruleMessage.addListener(_onMessageChanged);
+    gameInstance.matchVersion.addListener(_onMatchVersionChanged);
+    LanguageService.instance.addListener(_onLanguageChanged);
+
+    // Kích hoạt popup thông báo ban đầu khi vào trận
+    if (!gameInstance.rackOver) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _triggerMessagePopup();
+        }
+      });
+    }
+  }
+
+  void _onMessageChanged() {
+    if (!mounted) return;
+    _triggerMessagePopup();
+  }
+
+  void _onMatchVersionChanged() {
+    if (!mounted) return;
+    if (gameInstance.rackOver) {
+      _dismissTimer?.cancel();
+      _controller.reset();
+      if (_currentMessage.isNotEmpty) {
+        setState(() {
+          _currentMessage = '';
+        });
+      }
+    }
+  }
+
+  void _onLanguageChanged() {
+    if (!mounted) return;
+    if (_controller.value > 0) {
+      final newMsg = LanguageService.instance.localizeRuleMessage(gameInstance.ruleMessage.value);
+      if (newMsg != _currentMessage) {
+        setState(() {
+          _currentMessage = newMsg;
+        });
+      }
+    }
+  }
+
+  void _triggerMessagePopup() {
+    if (gameInstance.rackOver) return;
+
+    final raw = gameInstance.ruleMessage.value;
+    final localized = LanguageService.instance.localizeRuleMessage(raw);
+
+    _dismissTimer?.cancel();
+
+    if (localized.isEmpty) {
+      _controller.reset();
+      setState(() {
+        _currentMessage = '';
+      });
+      return;
+    }
+
+    setState(() {
+      _currentMessage = localized;
+    });
+
+    // Xuất hiện dạng popup mượt mà
+    _controller.forward(from: 0.0);
+
+    // Duy trì trong 2.0s rồi mờ dần cho đến khi biến mất hoàn toàn
+    _dismissTimer = async.Timer(const Duration(milliseconds: 2000), () {
+      if (mounted) {
+        _controller.reverse();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _dismissTimer?.cancel();
+    gameInstance.ruleMessage.removeListener(_onMessageChanged);
+    gameInstance.matchVersion.removeListener(_onMatchVersionChanged);
+    LanguageService.instance.removeListener(_onLanguageChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: (widget.ultraCompact ? 5.0 : 10.0) * widget.upscale,
+      left: 0,
+      right: 0,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          if (_controller.isDismissed || _currentMessage.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return IgnorePointer(
+            ignoring: _controller.value < 0.1,
+            child: Center(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: ScaleTransition(
+                  scale: _scaleAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: child,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        child: GestureDetector(
+          onTap: () {
+            // Cho phép người chơi chạm vào để ẩn ngay nếu muốn
+            _dismissTimer?.cancel();
+            _controller.reverse();
+          },
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(6 * widget.upscale),
+            ),
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: (widget.ultraCompact ? 8.0 : 12.0) * widget.upscale,
+                vertical: (widget.ultraCompact ? 3.0 : 6.0) * widget.upscale,
+              ),
+              child: Text(
+                _currentMessage,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: (widget.ultraCompact ? 10.5 : 12.5) * widget.upscale,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildRuleMessageBanner({
+  required bool ultraCompact,
+  required double upscale,
+}) {
+  return RuleMessagePopupBanner(
+    ultraCompact: ultraCompact,
+    upscale: upscale,
+  );
+}
+
 Widget _buildRightSideControls(
   BuildContext context, {
   bool compact = false,
   bool ultraCompact = false,
+  double upscaleFactor = 1.0,
 }) {
   return AimRulerSliderControl(
     game: gameInstance,
     compact: compact,
     ultraCompact: ultraCompact,
+    upscaleFactor: upscaleFactor,
     onOpenSpinDialog: () {
       if (!gameInstance.canUserControl) return;
       _showCueSpinDialog(context);
@@ -1230,8 +1546,12 @@ Widget _buildRightSideControls(
   );
 }
 
-Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
-  final controlWidth = ultraCompact ? 36.0 : (compact ? 44.0 : 52.0);
+Widget _buildPowerControl({
+  bool compact = false,
+  bool ultraCompact = false,
+  double upscaleFactor = 1.0,
+}) {
+  final controlWidth = (ultraCompact ? 36.0 : (compact ? 44.0 : 52.0)) * upscaleFactor;
   return ListenableBuilder(
     listenable: Listenable.merge([
       gameInstance.currentTurn,
@@ -1257,8 +1577,8 @@ Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
       return Container(
         width: controlWidth,
         padding: EdgeInsets.symmetric(
-          horizontal: ultraCompact ? 2.5 : (compact ? 4 : 5),
-          vertical: ultraCompact ? 4 : (compact ? 6 : 8),
+          horizontal: (ultraCompact ? 2.5 : (compact ? 4 : 5)) * upscaleFactor,
+          vertical: (ultraCompact ? 4 : (compact ? 6 : 8)) * upscaleFactor,
         ),
         decoration: BoxDecoration(
           color: const Color(0xFF14171C),
@@ -1380,7 +1700,7 @@ Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
                       children: [
                         // Thanh đo lực neon
                         Container(
-                          width: ultraCompact ? 5.5 : (compact ? 7.0 : 8.5),
+                          width: (ultraCompact ? 5.5 : (compact ? 7.0 : 8.5)) * upscaleFactor,
                           decoration: BoxDecoration(
                             color: Colors.black45,
                             borderRadius: BorderRadius.circular(3),
@@ -1437,7 +1757,7 @@ Widget _buildPowerControl({bool compact = false, bool ultraCompact = false}) {
                                   ((power - 0.05) / 0.95).clamp(0.0, 1.0);
                               final pullOffset = normalizedPower * maxTravel;
 
-                              final stickWidth = ultraCompact ? 10.0 : (compact ? 12.0 : 15.0);
+                              final stickWidth = (ultraCompact ? 10.0 : (compact ? 12.0 : 15.0)) * upscaleFactor;
 
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(5),
@@ -2159,13 +2479,19 @@ class _VerticalCueStickPainter extends CustomPainter {
 
 
 void _showCueSpinDialog(BuildContext context) {
+  final screenH = MediaQuery.of(context).size.height;
+  final isShort = screenH < 400;
+  final isVeryShort = screenH < 340;
+  final ballBoxSize = isVeryShort ? 140.0 : (isShort ? 170.0 : 230.0);
+  final cueBallSize = isVeryShort ? 120.0 : (isShort ? 150.0 : 200.0);
+
   showDialog<void>(
     context: context,
     builder: (context) => Dialog(
       backgroundColor: const Color(0xFF1B2026),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
+      child: SingleChildScrollView(
+        padding: EdgeInsets.all(isShort ? 12 : 18),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 360),
           child: Column(
@@ -2176,9 +2502,9 @@ void _showCueSpinDialog(BuildContext context) {
                 children: [
                   Text(
                     'spin_control_title'.tr,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 17,
+                      fontSize: isShort ? 15 : 17,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -2193,38 +2519,38 @@ void _showCueSpinDialog(BuildContext context) {
               const SizedBox(height: 4),
               Text(
                 'spin_control_instruction'.tr,
-                style: const TextStyle(color: Colors.white60, fontSize: 12),
+                style: TextStyle(color: Colors.white60, fontSize: isShort ? 10.5 : 12),
                 textAlign: TextAlign.center,
               ),
 
-              const SizedBox(height: 14),
-              // Khung hiển thị quả bi cái tương tác
+              SizedBox(height: isShort ? 8 : 14),
+              // Khung hiển thị quả bi cái tương tác (Tự động co giãn theo chiều cao màn hình)
               SizedBox(
-                width: 230,
-                height: 230,
+                width: ballBoxSize,
+                height: ballBoxSize,
                 child: ValueListenableBuilder<Offset>(
                   valueListenable: gameInstance.cueSpin,
                   builder: (context, spin, child) => GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTapDown: (details) =>
-                        _updateSpinFromTouch(details.localPosition, 230),
+                        _updateSpinFromTouch(details.localPosition, ballBoxSize),
                     onPanUpdate: (details) =>
-                        _updateSpinFromTouch(details.localPosition, 230),
+                        _updateSpinFromTouch(details.localPosition, ballBoxSize),
                     onPanEnd: (_) => gameInstance.commitCueSpin(),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
                         // Vỏ nền bi cái với viền phát sáng nhẹ
                         Container(
-                          width: 200,
-                          height: 200,
+                          width: cueBallSize,
+                          height: cueBallSize,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white,
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.cyanAccent.withValues(alpha: 0.25),
-                                blurRadius: 18,
+                                blurRadius: isShort ? 12 : 18,
                                 spreadRadius: 2,
                               ),
                             ],
@@ -2239,26 +2565,26 @@ void _showCueSpinDialog(BuildContext context) {
                         // Trục tọa độ và vòng tròn ranh giới an toàn
                         IgnorePointer(
                           child: CustomPaint(
-                            size: const Size(200, 200),
+                            size: Size(cueBallSize, cueBallSize),
                             painter: _CueBallGuidePainter(),
                           ),
                         ),
                         // Chấm đỏ đánh dấu điểm chạm cơ
                         Builder(
                           builder: (context) {
-                            const maxRadius = 100.0 * 0.80; // 80px
+                            final maxRadius = (cueBallSize / 2.0) * 0.80;
                             return Transform.translate(
                               offset: Offset(
                                 spin.dx * maxRadius,
                                 spin.dy * maxRadius,
                               ),
                               child: Container(
-                                width: 26,
-                                height: 26,
+                                width: isShort ? 20 : 26,
+                                height: isShort ? 20 : 26,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: Colors.redAccent.withValues(alpha: 0.9),
-                                  border: Border.all(color: Colors.white, width: 2.5),
+                                  border: Border.all(color: Colors.white, width: isShort ? 1.8 : 2.5),
                                   boxShadow: const [
                                     BoxShadow(
                                       color: Colors.black54,
@@ -2269,8 +2595,8 @@ void _showCueSpinDialog(BuildContext context) {
                                 ),
                                 child: Center(
                                   child: Container(
-                                    width: 6,
-                                    height: 6,
+                                    width: isShort ? 4 : 6,
+                                    height: isShort ? 4 : 6,
                                     decoration: const BoxDecoration(
                                       shape: BoxShape.circle,
                                       color: Colors.white,
@@ -2286,13 +2612,13 @@ void _showCueSpinDialog(BuildContext context) {
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: isShort ? 6 : 10),
               // Nhãn trạng thái xoáy thời gian thực
               ValueListenableBuilder<Offset>(
                 valueListenable: gameInstance.cueSpin,
                 builder: (context, spin, child) {
                   return Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                    padding: EdgeInsets.symmetric(horizontal: isShort ? 8 : 12, vertical: isShort ? 3 : 5),
                     decoration: BoxDecoration(
                       color: Colors.black45,
                       borderRadius: BorderRadius.circular(10),
@@ -2300,25 +2626,25 @@ void _showCueSpinDialog(BuildContext context) {
                     ),
                     child: Text(
                       _describeSpin(spin),
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.cyanAccent,
                         fontWeight: FontWeight.w600,
-                        fontSize: 12.5,
+                        fontSize: isShort ? 11.0 : 12.5,
                       ),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 14),
+              SizedBox(height: isShort ? 8 : 14),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.check, size: 18),
+                  icon: Icon(Icons.check, size: isShort ? 16 : 18),
                   label: Text('done'.tr),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF0E5B3A),
-                    padding: const EdgeInsets.symmetric(vertical: 11),
+                    padding: EdgeInsets.symmetric(vertical: isShort ? 8 : 11),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -2950,6 +3276,7 @@ Widget _buildControlBar(
   BuildContext context, {
   bool compact = false,
   bool ultraCompact = false,
+  double upscaleFactor = 1.0,
   required VoidCallback onHome,
 }) {
   return ListenableBuilder(
@@ -2965,8 +3292,8 @@ Widget _buildControlBar(
           if (gameInstance.activeDailyPuzzle != null) {
             final puzzle = gameInstance.activeDailyPuzzle!;
             return Container(
-              height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              height: (ultraCompact ? 48.0 : (compact ? 58.0 : 66.0)) * upscaleFactor.clamp(0.95, 1.15),
+              padding: EdgeInsets.symmetric(horizontal: ultraCompact ? 6 : 12, vertical: ultraCompact ? 2 : 3),
               decoration: BoxDecoration(
                 color: const Color(0xE620252A),
                 borderRadius: BorderRadius.circular(ultraCompact ? 8 : 12),
@@ -3111,8 +3438,8 @@ Widget _buildControlBar(
             final shot = gameInstance.activeLegendaryTrickshot!;
             final locPocket = LanguageService.instance.localizePocketName(shot.targetPocketName);
             return Container(
-              height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              height: (ultraCompact ? 48.0 : (compact ? 58.0 : 66.0)) * upscaleFactor.clamp(0.95, 1.15),
+              padding: EdgeInsets.symmetric(horizontal: ultraCompact ? 6 : 10, vertical: ultraCompact ? 2 : 3),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [Color(0xFF2A0808), Color(0xFF4A1010), Color(0xFF1F0505)],
@@ -3307,9 +3634,13 @@ Widget _buildControlBar(
 
               // Thông tin gậy cơ P1 và P2
               CueModel p1Cue = ProgressionService.instance.equippedCue;
-              int p1CueLevel = ProgressionService.instance.equippedCueLevel;
+              int p1CueLevel = gameInstance.isPassAndPlay
+                  ? 1
+                  : ProgressionService.instance.equippedCueLevel;
               CueModel p2Cue = CueCatalog.getById(gameInstance.player2CueId.value);
-              int p2CueLevel = gameInstance.player2CueLevel.value;
+              int p2CueLevel = gameInstance.isPassAndPlay
+                  ? 1
+                  : gameInstance.player2CueLevel.value;
 
               if (gameInstance.activeTournamentStage != null) {
                 final tour = gameInstance.activeTournamentStage!;
@@ -3370,10 +3701,10 @@ Widget _buildControlBar(
               }
 
               return Container(
-                height: ultraCompact ? 44.0 : (compact ? 52.0 : 66.0),
+                height: (ultraCompact ? 48.0 : (compact ? 58.0 : 66.0)) * upscaleFactor.clamp(0.95, 1.15),
                 padding: EdgeInsets.symmetric(
                   horizontal: ultraCompact ? 4 : 8,
-                  vertical: ultraCompact ? 3 : 5,
+                  vertical: ultraCompact ? 2 : 3,
                 ),
                 decoration: BoxDecoration(
                   color: const Color(0xE620252A),
@@ -3400,6 +3731,7 @@ Widget _buildControlBar(
                         cueLevel: p1CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
+                        upscaleFactor: upscaleFactor,
                         onTapCue: null, // Chỉ được đổi cơ ở ngoài main menu, không được đổi giữa trận đấu
                       ),
                     ),
@@ -3462,6 +3794,7 @@ Widget _buildControlBar(
                         cueLevel: p2CueLevel,
                         compact: compact,
                         ultraCompact: ultraCompact,
+                        upscaleFactor: upscaleFactor,
                         onTapCue: null, // Chỉ được đổi cơ ở ngoài main menu, không được đổi giữa trận đấu
                       ),
                     ),
@@ -3821,6 +4154,7 @@ void _showDeclareLoss(BuildContext context) {
   );
 }
 
+// ignore: unused_element
 void _showCueSelectorDialog(BuildContext context, {required bool forPlayer2}) {
   showDialog<void>(
     context: context,
@@ -4071,12 +4405,13 @@ Widget _buildPlayerCard(
   int cueLevel = 1,
   bool compact = false,
   bool ultraCompact = false,
+  double upscaleFactor = 1.0,
   VoidCallback? onTapCue,
 }) {
-  final ballBoxSize = ultraCompact ? 15.0 : (compact ? 18.0 : 22.0);
-  final ballImgSize = ultraCompact ? 13.0 : (compact ? 16.0 : 20.0);
-  final nameFontSize = ultraCompact ? 9.5 : (compact ? 11.0 : 12.0);
-  final detailFontSize = ultraCompact ? 7.0 : (compact ? 8.0 : 9.0);
+  final ballBoxSize = (ultraCompact ? 15.0 : (compact ? 18.0 : 22.0)) * upscaleFactor;
+  final ballImgSize = (ultraCompact ? 13.0 : (compact ? 16.0 : 20.0)) * upscaleFactor;
+  final nameFontSize = (ultraCompact ? 9.5 : (compact ? 11.0 : 12.0)) * upscaleFactor;
+  final detailFontSize = (ultraCompact ? 7.0 : (compact ? 8.0 : 9.0)) * upscaleFactor;
 
   final cardWidget = Container(
     padding: EdgeInsets.symmetric(
@@ -4098,78 +4433,82 @@ Widget _buildPlayerCard(
         // Cột thông tin người chơi: Level, Tên, Tiền ($), Tỷ số
         Expanded(
           flex: 5,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: alignRight
-                ? CrossAxisAlignment.end
-                : CrossAxisAlignment.start,
-            children: [
-              // 1. Dòng Level + Tên người chơi
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (isTurn && !alignRight)
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: const Color(0xFF00E676),
-                      size: ultraCompact ? 8 : 10,
-                    ),
-                  if (isTurn && !alignRight) SizedBox(width: ultraCompact ? 2 : 3),
-                  // Huy hiệu Level nhỏ gọn
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: ultraCompact ? 3 : 5,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: alignRight
+                  ? CrossAxisAlignment.end
+                  : CrossAxisAlignment.start,
+              children: [
+                // 1. Dòng Level + Tên người chơi
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isTurn && !alignRight)
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        color: const Color(0xFF00E676),
+                        size: ultraCompact ? 8 : 10,
                       ),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black45,
-                          blurRadius: 2,
-                          offset: Offset(0, 1),
+                    if (isTurn && !alignRight) SizedBox(width: ultraCompact ? 2 : 3),
+                    // Huy hiệu Level nhỏ gọn
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: ultraCompact ? 3 : 5,
+                        vertical: 1,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFB300), Color(0xFFFF6F00)],
                         ),
-                      ],
-                    ),
-                    child: Text(
-                      'Lv.$level',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: ultraCompact ? 6.8 : 8.2,
-                        fontWeight: FontWeight.w900,
+                        borderRadius: BorderRadius.circular(4),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Colors.black45,
+                            blurRadius: 2,
+                            offset: Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        'Lv.$level',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: ultraCompact ? 6.8 : 8.2,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 3.5),
-                  Flexible(
-                    child: Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: nameFontSize,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(width: 3.5),
+                    ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: (ultraCompact ? 80.0 : (compact ? 100.0 : 130.0)) * upscaleFactor,
+                      ),
+                      child: Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: nameFontSize,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                  ),
-                  if (isTurn && alignRight) SizedBox(width: ultraCompact ? 2 : 3),
-                  if (isTurn && alignRight)
-                    Icon(
-                      Icons.arrow_back_ios,
-                      color: const Color(0xFF00E676),
-                      size: ultraCompact ? 8 : 10,
-                    ),
-                ],
-              ),
-              // 2. Dòng Tiền Vàng ($) & Tỷ số (lấp đầy vị trí còn trống)
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: alignRight ? Alignment.centerRight : Alignment.centerLeft,
-                child: Row(
+                    if (isTurn && alignRight) SizedBox(width: ultraCompact ? 2 : 3),
+                    if (isTurn && alignRight)
+                      Icon(
+                        Icons.arrow_back_ios,
+                        color: const Color(0xFF00E676),
+                        size: ultraCompact ? 8 : 10,
+                      ),
+                  ],
+                ),
+                // 2. Dòng Tiền Vàng ($) & Tỷ số (lấp đầy vị trí còn trống)
+                Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
@@ -4196,27 +4535,28 @@ Widget _buildPlayerCard(
                     ),
                   ],
                 ),
-              ),
-              // 3. Phân loại bi mục tiêu (Bi trơn / Bi sọc)
-              if (groupLabel.isNotEmpty)
-                Text(
-                  groupLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: const Color(0xFFFFD54F),
-                    fontSize: detailFontSize,
-                    fontWeight: FontWeight.w600,
+                // 3. Phân loại bi mục tiêu (Bi trơn / Bi sọc)
+                if (groupLabel.isNotEmpty)
+                  Text(
+                    groupLabel,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: const Color(0xFFFFD54F),
+                      fontSize: detailFontSize,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         ),
         const SizedBox(width: 2),
         // Cột bi mục tiêu của người chơi
         Expanded(
           flex: 5,
-          child: Align(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
             alignment: alignRight
                 ? Alignment.centerLeft
                 : Alignment.centerRight,
@@ -4245,6 +4585,16 @@ Widget _buildPlayerCard(
                         'assets/images/ball_$number.png',
                         width: ballImgSize,
                         height: ballImgSize,
+                        errorBuilder: (context, error, stackTrace) => Center(
+                          child: Text(
+                            number.toString(),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: (ultraCompact ? 6.5 : 8.0) * upscaleFactor,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -4278,6 +4628,30 @@ String _formatPlayerCardCoins(int amount) {
   }
 }
 
+/// Quản lý thông báo luật chơi và lượt đấu:
+/// Tự động kích hoạt notifyListeners() mỗi khi có thông báo mới (kể cả cùng nội dung)
+/// để thanh thông báo luôn thực hiện hiệu ứng popup và mờ dần biến mất cho mỗi thông báo.
+class RuleMessageNotifier extends ValueNotifier<String> {
+  RuleMessageNotifier(super.value);
+
+  int _version = 0;
+  int get version => _version;
+
+  @override
+  set value(String newValue) {
+    _version++;
+    if (value == newValue) {
+      notifyListeners();
+    } else {
+      super.value = newValue;
+    }
+  }
+
+  void postMessage(String msg) {
+    value = msg;
+  }
+}
+
 class BilliardGame extends Forge2DGame with PanDetector {
   BilliardGame()
     : super(
@@ -4292,7 +4666,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   ValueNotifier<int> currentTurn = ValueNotifier<int>(1);
   ValueNotifier<bool> isBotMode = ValueNotifier<bool>(false);
   ValueNotifier<int> botDifficulty = ValueNotifier<int>(1);
-  ValueNotifier<String> ruleMessage = ValueNotifier<String>(
+  RuleMessageNotifier ruleMessage = RuleMessageNotifier(
     'Player 1: break shot',
   );
   ValueNotifier<double> shotPower = ValueNotifier<double>(0.05);
@@ -4465,6 +4839,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
     return true;
   }
 
+  /// Kiểm tra có đang trong chế độ 1vs1 chơi chung trên cùng 1 máy (Pass & Play) hay không
+  bool get isPassAndPlay =>
+      !isOnlineMultiplayer.value &&
+      !isLocalMultiplayer.value &&
+      !isBotMode.value &&
+      activeDailyPuzzle == null &&
+      activeLegendaryTrickshot == null &&
+      activeTournamentStage == null;
+
   /// Lấy cây gậy cơ và cấp độ tương ứng của người chơi đang trong lượt đánh (đồng bộ chính xác cho cả 2 máy)
   (CueModel cue, int level) getActivePlayerCue() {
     if (isOnlineMultiplayer.value) {
@@ -4506,6 +4889,19 @@ class BilliardGame extends Forge2DGame with PanDetector {
         CueCatalog.getById(isHard ? 'dragon_god' : 'frostbite'),
         isHard ? 4 : 2,
       );
+    } else if (isPassAndPlay) {
+      // Chế độ 1vs1 trên cùng 1 máy (Pass & Play): Cả 2 người chơi bắt buộc chỉ được dùng gậy Level 1
+      if (currentTurn.value == 2) {
+        return (
+          CueCatalog.getById(player2CueId.value),
+          1, // Cố định gậy Level 1 cho Player 2
+        );
+      } else {
+        return (
+          ProgressionService.instance.equippedCue,
+          1, // Cố định gậy Level 1 cho Player 1
+        );
+      }
     } else if (currentTurn.value == 2) {
       // Chế độ 2 người chơi trên cùng thiết bị (Pass & Play): Player 2 sử dụng cây gậy riêng của Player 2
       return (
@@ -5098,6 +5494,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void _reconfigureTableForSize(Vector2 newSize, {bool initialLoad = false}) {
+    final oldSize = _lastConfiguredSize?.clone();
     _lastConfiguredSize = newSize.clone();
     tableSpriteComponent?.size = newSize;
 
@@ -5145,6 +5542,27 @@ class BilliardGame extends Forge2DGame with PanDetector {
       } else if (breakShot) {
         spawnTriangleBalls();
         _resetCueBall();
+      } else if (oldSize != null && oldSize.x > 0 && oldSize.y > 0) {
+        // Tự động upscale / downscale tọa độ các bi trên bàn khi gập/mở thiết bị (Z Fold, Surface Duo)
+        final double kx = newSize.x / oldSize.x;
+        final double ky = newSize.y / oldSize.y;
+        if ((kx - 1.0).abs() > 0.001 || (ky - 1.0).abs() > 0.001) {
+          for (final ball in poolBalls) {
+            if (ball.isMounted && !ball.isSunk) {
+              final pos = ball.body.position;
+              ball.body.setTransform(Vector2(pos.x * kx, pos.y * ky), ball.body.angle);
+              ball.body.linearVelocity = Vector2(ball.body.linearVelocity.x * kx, ball.body.linearVelocity.y * ky);
+            }
+          }
+          try {
+            if (cueBall.isMounted && !cueBall.isSunk) {
+              final pos = cueBall.body.position;
+              cueBall.body.setTransform(Vector2(pos.x * kx, pos.y * ky), cueBall.body.angle);
+              cueBall.body.linearVelocity = Vector2(cueBall.body.linearVelocity.x * kx, cueBall.body.linearVelocity.y * ky);
+            }
+          } catch (_) {}
+          _updateAimVector(ballRadius * 2);
+        }
       }
     }
   }
@@ -5882,14 +6300,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
     } else if (isLocalMultiplayer.value) {
       final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
           ? LocalMultiplayerService.instance.opponentName
-          : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+          : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr);
       ruleMessage.value = isMyTurn
           ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn')
           : 'Đấu mạng: Lượt của $oppName...';
     } else if (isBotMode.value && currentTurn.value == 2) {
       final botTitle = activeTournamentStage?.opponentName ??
           activeBotStage?.botName ??
-          (botDifficulty.value == 2 ? 'Máy (Khó)' : 'Máy (Dễ)');
+          (botDifficulty.value == 2 ? 'bot_hard'.tr : 'bot_easy'.tr);
       ruleMessage.value = 'Lượt $botTitle';
     } else {
       ruleMessage.value = 'Lượt Player ${currentTurn.value}';
@@ -5904,6 +6322,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     isLocalMultiplayer.value = false;
     isOnlineMultiplayer.value = false;
     isBotMode.value = false;
+    player2CueLevel.value = 1; // Khóa cấp độ gậy P2 về Level 1 cho chế độ 1vs1 cùng máy
     restartMatch();
   }
 
@@ -6115,7 +6534,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     } else if (isLocalMultiplayer.value) {
       final oppName = LocalMultiplayerService.instance.opponentName.isNotEmpty
           ? LocalMultiplayerService.instance.opponentName
-          : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)');
+          : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr);
       ruleMessage.value = LocalMultiplayerService.instance.isHost
           ? 'Đấu mạng: Lượt của bạn (P1 break shot)'
           : 'Đấu mạng: Lượt của $oppName (P1 break shot)';
@@ -7230,7 +7649,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
           ? OnlineMultiplayerService.instance.opponentName
           : (LocalMultiplayerService.instance.opponentName.isNotEmpty
               ? LocalMultiplayerService.instance.opponentName
-              : (LocalMultiplayerService.instance.isHost ? 'Khách (P2)' : 'Chủ phòng (P1)'));
+              : (LocalMultiplayerService.instance.isHost ? 'guest_p2'.tr : 'host_p1'.tr));
       ruleMessage.value = isMyTurn
           ? (ballInHand ? 'Đấu mạng: Lượt của bạn (Đặt bi tuỳ ý!)' : 'Đấu mạng: Lượt của bạn!')
           : 'Đấu mạng: Lượt của $oppName...';
@@ -9122,3 +9541,33 @@ class PoolBall extends BodyComponent {
     canvas.restore();
   }
 }
+
+@visibleForTesting
+Widget buildControlBarForTesting(
+  BuildContext context, {
+  bool compact = false,
+  bool ultraCompact = false,
+  double upscaleFactor = 1.0,
+  required VoidCallback onHome,
+}) => _buildControlBar(context, compact: compact, ultraCompact: ultraCompact, upscaleFactor: upscaleFactor, onHome: onHome);
+
+@visibleForTesting
+Widget buildPlayerCardForTesting(
+  String name,
+  Color color,
+  bool isTurn,
+  int score,
+  String groupLabel,
+  List<int> groupBalls,
+  bool alignRight, {
+  int level = 1,
+  int coins = 1200,
+  CueModel? cue,
+  int cueLevel = 1,
+  bool compact = false,
+  bool ultraCompact = false,
+  double upscaleFactor = 1.0,
+  VoidCallback? onTapCue,
+}) => _buildPlayerCard(name, color, isTurn, score, groupLabel, groupBalls, alignRight,
+    level: level, coins: coins, cue: cue, cueLevel: cueLevel, compact: compact,
+    ultraCompact: ultraCompact, upscaleFactor: upscaleFactor, onTapCue: onTapCue);

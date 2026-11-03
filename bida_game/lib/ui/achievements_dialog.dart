@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/achievement_model.dart';
 import '../models/medal_model.dart';
@@ -47,8 +48,8 @@ class _AchievementsDialogState extends State<AchievementsDialog> with SingleTick
         vertical: isMobile ? 12 : 24,
       ),
       child: Container(
-        width: 820,
-        height: screenSize.height * 0.88,
+        width: math.min(screenSize.width * 0.95, 860.0),
+        height: screenSize.height * 0.90,
         decoration: BoxDecoration(
           color: const Color(0xFF0F1E19),
           borderRadius: BorderRadius.circular(20),

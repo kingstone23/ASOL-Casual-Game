@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/progression_service.dart';
@@ -21,7 +22,8 @@ class PlayerProfileDialog extends StatelessWidget {
         vertical: isMobile ? 12 : 24,
       ),
       child: Container(
-        width: 680,
+        width: math.min(screenSize.width * 0.94, 700.0),
+        constraints: BoxConstraints(maxHeight: screenSize.height * 0.94),
         decoration: BoxDecoration(
           color: const Color(0xFF0F1F1A),
           borderRadius: BorderRadius.circular(24),
@@ -414,7 +416,7 @@ class PlayerProfileDialog extends StatelessWidget {
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
-                                                      medal.name,
+                                                      medal.localizedName,
                                                       style: const TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 9,

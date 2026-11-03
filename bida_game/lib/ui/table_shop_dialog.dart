@@ -70,8 +70,8 @@ class _TableShopDialogState extends State<TableShopDialog> {
 
           return Container(
             constraints: BoxConstraints(
-              maxWidth: 880,
-              maxHeight: math.min(screenHeight * 0.94, 520.0),
+              maxWidth: math.min(screenWidth * 0.95, 920.0),
+              maxHeight: math.min(screenHeight * 0.94, 620.0),
             ),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
@@ -231,7 +231,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'CỬA HÀNG BÀN BIDA',
+                  'table_shop_title'.tr,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
@@ -240,7 +240,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
                   ),
                 ),
                 Text(
-                  '20 Mẫu Bàn Độc Quyền • Thay Đổi Diện Mạo Bàn Đấu',
+                  'table_shop_subtitle'.tr,
                   style: TextStyle(
                     color: Colors.tealAccent.shade100,
                     fontSize: 11,
@@ -301,7 +301,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
         itemBuilder: (context, index) {
           final rarity = rarities[index];
           final isSelected = _filterRarity == rarity;
-          final label = rarity == null ? 'Tất cả (20)' : rarity.label;
+          final label = rarity == null ? 'all_tables_filter'.tr : rarity.label;
           final color = rarity?.glowColor ?? Colors.tealAccent;
 
           return ChoiceChip(
@@ -416,14 +416,14 @@ class _TableShopDialogState extends State<TableShopDialog> {
                       const SizedBox(height: 2),
                       Text(
                         isEquipped
-                            ? '⭐ Đang dùng'
+                            ? 'table_in_use'.tr
                             : isOwned
-                                ? '✓ Đã sở hữu'
+                                ? 'table_owned'.tr
                                 : table.priceCoins == 0 && table.priceDiamonds == 0
-                                    ? 'Miễn phí'
+                                    ? 'free'.tr
                                     : table.priceDiamonds > 0
                                         ? '${table.priceDiamonds} KC'
-                                        : '${table.priceCoins} Vàng',
+                                        : '${table.priceCoins} ${'coins_unit'.tr}',
                         style: TextStyle(
                           color: isEquipped
                               ? Colors.amberAccent
@@ -516,10 +516,10 @@ class _TableShopDialogState extends State<TableShopDialog> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Expanded(child: _buildTableStat('Độ Nảy Băng', 'Chuẩn Tour', Icons.sports_tennis)),
-                Expanded(child: _buildTableStat('Mặt Vải Nỉ', 'Siêu Mịn', Icons.texture)),
-                Expanded(child: _buildTableStat('Concept', table.animeConcept.localizedLabel, table.animeConcept.icon)),
-                Expanded(child: _buildTableStat('Cấp Độ', 'Lv.${table.unlockLevel}', Icons.military_tech)),
+                Expanded(child: _buildTableStat('table_cushion_bounce'.tr, 'tour_standard'.tr, Icons.sports_tennis)),
+                Expanded(child: _buildTableStat('table_cloth_felt'.tr, 'ultra_smooth'.tr, Icons.texture)),
+                Expanded(child: _buildTableStat('concept_label'.tr, table.animeConcept.localizedLabel, table.animeConcept.icon)),
+                Expanded(child: _buildTableStat('level'.tr, 'Lv.${table.unlockLevel}', Icons.military_tech)),
               ],
             ),
           ),
@@ -666,7 +666,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.amberAccent),
         ),
-        child: const FittedBox(
+        child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -674,7 +674,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
               Icon(Icons.check_circle, color: Colors.amberAccent, size: 18),
               SizedBox(width: 6),
               Text(
-                'ĐANG TRANG BỊ TRÊN BÀN ĐẤU',
+                'table_equipped_banner'.tr,
                 style: TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.bold, fontSize: 13),
               ),
             ],
@@ -687,12 +687,12 @@ class _TableShopDialogState extends State<TableShopDialog> {
       return ElevatedButton.icon(
         onPressed: () {
           service.equipTable(table.id);
-          _showToast('Đã áp dụng ${table.localizedName} cho bàn thi đấu!');
+          _showToast('table_applied_toast'.tr.replaceAll('{name}', table.localizedName));
         },
         icon: const Icon(Icons.check, size: 18),
-        label: const FittedBox(
+        label: FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text('TRANG BỊ BÀN NÀY', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
+          child: Text('equip_table_btn'.tr, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5)),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF00897B),
@@ -714,7 +714,7 @@ class _TableShopDialogState extends State<TableShopDialog> {
           child: FittedBox(
             fit: BoxFit.scaleDown,
             child: Text(
-              'MỞ KHÓA Ở CẤP ${table.unlockLevel}',
+              'unlock_table_level'.tr.replaceAll('{level}', '${table.unlockLevel}'),
               style: const TextStyle(color: Colors.white38, fontWeight: FontWeight.bold, fontSize: 13),
             ),
           ),
@@ -730,21 +730,23 @@ class _TableShopDialogState extends State<TableShopDialog> {
     return ElevatedButton.icon(
       onPressed: () {
         if (!canAfford) {
-          _showToast(isDiamond ? 'Bạn không đủ Kim Cương!' : 'Bạn không đủ Vàng!', isError: true);
+          _showToast(isDiamond ? 'not_enough_diamonds'.tr : 'not_enough_coins'.tr, isError: true);
           return;
         }
         final ok = service.buyTable(table);
         if (ok) {
-          _showToast('Đã mua thành công và trang bị ${table.localizedName}!');
+          _showToast('table_bought_toast'.tr.replaceAll('{name}', table.localizedName));
         } else {
-          _showToast('Không thể mua bàn bida!', isError: true);
+          _showToast('table_buy_error_toast'.tr, isError: true);
         }
       },
       icon: Icon(isDiamond ? Icons.diamond : Icons.monetization_on, size: 18),
       label: FittedBox(
         fit: BoxFit.scaleDown,
         child: Text(
-          isDiamond ? 'MUA BẰNG $price KIM CƯƠNG' : 'MUA BẰNG $price VÀNG',
+          isDiamond
+              ? 'buy_with_diamonds'.tr.replaceAll('{price}', '$price')
+              : 'buy_with_coins'.tr.replaceAll('{price}', '$price'),
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
         ),
       ),

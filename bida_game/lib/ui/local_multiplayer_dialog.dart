@@ -138,8 +138,8 @@ class _LocalMultiplayerDialogState extends State<LocalMultiplayerDialog>
           }
 
           // Chiều cao tối ưu trên điện thoại ngang: không bao giờ tràn màn hình
-          final dialogMaxHeight = math.min(screenHeight * 0.92, 320.0);
-          final dialogMaxWidth = math.min(screenWidth * 0.94, 660.0);
+          final dialogMaxHeight = math.min(screenHeight * 0.92, 520.0);
+          final dialogMaxWidth = math.min(screenWidth * 0.94, 680.0);
 
           return Container(
             constraints: BoxConstraints(
