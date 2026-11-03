@@ -29,10 +29,34 @@ class AimRulerSliderControl extends StatefulWidget {
   State<AimRulerSliderControl> createState() => _AimRulerSliderControlState();
 }
 
-class _AimRulerSliderControlState extends State<AimRulerSliderControl> {
+class _AimRulerSliderControlState extends State<AimRulerSliderControl> with WidgetsBindingObserver {
   double? _lastPanY;
   bool _isDragging = false;
   int _lastHapticStep = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) {
+      if (_isDragging || _lastPanY != null) {
+        setState(() {
+          _isDragging = false;
+          _lastPanY = null;
+        });
+      }
+    }
+  }
 
   void _triggerHaptic(double angle) {
     final step = (angle * 180 / math.pi).floor();

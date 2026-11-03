@@ -162,7 +162,8 @@ class _BilliardHomeState extends State<BilliardHome> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.paused ||
-        state == AppLifecycleState.hidden) {
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.inactive) {
       gameInstance.onAppPaused();
       AudioManager.instance.pauseBgm();
     } else if (state == AppLifecycleState.resumed) {
@@ -4705,30 +4706,75 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void onAppPaused() {
     _appPausedTime = DateTime.now();
     isAppPaused = true;
-    // KHÔNG gán paused = true để Flame GameLoop không bị gián đoạn/lỗi ticker trên Android
+    _skipNextDt = true;
+    resetAllInputGestures();
+    try {
+      pauseEngine();
+    } catch (_) {}
   }
 
   void onAppResumed() {
     isAppPaused = false;
+    _skipNextDt = true;
+    try {
+      resumeEngine();
+    } catch (_) {}
+
     final pauseTime = _appPausedTime;
     _appPausedTime = null;
 
-    if (pauseTime != null) {
+    if (pauseTime != null && shotInProgress) {
       final elapsed = DateTime.now().difference(pauseTime).inMilliseconds / 1000.0;
       if (elapsed > 0.05) {
-        // Mô phỏng bù vật lý trong thời gian thực cho các bi đang lăn, va chạm và hoàn tất lượt
         _catchUpRealtimePhysics(elapsed);
       }
     }
 
+    if (isBotMode.value && currentTurn.value == 2 && !shotInProgress && !rackOver) {
+      botWaitTime = 0.2;
+      botState = 0;
+    }
+
+    resetAllInputGestures();
     _sanitizeAllBallBodies();
   }
 
-  void _catchUpRealtimePhysics(double elapsedSeconds) {
-    if (!_hasGameLoaded || !physicsReady) return;
+  void resetAllInputGestures() {
+    dragStart = null;
+    dragCurrent = null;
+    if (movingCueBall) {
+      movingCueBall = false;
+    }
+    powerDragStartY = null;
+    if (!shotInProgress) {
+      shotPower.value = 0.05;
+    }
+    settledTime = 0;
+    _skipNextDt = true;
 
-    // Giới hạn thời gian bù tối đa 8.0 giây để đảm bảo hoàn tất trọn vẹn cú đánh mà vẫn phản hồi tức thì
-    final double duration = elapsedSeconds.clamp(0.0, 8.0);
+    if (!shotInProgress && _hasGameLoaded && physicsReady) {
+      cueBall.isAiming = true;
+      _updateAimVector(ballRadius * 2);
+    }
+  }
+
+  @override
+  void lifecycleStateChange(AppLifecycleState state) {
+    super.lifecycleStateChange(state);
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.inactive) {
+      onAppPaused();
+    } else if (state == AppLifecycleState.resumed) {
+      onAppResumed();
+    }
+  }
+
+  void _catchUpRealtimePhysics(double elapsedSeconds) {
+    if (!_hasGameLoaded || !physicsReady || !shotInProgress) return;
+
+    // Giới hạn thời gian bù tối đa 3.0 giây (~180 bước) để phản hồi tức thì và không làm giật khung hình
+    final double duration = elapsedSeconds.clamp(0.0, 3.0);
     const double stepDt = 0.0166667;
     final int steps = (duration / stepDt).round();
 
@@ -4761,17 +4807,18 @@ class BilliardGame extends Forge2DGame with PanDetector {
             settledTime = 0;
           }
 
-          if (_shotElapsedTime > 18.0) {
+          if (_shotElapsedTime > 10.0) {
             cueBall.body.linearVelocity.setZero();
+            cueBall.body.angularVelocity = 0;
             for (final ball in poolBalls) {
               ball.body.linearVelocity.setZero();
+              ball.body.angularVelocity = 0;
             }
             _shotElapsedTime = 0.0;
             finishShot();
             break;
           }
         } else {
-          // Các bi đã dừng và không có cú đánh nào diễn ra: dừng catch-up ngay lập tức
           break;
         }
       }
@@ -6047,6 +6094,11 @@ class BilliardGame extends Forge2DGame with PanDetector {
       body.angularVelocity = 0;
       return true;
     }
+    if (vel.length < 0.35) {
+      vel.setZero();
+      body.angularVelocity = 0;
+      return true;
+    }
     return vel.length < 0.35 && ang.abs() < stopAngularVelocity;
   }
 
@@ -6183,6 +6235,7 @@ class BilliardGame extends Forge2DGame with PanDetector {
     // Khi vận tốc cực nhỏ (< 0.35 px/s), dừng bi dứt khoát mượt mà
     if (nextSpeed < 0.35 || nextSpeed.isNaN || nextSpeed.isInfinite) {
       velocity.setZero();
+      body.angularVelocity = 0;
     } else {
       if (nextSpeed > maximumBallSpeed) {
         nextSpeed = maximumBallSpeed;
