@@ -173,31 +173,45 @@ class Ball3DRenderer {
     double opacity = 1.0,
     Offset? cueSpinOffset,
     double pocketDropProgress = 0.0, // 0.0 (trên bàn nỉ) -> 1.0 (chìm sâu vào lòng lỗ)
+    double zHeight = 0.0, // Độ cao giả lập trục Z khi bay/nhảy Jump Shot
   }) {
     if (opacity <= 0.001 || scale <= 0.001 || radius <= 0) return;
 
+    // Khi bi nhảy lên cao (Jump Shot): phóng to nhẹ phối cảnh 3D
+    final jumpScale = zHeight > 0
+        ? 1.0 + (zHeight / (radius * 4.0)).clamp(0.0, 0.32)
+        : 1.0;
+    final totalScale = scale * jumpScale;
+
     canvas.save();
-    if (scale != 1.0) {
-      canvas.scale(scale, scale);
+    if (totalScale != 1.0) {
+      canvas.scale(totalScale, totalScale);
     }
 
     // ==========================================
     // 1. BÓNG ĐỔ MẶT BÀN NỈ (Ambient Drop Shadow)
     // Đèn trần rọi từ góc trên-trái, bóng đổ nghiêng về dưới-phải
-    // Khi bi rơi khỏi mép nỉ vào lòng lỗ, bóng đổ trên mặt nỉ tan biến tự nhiên
+    // Khi bi nhảy cao: Bóng đổ tách rời bên dưới, hơi to ra và mờ dần chân thực
     // ==========================================
     if (pocketDropProgress < 0.50) {
       final shadowAlpha = (1.0 - pocketDropProgress / 0.50).clamp(0.0, 1.0);
+      final zOffsetFactor = (zHeight / (radius * 1.6)).clamp(0.0, 3.5);
+      final zDim = 1.0 / (1.0 + zOffsetFactor * 0.7);
+
+      final shadowCenter = Offset(
+        radius * 0.14,
+        radius * 0.18 + (zHeight * 0.65),
+      );
       final shadowRect = Rect.fromCenter(
-        center: Offset(radius * 0.14, radius * 0.18),
-        width: radius * 2.12,
-        height: radius * 1.88,
+        center: shadowCenter,
+        width: radius * (2.12 + zOffsetFactor * 0.4),
+        height: radius * (1.88 + zOffsetFactor * 0.3),
       );
       final shadowPaint = Paint()
         ..shader = RadialGradient(
           colors: [
-            Color.fromRGBO(0, 0, 0, 0.52 * opacity * shadowAlpha),
-            Color.fromRGBO(0, 0, 0, 0.22 * opacity * shadowAlpha),
+            Color.fromRGBO(0, 0, 0, (0.52 * opacity * shadowAlpha * zDim).clamp(0.0, 1.0)),
+            Color.fromRGBO(0, 0, 0, (0.22 * opacity * shadowAlpha * zDim).clamp(0.0, 1.0)),
             const Color(0x00000000),
           ],
           stops: const [0.0, 0.55, 1.0],
@@ -207,8 +221,12 @@ class Ball3DRenderer {
 
     // ==========================================
     // 2. KHỐI CẦU 3D VÀ HOA VĂN LĂN 3D (Clipped Sphere)
+    // Khi bi bay trên không: dịch chuyển quả bi lên cao dọc trục Y ngược chiều trọng lực
     // ==========================================
     canvas.save();
+    if (zHeight > 0) {
+      canvas.translate(0, -zHeight * 0.75);
+    }
     canvas.clipPath(
       Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: radius)),
     );

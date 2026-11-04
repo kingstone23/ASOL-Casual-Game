@@ -117,7 +117,7 @@ class AuthService extends ChangeNotifier {
   Future<void> init() async {
     // Tự động lắng nghe thay đổi chỉ số từ ProgressionService để đồng bộ tức thì lên Firebase
     ProgressionService.instance.addListener(() {
-      if (isLoggedIn) {
+      if (isLoggedIn && !_isGuest) {
         syncCurrentPlayerStats();
       }
     });

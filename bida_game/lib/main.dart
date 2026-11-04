@@ -1108,7 +1108,8 @@ Widget _buildInteractivePowerControl({
     ]),
     builder: (context, child) {
       final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-      final isLocked = isMultiplayer && !gameInstance.isMyTurn;
+      final isBallPlacing = gameInstance.ballInHand;
+      final isLocked = (isMultiplayer && !gameInstance.isMyTurn) || isBallPlacing;
       return IgnorePointer(
         ignoring: isLocked,
         child: AnimatedOpacity(
@@ -2558,7 +2559,7 @@ void _showCueSpinDialog(BuildContext context) {
                           ),
                           child: ClipOval(
                             child: Image.asset(
-                              'assets/images/cue_bal.png',
+                              'assets/images/cue_ball.png',
                               fit: BoxFit.cover,
                             ),
                           ),
@@ -2626,11 +2627,11 @@ void _showCueSpinDialog(BuildContext context) {
                       border: Border.all(color: Colors.white12),
                     ),
                     child: Text(
-                      _describeSpin(spin),
+                      '${_describeSpin(spin)} (dx: ${spin.dx >= 0 ? '+' : ''}${spin.dx.toStringAsFixed(2)}, dy: ${spin.dy >= 0 ? '+' : ''}${spin.dy.toStringAsFixed(2)})',
                       style: TextStyle(
                         color: Colors.cyanAccent,
                         fontWeight: FontWeight.w600,
-                        fontSize: isShort ? 11.0 : 12.5,
+                        fontSize: isShort ? 10.5 : 12.0,
                       ),
                     ),
                   );
@@ -4703,6 +4704,17 @@ class BilliardGame extends Forge2DGame with PanDetector {
   bool _skipNextDt = false;
   double _shotElapsedTime = 0.0;
 
+  // Vết bóng mờ lần bắn trước (Ghost Trail Replay) cho Trickshot & Daily Puzzle
+  double? previousShotAimAngle;
+  Vector2? previousShotAimVector;
+  double? previousShotPower;
+  Offset? previousShotSpin;
+  bool showPreviousShotGhost = false;
+
+  // Trạng thái nhắm mượt mà của Bot AI
+  double targetBotAngle = 0.0;
+  double targetBotPower = 0.40;
+
   void onAppPaused() {
     _appPausedTime = DateTime.now();
     isAppPaused = true;
@@ -5991,11 +6003,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
       _sanitizeAllBallBodies();
     }
 
-    super.update(safeDt);
     if (!_hasGameLoaded) {
+      super.update(safeDt);
       return;
     }
     if (!physicsReady) {
+      super.update(safeDt);
       physicsReady =
           cueBall.isMounted && poolBalls.every((ball) => ball.isMounted);
       if (physicsReady) {
@@ -6004,13 +6017,32 @@ class BilliardGame extends Forge2DGame with PanDetector {
         } else if (activeLegendaryTrickshot != null) {
           _setupLegendaryTrickshot(activeLegendaryTrickshot!);
         }
-      } else {
-        return;
       }
+      return;
     }
-    _checkContinuousPocketDrops();
+
+    // Chống xuyên băng triệt để bằng Sub-stepping: Khi bi di chuyển ở tốc độ cao (> 350 px/s),
+    // chia nhỏ bước thời gian thành 2 sub-steps để va chạm nảy băng chuẩn xác 100% tự nhiên
+    final maxSpeed = math.max(
+      cueBall.body.linearVelocity.length,
+      poolBalls.fold<double>(
+        0.0,
+        (maxV, b) => b.isRemoved ? maxV : math.max(maxV, b.body.linearVelocity.length),
+      ),
+    );
+    final int subSteps = (shotInProgress && maxSpeed > 350.0) ? 2 : 1;
+    final double stepDt = safeDt / subSteps;
+
+    for (int s = 0; s < subSteps; s++) {
+      if (s > 0) {
+        world.physicsWorld.stepDt(stepDt);
+      } else {
+        super.update(stepDt);
+      }
+      _checkContinuousPocketDrops();
+      _applyClothPhysics(stepDt);
+    }
     _keepBallsInsideTable();
-    _applyClothPhysics(safeDt);
 
     // Ghi nhận vệt mờ tốc độ cao của bi cái và các bi mục tiêu (xóa ngay khi vào lỗ hoặc chậm)
     if (physicsReady && !cueBall.isSunk) {
@@ -6094,12 +6126,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
       body.angularVelocity = 0;
       return true;
     }
-    if (vel.length < 0.35) {
+    // Dừng bi dứt khoát khi vận tốc rất thấp (< 1.2 px/s)
+    // Loại bỏ hoàn toàn cảm giác phải chờ 2-3 giây nhìn bi nhích từng pixel mới chuyển lượt
+    if (vel.length < 1.2) {
       vel.setZero();
       body.angularVelocity = 0;
       return true;
     }
-    return vel.length < 0.35 && ang.abs() < stopAngularVelocity;
+    return vel.length < 1.2 && ang.abs() < stopAngularVelocity;
   }
 
   void _applyClothPhysics(double dt) {
@@ -6228,12 +6262,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
     // Khi bi chậm dần (speed < 36), lực hãm tự động giảm mượt dần theo đường cong tỉ lệ
     // giúp bi lướt êm và dừng nhẹ nhàng như bi thật, loại bỏ hoàn toàn hiện tượng phanh gấp.
     final lowSpeedEase = speed < 36.0 ? (speed / 36.0) : 1.0;
-    final decelStep = (rollingDeceleration * lowSpeedEase) * dt;
+    // Tăng nhẹ lực hãm khi bi lăn rất chậm (< 12 px/s) để bi dừng tự nhiên và dứt khoát
+    final extraDamping = speed < 12.0 ? (12.0 - speed) * 1.8 * dt : 0.0;
+    final decelStep = (rollingDeceleration * lowSpeedEase * dt) + extraDamping;
 
     var nextSpeed = (speed * dragFactor) - decelStep;
 
-    // Khi vận tốc cực nhỏ (< 0.35 px/s), dừng bi dứt khoát mượt mà
-    if (nextSpeed < 0.35 || nextSpeed.isNaN || nextSpeed.isInfinite) {
+    // Khi vận tốc rất nhỏ (< 1.2 px/s), dừng bi dứt khoát mượt mà
+    if (nextSpeed < 1.2 || nextSpeed.isNaN || nextSpeed.isInfinite) {
       velocity.setZero();
       body.angularVelocity = 0;
     } else {
@@ -6595,6 +6631,14 @@ class BilliardGame extends Forge2DGame with PanDetector {
       ruleMessage.value = 'Player 1: break shot';
     }
 
+    if (activeDailyPuzzle != null || activeLegendaryTrickshot != null) {
+      if (previousShotAimVector != null) {
+        showPreviousShotGhost = true;
+      }
+    } else {
+      showPreviousShotGhost = false;
+    }
+
     resetCueSpin();
 
     if (!_hasGameLoaded) {
@@ -6775,6 +6819,24 @@ class BilliardGame extends Forge2DGame with PanDetector {
         rollingVelocityMultiplier *
         forceMult;
 
+    // Ghi nhận Vết bóng mờ lần bắn trước cho Daily Puzzle & Trickshots
+    if (activeLegendaryTrickshot != null || activeDailyPuzzle != null) {
+      previousShotAimAngle = aimAngle;
+      previousShotAimVector = cueBall.aimVector?.clone();
+      previousShotPower = shotPower.value;
+      previousShotSpin = cueSpin.value;
+      showPreviousShotGhost = false;
+    }
+
+    // Xử lý trục Z giả lập cho Jump Shot: Khi là thế bi nhảy hoặc nâng cơ
+    final isJumpTrickshot = activeLegendaryTrickshot?.id.contains('jump') == true ||
+        activeLegendaryTrickshot?.techniqueNotes.toLowerCase().contains('jump') == true;
+    if (isJumpTrickshot) {
+      final jumpPower = (shotPower.value * 340.0).clamp(140.0, 380.0);
+      cueBall.zVelocity = jumpPower;
+      cueBall.zHeight = 1.0;
+    }
+
     cueBall.body.setAwake(true);
     // Vận tốc góc xoáy áp-phê quanh trục Z (áp-phê phải dx > 0 thì quay thuận chiều kim đồng hồ)
     cueBall.body.angularVelocity = -cueSpin.value.dx * 18.0 * spinMult;
@@ -6835,9 +6897,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
     botWaitTime += dt;
 
-    // Giai đoạn 1: Bot phân tích bi và lên đường ngắm (chưa đánh)
+    // Giai đoạn 0: Bot "suy nghĩ" tính toán thế bi và chọn mục tiêu (0.35s)
     if (botState == 0) {
-      if (botWaitTime > 0.8 && physicsReady) {
+      if (botWaitTime > 0.35 && physicsReady) {
         if (ballInHand) {
           _placeBotCueBall();
           ballInHand = false;
@@ -6860,18 +6922,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
             }
           }
 
-          aimAngle = angle;
-          shotPower.value = pwr;
+          targetBotAngle = angle;
+          targetBotPower = pwr;
           cueSpin.value = spin;
           cueBall.spinInfluence = spin;
           cueBall.isAiming = true;
-          cueBall.strokeDistance = maxDragDistance * pwr;
-          _updateAimVector(ballRadius * 2);
 
-          botState = 1; // Chuyển sang giai đoạn chờ đánh
+          botState = 1; // Chuyển sang giai đoạn xoay cơ ngắm mượt mà
           botWaitTime = 0;
         } else {
-          // Phòng ngừa trường hợp bot không tìm thấy đường bi lý tưởng: tự động nhắm bi 8 hoặc bi gần nhất
           final aliveBalls = poolBalls.where((b) => !b.isSunk && !b.isRemoved).toList();
           if (aliveBalls.isNotEmpty) {
             final targetBall = aliveBalls.firstWhere(
@@ -6879,22 +6938,43 @@ class BilliardGame extends Forge2DGame with PanDetector {
               orElse: () => aliveBalls.first,
             );
             final aimDir = targetBall.body.position - cueBall.body.position;
-            aimAngle = math.atan2(aimDir.y, aimDir.x);
-            shotPower.value = 0.42;
+            targetBotAngle = math.atan2(aimDir.y, aimDir.x);
+            targetBotPower = 0.42;
             cueSpin.value = Offset.zero;
             cueBall.spinInfluence = Offset.zero;
             cueBall.isAiming = true;
-            cueBall.strokeDistance = maxDragDistance * 0.42;
-            _updateAimVector(ballRadius * 2);
+
             botState = 1;
             botWaitTime = 0;
           }
         }
       }
     }
-    // Giai đoạn 2: Bot đứng ngắm trong 1.5s rồi mới dứt khoát bắn
+    // Giai đoạn 1: Hiệu ứng xoay cây cơ từ từ và kéo lực mượt mà (0.65s)
     else if (botState == 1) {
-      if (botWaitTime > 1.5) {
+      // Nội suy góc ngắm ngắn nhất (shortest angle interpolation)
+      var diff = (targetBotAngle - aimAngle) % (2 * math.pi);
+      if (diff > math.pi) diff -= 2 * math.pi;
+      if (diff < -math.pi) diff += 2 * math.pi;
+      aimAngle += diff * (dt * 7.5).clamp(0.0, 1.0);
+
+      // Kéo nhẹ thanh lực mượt mà
+      shotPower.value = (shotPower.value + (targetBotPower - shotPower.value) * (dt * 6.0)).clamp(0.05, 1.0);
+      cueBall.strokeDistance = maxDragDistance * shotPower.value;
+      _updateAimVector(ballRadius * 2);
+
+      if (botWaitTime >= 0.65) {
+        aimAngle = targetBotAngle;
+        shotPower.value = targetBotPower;
+        cueBall.strokeDistance = maxDragDistance * targetBotPower;
+        _updateAimVector(ballRadius * 2);
+        botState = 2; // Chuyển sang giai đoạn ngắm tĩnh định vị
+        botWaitTime = 0;
+      }
+    }
+    // Giai đoạn 2: Bot đứng ngắm chắc chắn trong 0.35s rồi ra cơ dứt khoát
+    else if (botState == 2) {
+      if (botWaitTime > 0.35) {
         shootWithPower(fromBot: true);
         botState = 0;
         botWaitTime = 0;
@@ -7289,6 +7369,48 @@ class BilliardGame extends Forge2DGame with PanDetector {
         final railPoint = cueBall.body.position + rayBottom * t;
         if (railPoint.x >= playAreaTopLeft.x + ballRadius &&
             railPoint.x <= playAreaBottomRight.x - ballRadius) {
+          if (_isBotPathClear(cueBall.body.position, railPoint) &&
+              _isBotPathClear(railPoint, ball.body.position, excluded: ball)) {
+            final aimDir = railPoint - cueBall.body.position;
+            return BotShot(
+              direction: aimDir,
+              totalDistance: aimDir.length + (ball.body.position - railPoint).length,
+              spin: Offset.zero,
+              power: 0.48,
+            );
+          }
+        }
+      }
+
+      // Dội băng phải (Right Cushion Kick Shot)
+      final mirrorRight = Vector2(2 * walls[1] - ball.body.position.x, ball.body.position.y);
+      final rayRight = mirrorRight - cueBall.body.position;
+      if (rayRight.x > 0) {
+        final t = (walls[1] - cueBall.body.position.x) / rayRight.x;
+        final railPoint = cueBall.body.position + rayRight * t;
+        if (railPoint.y >= playAreaTopLeft.y + ballRadius &&
+            railPoint.y <= playAreaBottomRight.y - ballRadius) {
+          if (_isBotPathClear(cueBall.body.position, railPoint) &&
+              _isBotPathClear(railPoint, ball.body.position, excluded: ball)) {
+            final aimDir = railPoint - cueBall.body.position;
+            return BotShot(
+              direction: aimDir,
+              totalDistance: aimDir.length + (ball.body.position - railPoint).length,
+              spin: Offset.zero,
+              power: 0.48,
+            );
+          }
+        }
+      }
+
+      // Dội băng trái (Left Cushion Kick Shot)
+      final mirrorLeft = Vector2(2 * walls[3] - ball.body.position.x, ball.body.position.y);
+      final rayLeft = mirrorLeft - cueBall.body.position;
+      if (rayLeft.x < 0) {
+        final t = (walls[3] - cueBall.body.position.x) / rayLeft.x;
+        final railPoint = cueBall.body.position + rayLeft * t;
+        if (railPoint.y >= playAreaTopLeft.y + ballRadius &&
+            railPoint.y <= playAreaBottomRight.y - ballRadius) {
           if (_isBotPathClear(cueBall.body.position, railPoint) &&
               _isBotPathClear(railPoint, ball.body.position, excluded: ball)) {
             final aimDir = railPoint - cueBall.body.position;
@@ -8200,9 +8322,11 @@ class BilliardContactListener extends ContactListener {
 
     final cue = first.userData is CueBall
         ? first.userData as CueBall
-        : second.userData is CueBall
-        ? second.userData as CueBall
-        : null;
+        : (second.userData is CueBall ? second.userData as CueBall : null);
+    if (cue != null && cue.isAirborne) {
+      // Bi cái đang bay trên không (Jump Shot): Tạm thời bỏ qua va chạm với bi cản phía dưới!
+      return;
+    }
     final target = first.userData is PoolBall
         ? first.userData as PoolBall
         : second.userData is PoolBall
@@ -8390,6 +8514,11 @@ class CueBall extends BodyComponent {
   int? firstObjectBallHit;
   bool pocketedThisShot = false;
 
+  // Trục Z giả lập cho các cú Jump Shot và nhảy bi qua bi cản
+  double zHeight = 0.0;
+  double zVelocity = 0.0;
+  bool get isAirborne => zHeight > (hitboxRadius * 0.60);
+
   Vector2? _sunkStartPos;
   Vector2? _sunkCurrentPos;
   Vector2? _sunkTargetPocket;
@@ -8458,7 +8587,7 @@ class CueBall extends BodyComponent {
   @override
   Future<void> onLoad() async {
     await super.onLoad();
-    cueSprite = await Sprite.load('cue_bal.png');
+    cueSprite = await Sprite.load('cue_ball.png');
     cueStickSprite = await Sprite.load('cue_stick.png');
   }
 
@@ -8488,6 +8617,17 @@ class CueBall extends BodyComponent {
   @override
   void update(double dt) {
     super.update(dt);
+
+    // Cập nhật độ cao trục Z giả lập cho Jump Shot
+    if (zHeight > 0.0 || zVelocity > 0.0) {
+      zVelocity -= 980.0 * dt;
+      zHeight += zVelocity * dt;
+      if (zHeight <= 0.0) {
+        zHeight = 0.0;
+        zVelocity = 0.0;
+      }
+    }
+
     if (!isMounted) return;
     try {
       final _ = body;
@@ -8705,7 +8845,65 @@ class CueBall extends BodyComponent {
       );
     }
 
-    // Dựng hình Bi cái 2.5D lăn 3D với 6 chấm đỏ giải đấu Aramith TV
+    // Khi Ball In Hand: vẽ vòng định vị kèm 4 mũi tên hướng dẫn
+    if (gameInstance.ballInHand) {
+      final ringPaint = Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.65)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.6;
+      canvas.drawCircle(Offset.zero, radius * 1.55, ringPaint);
+
+      final crossPaint = Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.85)
+        ..strokeWidth = 1.5;
+      final d = radius * 1.55;
+      canvas.drawLine(Offset(0, -d - 4), Offset(0, -d + 4), crossPaint);
+      canvas.drawLine(Offset(0, d - 4), Offset(0, d + 4), crossPaint);
+      canvas.drawLine(Offset(-d - 4, 0), Offset(-d + 4, 0), crossPaint);
+      canvas.drawLine(Offset(d - 4, 0), Offset(d + 4, 0), crossPaint);
+    }
+
+    // Vết bóng mờ lần bắn trước (Ghost Trail Replay) cho Trickshots & Daily Puzzle
+    if (gameInstance.showPreviousShotGhost &&
+        gameInstance.previousShotAimVector != null &&
+        (gameInstance.activeLegendaryTrickshot != null || gameInstance.activeDailyPuzzle != null)) {
+      final prevDir = gameInstance.previousShotAimVector!.normalized();
+      final ghostLength = gameInstance.ballRadius * 16.0;
+
+      final ghostPaint = Paint()
+        ..color = const Color(0xFFFFD54F).withValues(alpha: 0.40)
+        ..strokeWidth = 1.2
+        ..style = PaintingStyle.stroke;
+
+      const dashWidth = 5.0;
+      const dashSpace = 4.0;
+      double currentDist = 0.0;
+      while (currentDist < ghostLength) {
+        final start = prevDir * currentDist;
+        final end = prevDir * math.min(currentDist + dashWidth, ghostLength);
+        canvas.drawLine(start.toOffset(), end.toOffset(), ghostPaint);
+        currentDist += dashWidth + dashSpace;
+      }
+
+      final ghostEnd = prevDir * ghostLength;
+      canvas.drawCircle(
+        ghostEnd.toOffset(),
+        radius * 0.90,
+        Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: 0.18)
+          ..style = PaintingStyle.fill,
+      );
+      canvas.drawCircle(
+        ghostEnd.toOffset(),
+        radius * 0.90,
+        Paint()
+          ..color = const Color(0xFFFFD54F).withValues(alpha: 0.45)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.0,
+      );
+    }
+
+    // Dựng hình Bi cái 2.5D lăn 3D với 6 chấm đỏ giải đấu Aramith TV và độ cao Jump Shot
     Ball3DRenderer.renderBall(
       canvas: canvas,
       radius: radius,
@@ -8714,6 +8912,7 @@ class CueBall extends BodyComponent {
       scale: 1.0,
       opacity: 1.0,
       cueSpinOffset: spinInfluence,
+      zHeight: zHeight,
     );
 
     if (isAiming && aimVector != null) {

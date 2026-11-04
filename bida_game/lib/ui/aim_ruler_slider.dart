@@ -235,7 +235,37 @@ class _AimRulerSliderControlState extends State<AimRulerSliderControl> with Widg
               },
             ),
           ),
-          SizedBox(height: ultraCompact ? 4.0 : 8.0),
+          SizedBox(height: ultraCompact ? 2.0 : 4.0),
+
+          // 2.5. Hiển thị Telemetry áp-phê chính xác (dx, dy) khi người chơi chỉnh xoáy
+          ValueListenableBuilder<Offset>(
+            valueListenable: widget.game.cueSpin,
+            builder: (context, spin, _) {
+              if (spin.distance < 0.04) return const SizedBox.shrink();
+              final dxStr = '${spin.dx >= 0 ? '+' : ''}${spin.dx.toStringAsFixed(1)}';
+              final dyStr = '${spin.dy >= 0 ? '+' : ''}${spin.dy.toStringAsFixed(1)}';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0.5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF101418),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(color: Colors.cyanAccent.withValues(alpha: 0.6), width: 0.6),
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '$dxStr,$dyStr',
+                    style: TextStyle(
+                      color: Colors.cyanAccent,
+                      fontSize: ultraCompact ? 6.5 : 8.0,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
 
           // 3. Nút tròn màu trắng bi cái có chấm đỏ xoáy (Spin Button) ở góc dưới bên phải
           _buildBottomSpinButton(bottomButtonSize, ultraCompact),

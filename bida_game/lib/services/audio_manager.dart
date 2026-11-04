@@ -152,9 +152,14 @@ class AudioManager {
     _lastBallHitTime = now;
 
     try {
-      // Âm lượng theo lực va chạm: chạm nhẹ kêu "cạch" thanh mảnh, chạm mạnh kêu "cạch" đanh giòn
-      final intensity = (relativeSpeed / 550.0).clamp(0.25, 1.0);
-      final vol = (sfxVolume.value * intensity).clamp(0.08, 1.0);
+      // Âm lượng tỷ lệ thuận với vận tốc va chạm thực tế:
+      // - Chạm nhẹ (< 60 px/s): kêu "cạch" thanh mảnh, âm lượng êm dịu
+      // - Chạm trung bình (150 - 350 px/s): tiếng bi vang chuẩn xác
+      // - Phá bi mạnh (> 450 px/s): tiếng va chạm đanh, giòn, uy lực
+      final speedFactor = relativeSpeed <= 60.0
+          ? (relativeSpeed / 60.0) * 0.35 + 0.15
+          : (relativeSpeed / 500.0).clamp(0.35, 1.0);
+      final vol = (sfxVolume.value * speedFactor).clamp(0.06, 1.0);
       FlameAudio.play('ball_hit.wav', volume: vol);
     } catch (_) {}
   }
