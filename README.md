@@ -351,3 +351,5 @@ Hệ thống bản địa hóa thời gian thực hỗ trợ **5 ngôn ngữ ch�
 - [ ] Chế độ Thi Đấu Chuyên Nghiệp (Pro Mode: Tắt toàn bộ tia hỗ trợ ngắm).
 - [ ] Xuất bản bản build tối ưu cho Trình duyệt Web (Canvas Kit) và Desktop (Windows/macOS).
 - [ ] Bida Pass Mùa Giải (Battle Pass 30 ngày) và Hệ thống Bang Hội / Club Wars.
+
+# NOZVI-GAME-04
