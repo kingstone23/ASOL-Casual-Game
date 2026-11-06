@@ -1108,8 +1108,8 @@ Widget _buildInteractivePowerControl({
     ]),
     builder: (context, child) {
       final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-      final isBallPlacing = gameInstance.ballInHand;
-      final isLocked = (isMultiplayer && !gameInstance.isMyTurn) || isBallPlacing;
+      // Thanh lực luôn sáng rõ (100% opacity) và hoạt động mượt mà cho người chơi trong lượt
+      final isLocked = isMultiplayer && !gameInstance.isMyTurn;
       return IgnorePointer(
         ignoring: isLocked,
         child: AnimatedOpacity(
@@ -6659,6 +6659,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void setShotPower(double value) {
+    if (ballInHand) {
+      ballInHand = false;
+      movingCueBall = false;
+    }
     shotPower.value = value.clamp(0.05, 1.0);
     if (_hasGameLoaded) {
       cueBall.isAiming = true;
@@ -6724,6 +6728,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
       powerDragStartY = null;
       return;
     }
+    if (ballInHand) {
+      ballInHand = false;
+      movingCueBall = false;
+    }
     powerDragStartY = startY;
   }
 
@@ -6763,11 +6771,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
     if (!_hasGameLoaded ||
         !physicsReady ||
         shotInProgress ||
-        ballInHand ||
         rackOver ||
         (!fromBot && !fromNetwork && !canUserControl) ||
         (networkPower == null && shotPower.value <= 0.05)) {
       return;
+    }
+
+    if (ballInHand) {
+      ballInHand = false;
+      movingCueBall = false;
     }
 
     if (networkAngle != null) {
@@ -7511,8 +7523,12 @@ class BilliardGame extends Forge2DGame with PanDetector {
   }
 
   void rotateAimToPoint(Vector2 touchPosition) {
-    if (!canUserControl || ballInHand || !physicsReady || !_hasGameLoaded) {
+    if (!canUserControl || !physicsReady || !_hasGameLoaded) {
       return;
+    }
+    if (ballInHand) {
+      ballInHand = false;
+      movingCueBall = false;
     }
     final offset = touchPosition - cueBall.body.position;
     if (offset.length2 > 4) {
@@ -7531,6 +7547,10 @@ class BilliardGame extends Forge2DGame with PanDetector {
   void rotateAim(double delta) {
     if (!canUserControl) {
       return;
+    }
+    if (ballInHand) {
+      ballInHand = false;
+      movingCueBall = false;
     }
     aimAngle += delta;
     if (_hasGameLoaded && physicsReady) {
@@ -7563,6 +7583,13 @@ class BilliardGame extends Forge2DGame with PanDetector {
           (dragStart! - cueBall.body.position).length <= ballRadius * 2.5;
       if (movingCueBall) {
         cueBall.isAiming = false;
+      } else {
+        // Chạm ra ngoài bi cái: xác nhận vị trí đặt bi cái và ngắm cơ ngay lập tức
+        ballInHand = false;
+        movingCueBall = false;
+        cueBall.isAiming = true;
+        _updateAimVector(ballRadius * 2);
+        rotateAimToPoint(dragStart!);
       }
       return;
     }

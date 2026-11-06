@@ -66,5 +66,20 @@ void main() {
       expect(game.botState, equals(0));
       expect(game.targetBotAngle, equals(0.0));
     });
+
+    test('BallInHand does not lock power bar and auto-confirms on power pull or aim', () {
+      final game = BilliardGame();
+      game.ballInHand = true;
+      expect(game.ballInHand, isTrue);
+
+      // User adjusts power -> confirms placement
+      game.beginPowerDrag(100.0);
+      expect(game.ballInHand, isFalse);
+
+      // Re-trigger ball in hand
+      game.ballInHand = true;
+      game.rotateAim(0.1);
+      expect(game.ballInHand, isFalse);
+    });
   });
 }
