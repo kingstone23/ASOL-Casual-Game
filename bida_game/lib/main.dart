@@ -1103,19 +1103,46 @@ Widget _buildInteractivePowerControl({
       gameInstance.currentTurn,
       gameInstance.isLocalMultiplayer,
       gameInstance.isOnlineMultiplayer,
+      gameInstance.isBotMode,
+      gameInstance.isShotInProgressNotifier,
+      gameInstance.isBallInHandNotifier,
       LocalMultiplayerService.instance,
       OnlineMultiplayerService.instance,
     ]),
     builder: (context, child) {
       final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
-      // Thanh lực luôn sáng rõ (100% opacity) và hoạt động mượt mà cho người chơi trong lượt
-      final isLocked = isMultiplayer && !gameInstance.isMyTurn;
-      return IgnorePointer(
-        ignoring: isLocked,
-        child: AnimatedOpacity(
-          opacity: isLocked ? 0.35 : 1.0,
-          duration: const Duration(milliseconds: 200),
-          child: child,
+      final isBot = gameInstance.isBotMode.value;
+
+      final bool isLocked;
+      if (isMultiplayer) {
+        isLocked = !gameInstance.isMyTurn || gameInstance.shotInProgress || gameInstance.ballInHand;
+      } else if (isBot) {
+        isLocked = (gameInstance.currentTurn.value == 2) || gameInstance.shotInProgress || gameInstance.ballInHand;
+      } else {
+        // Chế độ 1vs1 cùng 1 máy (Pass & Play):
+        // Giữ chức năng khoá và làm mờ khi bi đang lăn (chờ đối thủ hết lượt cho công bằng)
+        // hoặc khi đang trong trạng thái đặt bi cái (ballInHand).
+        // Ngay sau khi đặt bi cái xuống bàn (ballInHand = false), lập tức mở khoá (100% sáng rõ) để đánh!
+        isLocked = gameInstance.shotInProgress || gameInstance.ballInHand;
+      }
+
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTapDown: (_) {
+          if (gameInstance.ballInHand && !gameInstance.shotInProgress && gameInstance.canUserControl) {
+            gameInstance.ballInHand = false;
+            gameInstance.movingCueBall = false;
+            gameInstance.cueBall.isAiming = true;
+            gameInstance._updateAimVector(gameInstance.ballRadius * 2);
+          }
+        },
+        child: IgnorePointer(
+          ignoring: isLocked,
+          child: AnimatedOpacity(
+            opacity: isLocked ? 0.35 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            child: child,
+          ),
         ),
       );
     },
@@ -1137,16 +1164,43 @@ Widget _buildInteractiveRightControls(
     listenable: Listenable.merge([
       gameInstance.currentTurn,
       gameInstance.isLocalMultiplayer,
+      gameInstance.isOnlineMultiplayer,
+      gameInstance.isBotMode,
+      gameInstance.isShotInProgressNotifier,
+      gameInstance.isBallInHandNotifier,
       LocalMultiplayerService.instance,
+      OnlineMultiplayerService.instance,
     ]),
     builder: (context, child) {
-      final isLocked = gameInstance.isLocalMultiplayer.value && !gameInstance.isMyTurn;
-      return IgnorePointer(
-        ignoring: isLocked,
-        child: AnimatedOpacity(
-          opacity: isLocked ? 0.35 : 1.0,
-          duration: const Duration(milliseconds: 200),
-          child: child,
+      final isMultiplayer = gameInstance.isLocalMultiplayer.value || gameInstance.isOnlineMultiplayer.value;
+      final isBot = gameInstance.isBotMode.value;
+
+      final bool isLocked;
+      if (isMultiplayer) {
+        isLocked = !gameInstance.isMyTurn || gameInstance.shotInProgress || gameInstance.ballInHand;
+      } else if (isBot) {
+        isLocked = (gameInstance.currentTurn.value == 2) || gameInstance.shotInProgress || gameInstance.ballInHand;
+      } else {
+        isLocked = gameInstance.shotInProgress || gameInstance.ballInHand;
+      }
+
+      return GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTapDown: (_) {
+          if (gameInstance.ballInHand && !gameInstance.shotInProgress && gameInstance.canUserControl) {
+            gameInstance.ballInHand = false;
+            gameInstance.movingCueBall = false;
+            gameInstance.cueBall.isAiming = true;
+            gameInstance._updateAimVector(gameInstance.ballRadius * 2);
+          }
+        },
+        child: IgnorePointer(
+          ignoring: isLocked,
+          child: AnimatedOpacity(
+            opacity: isLocked ? 0.35 : 1.0,
+            duration: const Duration(milliseconds: 200),
+            child: child,
+          ),
         ),
       );
     },
@@ -1223,6 +1277,7 @@ Widget _buildLockedOpponentBanner({
       gameInstance.currentTurn,
       gameInstance.isLocalMultiplayer,
       gameInstance.isOnlineMultiplayer,
+      gameInstance.isBallInHandNotifier,
       LocalMultiplayerService.instance,
       OnlineMultiplayerService.instance,
       LanguageService.instance,
@@ -5368,11 +5423,26 @@ class BilliardGame extends Forge2DGame with PanDetector {
   Vector2? _lastConfiguredSize;
   Vector2? dragStart;
   Vector2? dragCurrent;
-  bool shotInProgress = false;
+  final ValueNotifier<bool> isShotInProgressNotifier = ValueNotifier<bool>(false);
+  bool get shotInProgress => isShotInProgressNotifier.value;
+  set shotInProgress(bool value) {
+    if (isShotInProgressNotifier.value != value) {
+      isShotInProgressNotifier.value = value;
+    }
+  }
+
   double settledTime = 0;
   bool breakShot = true;
   bool rackOver = false;
-  bool ballInHand = false;
+
+  final ValueNotifier<bool> isBallInHandNotifier = ValueNotifier<bool>(false);
+  bool get ballInHand => isBallInHandNotifier.value;
+  set ballInHand(bool value) {
+    if (isBallInHandNotifier.value != value) {
+      isBallInHandNotifier.value = value;
+    }
+  }
+
   bool movingCueBall = false;
   final Map<int, BallGroup> playerGroups = {};
   bool objectBallHitRailThisShot = false;
@@ -7579,17 +7649,15 @@ class BilliardGame extends Forge2DGame with PanDetector {
     dragStart = info.eventPosition.widget;
     dragCurrent = dragStart;
     if (ballInHand) {
-      movingCueBall =
-          (dragStart! - cueBall.body.position).length <= ballRadius * 2.5;
-      if (movingCueBall) {
+      final distToCueBall = (dragStart! - cueBall.body.position).length;
+      if (distToCueBall <= ballRadius * 4.0) {
+        movingCueBall = true;
         cueBall.isAiming = false;
       } else {
-        // Chạm ra ngoài bi cái: xác nhận vị trí đặt bi cái và ngắm cơ ngay lập tức
-        ballInHand = false;
-        movingCueBall = false;
-        cueBall.isAiming = true;
-        _updateAimVector(ballRadius * 2);
-        rotateAimToPoint(dragStart!);
+        // Chạm vị trí khác trên bàn: di chuyển bi cái đến vị trí chạm hợp lệ
+        moveCueBallTo(dragStart!);
+        movingCueBall = true;
+        cueBall.isAiming = false;
       }
       return;
     }
@@ -7612,7 +7680,8 @@ class BilliardGame extends Forge2DGame with PanDetector {
   @override
   void onPanEnd(DragEndInfo info) {
     if (!canUserControl || !_hasGameLoaded || !physicsReady) return;
-    if (movingCueBall) {
+    if (movingCueBall || ballInHand) {
+      // Đặt bi cái xuống bàn: nhấc ngón tay lên là mở khoá ngay lập tức!
       movingCueBall = false;
       ballInHand = false;
       cueBall.isAiming = true;
@@ -7631,8 +7700,9 @@ class BilliardGame extends Forge2DGame with PanDetector {
 
   @override
   void onPanCancel() {
-    if (movingCueBall) {
+    if (movingCueBall || ballInHand) {
       movingCueBall = false;
+      ballInHand = false;
       if (_hasGameLoaded && physicsReady) {
         cueBall.isAiming = true;
         _updateAimVector(ballRadius * 2);

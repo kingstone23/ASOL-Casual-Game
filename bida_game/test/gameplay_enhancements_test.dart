@@ -67,19 +67,58 @@ void main() {
       expect(game.targetBotAngle, equals(0.0));
     });
 
-    test('BallInHand does not lock power bar and auto-confirms on power pull or aim', () {
+    test('BallInHand notifies isBallInHandNotifier and unlocks upon placing cue ball', () {
+      final game = BilliardGame();
+      int ballInHandNotifiedCount = 0;
+      game.isBallInHandNotifier.addListener(() {
+        ballInHandNotifiedCount++;
+      });
+
+      int shotInProgressNotifiedCount = 0;
+      game.isShotInProgressNotifier.addListener(() {
+        shotInProgressNotifiedCount++;
+      });
+
+      // Foul occurs -> ball in hand
+      game.ballInHand = true;
+      expect(game.ballInHand, isTrue);
+      expect(game.isBallInHandNotifier.value, isTrue);
+      expect(ballInHandNotifiedCount, equals(1));
+
+      // Player places cue ball down on table -> immediately unlocks
+      game.ballInHand = false;
+      expect(game.ballInHand, isFalse);
+      expect(game.isBallInHandNotifier.value, isFalse);
+      expect(ballInHandNotifiedCount, equals(2));
+
+      // Shot taken -> shot in progress
+      game.shotInProgress = true;
+      expect(game.shotInProgress, isTrue);
+      expect(game.isShotInProgressNotifier.value, isTrue);
+      expect(shotInProgressNotifiedCount, equals(1));
+
+      // Balls settle -> shot finished
+      game.shotInProgress = false;
+      expect(game.shotInProgress, isFalse);
+      expect(game.isShotInProgressNotifier.value, isFalse);
+      expect(shotInProgressNotifiedCount, equals(2));
+    });
+
+    test('BallInHand auto-confirms placement on power pull or aim adjustment', () {
       final game = BilliardGame();
       game.ballInHand = true;
       expect(game.ballInHand, isTrue);
 
-      // User adjusts power -> confirms placement
+      // User adjusts power -> confirms placement and unlocks
       game.beginPowerDrag(100.0);
       expect(game.ballInHand, isFalse);
+      expect(game.isBallInHandNotifier.value, isFalse);
 
       // Re-trigger ball in hand
       game.ballInHand = true;
       game.rotateAim(0.1);
       expect(game.ballInHand, isFalse);
+      expect(game.isBallInHandNotifier.value, isFalse);
     });
   });
 }
